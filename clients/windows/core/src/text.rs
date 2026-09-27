@@ -14,7 +14,7 @@ pub enum Enc {
 pub fn read(path: &Path) -> io::Result<(String, Enc)> {
     let b = fs::read(path)?;
     if b.len() >= 2 && b[0] == 0xFF && b[1] == 0xFE {
-        let units: Vec<u16> = b[2..].chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])).collect();
+        let units: Vec<u16> = b[2..].as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).collect();
         return Ok((String::from_utf16_lossy(&units), Enc::Utf16Le));
     }
     let s = b.strip_prefix(&[0xEF, 0xBB, 0xBF]).unwrap_or(&b);

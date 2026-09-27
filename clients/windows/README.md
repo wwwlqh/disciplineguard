@@ -33,7 +33,7 @@ cd clients\windows && cargo run -p disciplineguard
 ## How Protect works
 
 1. The EA build is checked against the signed manifest, then copied to `MQL5\Experts\DisciplineGuard\`.
-2. `MQL5\Profiles\Templates\default.tpl` gets the EA, so every new chart has the panel.
+2. `MQL5\Profiles\Templates\default.tpl` gets the EA, so every new chart has the panel. A fresh MT has no `default.tpl`, so the app writes a bare one that looks like MT's built-in default.
 3. With MetaTrader closed, the last-used profile's first free chart gets the EA and `config\common.ini` turns on Algo Trading. If MetaTrader is open, the app asks: "Restart MetaTrader" or "Next time I open it". It never closes MetaTrader without that click, and a chart running another EA is left alone.
 4. The EA's first sync reaches the app through the bridge, and the app registers the terminal (`POST /v1/desktop/terminals`).
 

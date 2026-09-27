@@ -1,7 +1,7 @@
 //! Protect, per terminal (SPEC §9.5). Everything goes through MetaTrader's own files; nothing inside MT is clicked.
 //! - The EA is copied to `MQL5\Experts\DisciplineGuard\DisciplineGuard.ex5` (the caller checked it, [`crate::release`]).
 //! - The chart template `default.tpl` carries the EA, so every new chart has the panel. MT only reads it, so this
-//!   works while MT is open.
+//!   works while MT is open. A fresh MT has no `default.tpl`, so Protect writes one that looks like MT's own default.
 //! - With MT closed: the first chart of the last-used profile gets the EA, and `config\common.ini` turns on Algo
 //!   Trading (`[Experts] Enabled=1`, `AllowLiveTrading=1`). MT rewrites both on exit, so they wait for a restart.
 //!   The app never closes MetaTrader without the trader's click.
@@ -46,9 +46,22 @@ pub fn install_ea(t: &Terminal, ea: &[u8]) -> io::Result<()> {
     text::write_bytes(&ea_path(t), ea)
 }
 
+/// What MT draws a new chart with when there is no `default.tpl`, which is the case on a fresh install: a new chart
+/// from this template looks the same as one without it (checked against MT5 build 6230).
+const BARE_TEMPLATE: &str =
+    "<chart>\r\n<window>\r\nheight=100\r\n<indicator>\r\nname=Main\r\npath=\r\napply=1\r\nshow_data=1\r\n</indicator>\r\n</window>\r\n</chart>\r\n";
+
 /// Adds the EA to (or removes it from) the chart template. Returns true when the file changed.
+/// Without a `default.tpl`, adding writes the bare template with the EA, and removing deletes it again.
 pub fn edit_template(t: &Terminal, add: bool) -> io::Result<bool> {
-    edit_chart_file(&template_path(t), add)
+    let path = template_path(t);
+    match text::read(&path) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound && add => {
+            text::write(&path, &with_ea(BARE_TEMPLATE).expect("the bare template has a window"), Enc::Utf16Le).map(|_| true)
+        }
+        Ok((s, _)) if !add && without_ea(&s).as_deref() == Some(BARE_TEMPLATE) => fs::remove_file(&path).map(|_| true),
+        _ => edit_chart_file(&path, add),
+    }
 }
 
 /// Needs MetaTrader closed: adds the EA to the last-used profile's first free chart and turns on Algo Trading, or
@@ -192,6 +205,21 @@ mod tests {
         remove_ea(&t).unwrap();
         assert!(!read(&charts.join("chart02.chr")).contains(EA_REL));
         assert!(!ea_path(&t).exists());
+        fs::remove_dir_all(&t.data_dir).ok();
+    }
+
+    #[test]
+    fn writes_a_template_when_mt_has_none_and_removes_it_again() {
+        let t = terminal();
+        let tpl = t.data_dir.join("MQL5").join("Profiles").join("Templates").join("default.tpl");
+        assert!(edit_template(&t, true).unwrap());
+        let (s, enc) = text::read(&tpl).unwrap();
+        assert_eq!(enc, Enc::Utf16Le);
+        assert_eq!(s.matches(EA_REL).count(), 1);
+        assert!(!edit_template(&t, true).unwrap());
+        assert!(edit_template(&t, false).unwrap());
+        assert!(!tpl.exists());
+        assert!(!edit_template(&t, false).unwrap());
         fs::remove_dir_all(&t.data_dir).ok();
     }
 }
