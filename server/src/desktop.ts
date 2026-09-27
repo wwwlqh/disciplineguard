@@ -27,7 +27,10 @@ export async function allowDesktop(req: Request, env: Env, user: UserRow): Promi
   return json({ code });
 }
 
-/** POST /v1/auth/desktop {code, verifier, version}: the app exchanges the code for its own token. */
+/**
+ * POST /v1/auth/desktop {code, verifier, version}: the app exchanges the code for its own token. `user` lets the app
+ * notice a sign-in as another person, which first turns off the old person's connections (SEC-01).
+ */
 export async function desktopToken(req: Request, env: Env, ctx: Ctx): Promise<Response> {
   await rateLimit(env, `desktop:ip:${clientIp(req)}`, 30, 3600_000);
   const b = await body(req);
@@ -46,7 +49,7 @@ export async function desktopToken(req: Request, env: Env, ctx: Ctx): Promise<Re
     .run();
   await audit(env, user.id, 'user', 'desktop_allowed', { desktop: id });
   await securityEmail(env, user.email, `DisciplineGuard for Windows was allowed on ${row.name}.`, req, ctx);
-  return json({ token: appToken, email: maskEmail(user.email) });
+  return json({ token: appToken, email: maskEmail(user.email), user: user.id });
 }
 
 async function requireDesktop(req: Request, env: Env): Promise<{ id: string; user: UserRow; name: string }> {

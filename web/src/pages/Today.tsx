@@ -65,7 +65,8 @@ const DECISION: Record<string, string> = { skip: 'Skipped', timeout: 'Skipped (t
 
 export function Today({ me, reload }: PageProps) {
   const [d, setD] = useState<TodayData | null>(null);
-  const [practice, setPractice] = useState(false);
+  // The Windows app's "Try a practice pause" opens /today?practice.
+  const [practice, setPractice] = useState(() => new URLSearchParams(location.search).has('practice'));
   const [confirm, setConfirm] = useState<'break' | 'done' | null>(null);
   const toast = useToast();
 

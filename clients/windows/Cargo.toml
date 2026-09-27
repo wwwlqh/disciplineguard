@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = ["core", "app"]
+# The app only builds on Windows (Tauri, WebView2); `cargo test -p dg-core` runs anywhere.
+default-members = ["core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "UNLICENSED"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

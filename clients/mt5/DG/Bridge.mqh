@@ -11,7 +11,8 @@
 //|                                          state, connection id,   |
 //|                                          masked email, and       |
 //|                                          "baseline" if consented |
-//|   DisciplineGuard\<terminal id>\ea.txt   EA heartbeat: unix s    |
+//|   DisciplineGuard\<terminal id>\ea.txt   EA heartbeat: unix s,   |
+//|                                          then algo_on/algo_off   |
 //| Files are touched only from the timer: never in a click handler  |
 //| and never while a pause is open (invariant 3).                   |
 //+------------------------------------------------------------------+
@@ -105,7 +106,9 @@ public:
       if(GetTickCount64() - lastBeat >= DG_EA_BEAT_MS)
         {
          lastBeat = GetTickCount64();
-         DGCommonWrite(dir + "ea.txt", IntegerToString((long)TimeGMT()));
+         // The app shows "Click Algo Trading once" when the terminal's Algo Trading is off (spike Q11).
+         string algo = TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) != 0 ? "algo_on" : "algo_off";
+         DGCommonWrite(dir + "ea.txt", IntegerToString((long)TimeGMT()) + "\n" + algo);
         }
      }
 

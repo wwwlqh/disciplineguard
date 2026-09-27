@@ -795,16 +795,17 @@ A trader installs at most one thing per kind of platform, never one per platform
 **What the app does on Protect**, per terminal:
 - Finds terminals from `%APPDATA%\MetaQuotes\Terminal\<id>\origin.txt` and from running `terminal64.exe` processes, including portable installs.
 - Copies the EA into `MQL5\Experts\DisciplineGuard\` after checking its SHA-256 against the signed release manifest.
-- Attaches the EA and turns on Algo Trading through MT's own start-up and profile files. Spike Q11 fixes the exact method:
-  - the chart template `default.tpl` carries the EA, so every new chart has the panel;
-  - the active profile gets one chart with the EA, and `[Experts] AllowLiveTrading=1` and `Enabled=1` are set through a start-up configuration.
-- Profile changes need the terminal closed. If it is running: "MT5 needs a quick restart to finish. Open trades aren't affected. [Restart MT5] [Next time I open it]". The app never closes MT5 without that click.
+- Attaches the EA and turns on Algo Trading through MT's own files:
+  - the chart template `MQL5\Profiles\Templates\default.tpl` carries the EA, so every new chart has the panel (MT only reads it, so this works while MT is open);
+  - with MT closed, the first chart of the last-used profile without an EA gets it, and `config\common.ini` gets `[Experts] Enabled=1` and `AllowLiveTrading=1`. A chart or template that runs another EA is left alone.
+- MT rewrites its profile on exit, so if the terminal is running: "MetaTrader needs a quick restart to finish. Open trades aren't affected. [Restart MetaTrader] [Next time I open it]". Restart asks MT to close the way its own X button does, finishes and opens it again. The app never closes MT without that click. With "Next time", setup finishes the next time the trader closes MT.
+- MT5 can switch Algo Trading off when it logs in to an account at start (Q11). The EA reports the switch in `ea.txt`, and the app then shows one step: "Click Algo Trading once in MetaTrader".
 - Marks the terminal protected. The EA's first sync then reaches the app, which registers the terminal and its account (`POST /v1/desktop/terminals`) and passes the reply back.
 
 **The bridge** (EA ↔ app), in `%APPDATA%\MetaQuotes\Terminal\Common\Files\DisciplineGuard\<terminal id>\`:
 - `out.txt`: one request from the EA, `<seq> <path>` then the JSON body. Only `/v1/sync` and `/v1/baseline` are forwarded.
 - `in.txt`: the reply, `<seq> <HTTP status>` then the body. The signed rules inside are verified by the EA with Ed25519 (§10.5), so editing the file has no effect.
-- `app.txt`: the app heartbeat (time, state, connection id, masked email, baseline consent). `ea.txt`: the EA heartbeat, every 15 s.
+- `app.txt`: the app heartbeat (time, state, connection id, masked email, baseline consent). `ea.txt`: the EA heartbeat, every 15 s, with `algo_on` or `algo_off`.
 - Every file is written to a temp name and renamed, so neither side reads half a file.
 - The EA touches these files only on its timer, never while a pause is open and never in a click handler. Invariant 3 holds with no special network rules.
 
@@ -813,11 +814,12 @@ A trader installs at most one thing per kind of platform, never one per platform
 - When the app isn't running, the EA keeps enforcing its saved rules and shows **On (offline)**, "DisciplineGuard app isn't running". §10.5 applies unchanged.
 
 **Updates**
-- The app updates itself and the EA from signed release manifests. A new EA build is copied in and picked up at the next terminal start. The trader does nothing.
+- The app updates itself through a signed update manifest (checked every 6 hours) and carries the EA with a signed EA manifest. After an update the new EA build is copied into each protected terminal and picked up at the next terminal start. The trader does nothing.
+- Releases are published with the client source (`wwwlqh/disciplineguard-clients`); `disciplineguard.com/downloads/` points to the latest one.
 - An MT5 installed later shows a tray notice: "New MetaTrader found: IC Markets MT5. Protect it? [Protect]".
 
 **Protection-off signals**
-- Unticking a terminal or uninstalling the app is a loosening and waits like any removal (§10.6, EXPERIENCE.md §5.7). The uninstaller sends protection-off and removes the EA from templates only after the server acknowledges it. Without server contact it leaves the EA in place and says so.
+- Removing protection from a terminal is a loosening and waits like any removal (§10.6, EXPERIENCE.md §5.7): the app links to Devices, and keeps serving the terminal until the server reports it removed. Uninstalling the app is a protection-off signal (`uninstalled`). The uninstaller sends protection-off and removes the EA from templates only after the server acknowledges it. Without server contact it leaves the EA in place and says so.
 - Removing the EA from a chart by hand queues protection-off, which the app sends; a stale `ea.txt` also shows it.
 
 **Later platforms.** The same app installs the MT4 EA, and later cTrader cBots and NinjaTrader add-ons, each as its own adapter (§9.0).

@@ -1,0 +1,21 @@
+[package]
+name = "dg-core"
+description = "DisciplineGuard for Windows: sign-in, MetaTrader setup and the EA file bridge (SPEC §9.5)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+ed25519-dalek = "3.0.0"
+getrandom = "0.4.3"
+hex = "0.4.3"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+# Plain HTTP elsewhere: only the tests against the local dev server run off Windows.
+ureq = { version = "3.4.2", default-features = false, features = ["json"] }
+
+[target."cfg(windows)".dependencies]
+# Windows' own TLS (SChannel) and certificate store.
+ureq = { version = "3.4.2", default-features = false, features = ["json", "native-tls-no-default"] }
+windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_Memory", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }

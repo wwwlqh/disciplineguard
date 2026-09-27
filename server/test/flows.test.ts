@@ -61,6 +61,7 @@ describe('Windows app connect (SPEC §9.5)', () => {
     const ok = await w.call('POST', '/v1/auth/desktop', { code, verifier });
     expect(ok.status).toBe(200);
     expect(ok.data.email).toBe('a***@b.co');
+    expect(ok.data.user).toBe((w.db.db.prepare('SELECT id FROM users WHERE email = ?').get('a@b.co') as { id: string }).id);
     expect((await w.call('POST', '/v1/auth/desktop', { code, verifier })).status).toBe(400);
     expect(w.outbox().some((m) => m.to_email === 'a@b.co' && m.body.includes('DESKTOP-4F2'))).toBe(true);
   });

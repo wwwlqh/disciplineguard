@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "DisciplineGuard",
+  "mainBinaryName": "DisciplineGuard",
+  "identifier": "com.disciplineguard.windows",
+  "build": { "frontendDist": "ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      { "label": "main", "title": "DisciplineGuard", "width": 520, "height": 660, "resizable": false, "visible": false, "center": true }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "publisher": "DisciplineGuard",
+    "shortDescription": "Pauses you at the click when a trade breaks your own rules.",
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": { "installMode": "currentUser", "installerHooks": "nsis/hooks.nsh", "displayLanguageSelector": false }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "set by the release workflow",
+      "endpoints": ["https://disciplineguard.com/downloads/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
+  }
+}

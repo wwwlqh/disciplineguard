@@ -1,0 +1,3 @@
+# The Windows app download and its signed update manifest are published on the public client repo (SPEC §9.5).
+/downloads/DisciplineGuard-Setup.exe https://github.com/wwwlqh/disciplineguard-clients/releases/latest/download/DisciplineGuard-Setup.exe 302
+/downloads/latest.json https://github.com/wwwlqh/disciplineguard-clients/releases/latest/download/latest.json 302

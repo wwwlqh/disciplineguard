@@ -1,6 +1,7 @@
 // Local development: runs the Worker's handler on Node with SQLite. Not deployed.
 // Usage: node dev.ts   (API on http://localhost:8787; the web app's Vite server proxies /api and /v1 here)
 // Emails are kept in the outbox: http://localhost:8787/dev/outbox
+// DG_DB=:memory: starts with an empty database. POST /dev/advance?ms=N moves the clock forward (for client tests).
 import { createServer } from 'node:http';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
@@ -27,7 +28,8 @@ if (!existsSync(keyFile)) {
   );
 }
 const keys = JSON.parse(readFileSync(keyFile, 'utf8'));
-const db = new NodeD1(join(here, '.dev.sqlite'));
+const db = new NodeD1(process.env.DG_DB ?? join(here, '.dev.sqlite'));
+let offset = 0;
 db.migrate(join(here, 'migrations'));
 
 const env: Env = {
@@ -36,6 +38,7 @@ const env: Env = {
   DEV: '1',
   OWNER_EMAILS: process.env.OWNER_EMAILS ?? 'owner@example.com',
   LS_CHECKOUT_EARLYBIRD: process.env.LS_CHECKOUT_EARLYBIRD ?? 'https://example.lemonsqueezy.com/buy/early-bird',
+  NOW: () => Date.now() + offset,
   ...keys,
 };
 
@@ -50,6 +53,13 @@ createServer(async (req, res) => {
     const rows = db.db.prepare('SELECT id, to_email, subject, body, created_at FROM outbox_email ORDER BY id DESC LIMIT 20').all();
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify(rows, null, 1));
+    return;
+  }
+  if (req.method === 'POST' && req.url?.startsWith('/dev/advance?')) {
+    offset += Number(new URL(url).searchParams.get('ms')) || 0;
+    await runScheduled(env, ctx);
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ now: Date.now() + offset }));
     return;
   }
   const headers = new Headers();

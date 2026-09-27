@@ -9,3 +9,7 @@ build.log
 .playwright-mcp/
 .dev.keys.json
 .dev.sqlite*
+clients/windows/target/
+clients/windows/app/gen/
+clients/windows/app/release.conf.json
+!clients/mt5/release/DisciplineGuard.ex5

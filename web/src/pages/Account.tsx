@@ -93,7 +93,7 @@ export function AccountPage({ me, reload }: PageProps) {
         <p className="small muted" style={{ marginTop: 8 }}>Signing out web sessions doesn't disconnect your devices.</p>
       </div>
 
-      <div className="card">
+      <div className="card" id="report">
         <h2>Report a problem</h2>
         <div className="stack">
           <select value={report.type} onChange={(e) => setReport({ ...report, type: e.target.value })} aria-label="Problem type">

@@ -1,0 +1,90 @@
+# DisciplineGuard for Windows (SPEC §9.5).
+# Every change: the app's tests against the real server handler, clippy, and a debug build, on Windows.
+# Run by hand with "release" ticked: signs the EA manifest, builds the signed installer and publishes it with the
+# signed update manifest to github.com/wwwlqh/disciplineguard-clients/releases, where disciplineguard.com/downloads
+# points (web/public/_redirects). Secrets are listed in clients/windows/README.md.
+name: Windows app
+on:
+  push:
+    branches: [main]
+    paths: ['clients/windows/**', 'clients/mt5/**', 'server/**', '.github/workflows/windows.yml']
+  pull_request:
+    paths: ['clients/windows/**', 'clients/mt5/**', 'server/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Build, sign and publish a release
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm test --workspace clients/windows
+      - run: npm run typecheck --workspace clients/windows
+      - name: Build the app (debug; without the signed EA it can't Protect)
+        working-directory: clients/windows
+        run: cargo build -p disciplineguard
+
+  release:
+    if: github.event_name == 'workflow_dispatch' && inputs.release
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Version
+        id: v
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path clients/windows/Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          "version=$v" >> $env:GITHUB_OUTPUT
+      - name: Sign the EA manifest
+        env:
+          DG_RELEASE_KEY: ${{ secrets.DG_RELEASE_KEY }}
+        run: node scripts/sign-ea-manifest.ts clients/mt5/release/DisciplineGuard.ex5 ${{ steps.v.outputs.version }}
+      - run: cargo install trusted-signing-cli --locked
+      - name: Build and code-sign
+        working-directory: clients/windows/app
+        shell: pwsh
+        env:
+          DG_RELEASE_PUB: ${{ secrets.DG_RELEASE_PUB }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          SIGN_ENDPOINT: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          SIGN_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          SIGN_PROFILE: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
+        run: |
+          @{
+            bundle = @{ windows = @{ signCommand = "trusted-signing-cli -e $env:SIGN_ENDPOINT -a $env:SIGN_ACCOUNT -c $env:SIGN_PROFILE -d DisciplineGuard %1" } }
+            plugins = @{ updater = @{ pubkey = $env:UPDATER_PUBKEY } }
+          } | ConvertTo-Json -Depth 5 | Set-Content release.conf.json
+          npx --yes @tauri-apps/cli@2 build --config release.conf.json
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          $v = "${{ steps.v.outputs.version }}"
+          $dir = "clients/windows/target/release/bundle/nsis"
+          Copy-Item "$dir/DisciplineGuard_${v}_x64-setup.exe" DisciplineGuard-Setup.exe
+          $sig = Get-Content "$dir/DisciplineGuard_${v}_x64-setup.exe.sig" -Raw
+          @{
+            version = $v
+            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{ "windows-x86_64" = @{ signature = $sig.Trim(); url = "https://github.com/wwwlqh/disciplineguard-clients/releases/download/v$v/DisciplineGuard-Setup.exe" } }
+          } | ConvertTo-Json -Depth 5 | Set-Content latest.json
+          gh release create "v$v" DisciplineGuard-Setup.exe latest.json --repo wwwlqh/disciplineguard-clients --title "DisciplineGuard for Windows $v" --notes "Built from the source in this repository."

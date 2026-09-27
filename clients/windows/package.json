@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "dev": "node src/dev.ts"
+    "test": "node test.ts",
+    "typecheck": "cargo clippy -p dg-core --all-targets -- -D warnings"
   }
 }

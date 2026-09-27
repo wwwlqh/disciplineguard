@@ -1,6 +1,6 @@
 # Runs DisciplineGuard.ex5 in the isolated portable MT5 copy and takes screenshots of the terminal window.
 # Usage: smoke.ps1 [-Seconds 25] [-Shots 1] [-Keep]
-# To connect it, run the Windows app's dev bridge first: node clients/windows/src/dev.ts <email> dg-mt5-portable
+# To connect it, run a debug build of the Windows app against the local server first (clients/windows/README.md).
 # The portable copy has its own data folder, so the trader's own terminals and accounts are never touched.
 param(
   [int]$Seconds = 25,

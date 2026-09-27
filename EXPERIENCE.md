@@ -388,15 +388,16 @@ The trader never has to handle the EA. The Windows app installs, attaches, conne
 **First run**
 1. "Sign in to DisciplineGuard" [Continue in browser]. The browser opens the web app: "Allow DisciplineGuard on this computer (DESKTOP-4F2)? [Allow] [Cancel]". If the web app isn't signed in, the normal email sign-in comes first.
 2. "We found your MetaTrader". One row per terminal: broker name, folder, a tick (on by default). "Don't see it? [Browse]". Below the list, ticked by default: "Include my last 90 days of trades. Used only for your own before/after comparison. Only you see it." 
-3. **[Protect]**. Per row: "Installed ✓ · Algo Trading on ✓ · Connected ✓". If MT is open: "MetaTrader needs a quick restart to finish. Open trades aren't affected. [Restart MetaTrader] [Next time I open it]".
-4. "Done. Open any chart: the DisciplineGuard panel is there. [Try a practice pause]".
+3. **[Protect]**. Per row: "Installed ✓ · Algo Trading on ✓ · Connected ✓". If MT is open: "MetaTrader needs a quick restart to finish. Open trades aren't affected. [Restart MetaTrader] [Next time I open it]". If Algo Trading stays off: "Algo Trading on: off, click Algo Trading once in MetaTrader".
+4. "Done. Open any chart: the DisciplineGuard panel is there. [Try a practice pause]" (opens the practice pause on Today).
 
 The three trust lines sit at the bottom of every first-run screen.
 
 **Tray**
 - Icon dot uses the status colors (§8). The menu: status per terminal · Open dashboard · Practice pause · Protect another MetaTrader · Help · Report a problem.
 - "New MetaTrader found: IC Markets MT5. [Protect]".
-- Unticking a terminal: "Removing protection is a loosening. It takes effect Tue 02:00. Until then this terminal stays protected." (Same as removing an account, §5.7.)
+- Protected terminals show no tick to untick. Under them: "To remove protection, remove the account on the website. It's a loosening, so it waits like any other. [Open Devices]" (same as removing an account, §5.7).
+- Closing the window keeps the app in the tray. Help opens Devices (its troubleshooting) until the help articles ship.
 
 **Never**: the app never closes MetaTrader without the Restart click, never shows ads or upsells in the tray, and never asks for a broker password.
 

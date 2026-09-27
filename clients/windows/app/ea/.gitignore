@@ -1,0 +1,3 @@
+# The EA build and its signed manifest are put here by the release (scripts/sign-ea-manifest.ts).
+*
+!.gitignore
