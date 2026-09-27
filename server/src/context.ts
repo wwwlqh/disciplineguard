@@ -1,5 +1,5 @@
 // Loads a user with their active settings, resolved time and license.
-import { DAY, resets as resolveResets, transitions, type ResetSpec, type ResolvedTime } from '@dg/core';
+import { DAY, resets as resolveResets, transitions, type ResetSpec, type ResolvedTime, type Rules } from '@dg/core';
 import type { D1Like, Env } from './env.ts';
 import { HttpError } from './http.ts';
 import { license, type License } from './license.ts';
@@ -82,6 +82,35 @@ export interface UserCtx {
   accountResets: Record<string, number[]>;
   license: License;
   now: number;
+  /** Tighten for today, while it lasts (SPEC §6.5). */
+  tighten?: Tighten;
+}
+
+export interface Tighten {
+  r1?: number;
+  r8?: number;
+  until: number;
+}
+
+/**
+ * The rules clients enforce: the saved rules with today's tighten on top. Never looser than the saved rules.
+ * R8's tighten is an amount in each account's currency; an account with a % limit keeps its own.
+ */
+export function enforcedRules(uc: UserCtx): Rules {
+  const t = uc.tighten;
+  const base = uc.asm.rules;
+  if (!t) return base;
+  const r: Rules = structuredClone(base);
+  if (t.r1 !== undefined) r.R1 = { on: true, max: base.R1.on ? Math.min(base.R1.max, t.r1) : t.r1 };
+  if (t.r8 !== undefined) {
+    r.R8 = { ...base.R8, on: true };
+    for (const a of uc.accounts) {
+      const cur = base.R8.on ? base.accounts[a.id]?.r8 : undefined;
+      if (cur?.unit === 'pct') continue;
+      (r.accounts[a.id] ??= {}).r8 = { unit: 'amount', value: cur ? Math.min(cur.value, t.r8) : t.r8 };
+    }
+  }
+  return r;
 }
 
 const resetCache = new Map<string, number[]>();
@@ -131,7 +160,10 @@ export async function userCtx(env: Env, userId: string, now: number): Promise<Us
     const spec = asm.accountResets[a.id];
     if (spec) accountResets[a.id] = cachedResets(spec, now - 3 * DAY, far);
   }
-  return { user, settings, asm, userResets, accounts: live, accountResets, license: license(user, userResets, now), now };
+  const st = await env.DB.prepare('SELECT tighten_json FROM user_state WHERE user_id = ?').bind(userId).first<{ tighten_json: string | null }>();
+  const tj = st?.tighten_json ? (JSON.parse(st.tighten_json) as Tighten) : undefined;
+  const tighten = tj && tj.until > now ? tj : undefined;
+  return { user, settings, asm, userResets, accounts: live, accountResets, license: license(user, userResets, now), now, tighten };
 }
 
 /** The pre-resolved time block for clients, covering at least valid_until + 7 days (SPEC §3.3). */

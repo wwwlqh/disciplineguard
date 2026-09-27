@@ -2,7 +2,7 @@
 import { autoLockAt, dayOf, DAY, HOUR, MIN, nextReset } from '@dg/core';
 import { accountHashes, registerAccount, type ReportedAccount } from './accounts.ts';
 import { audit, rateLimit, scheduleJob, type Ctx } from './common.ts';
-import { resolvedTime, userCtx, type AccountRow, type UserCtx } from './context.ts';
+import { enforcedRules, resolvedTime, userCtx, type AccountRow, type UserCtx } from './context.ts';
 import * as alerts from './alerts.ts';
 import { addCoverage, wasCovered } from './coverage.ts';
 import { eventId, randomId, sha256, sign } from './crypto.ts';
@@ -390,7 +390,7 @@ export async function signedBlock(env: Env, uc: UserCtx, connectionId: string): 
     hideAmounts: !!uc.user.hide_amounts,
     setupMode: !!uc.user.setup_mode,
     lockAt,
-    rules: uc.asm.rules,
+    rules: enforcedRules(uc),
     popup: uc.asm.popup,
     notes: uc.asm.notes,
     plan: uc.asm.plan,
@@ -404,7 +404,7 @@ export async function signedBlock(env: Env, uc: UserCtx, connectionId: string): 
 
 export async function buildSnapshot(env: Env, uc: UserCtx) {
   const t = uc.now;
-  const r = uc.asm.rules;
+  const r = enforcedRules(uc);
   const day = dayOf(uc.userResets, t);
   const entriesFrom = Math.min(day.start, t - Math.max(HOUR, r.R3.seconds * 1000)) - 60_000;
   const closesFrom = t - Math.max(2 * r.R7.minutes + r.R10.minutes, 30) * MIN;

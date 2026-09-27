@@ -6,7 +6,7 @@ import {
 import { isEnded } from './accounts.ts';
 import { isOwner, requireSession, type Session } from './auth.ts';
 import { audit, rateLimit, securityEmail, sendEmail, type Ctx } from './common.ts';
-import { resolvedTime, userCtx, type AccountRow, type UserCtx } from './context.ts';
+import { enforcedRules, resolvedTime, userCtx, type AccountRow, type UserCtx } from './context.ts';
 import { coverageGaps } from './coverage.ts';
 import { dayRows, isKept } from './days.ts';
 import { now as clock, type Env } from './env.ts';
@@ -29,6 +29,7 @@ const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/api\/lock$/, lockRules],
   ['POST', /^\/api\/break$/, (r, e, s, c) => tighten(r, e, s, c, 'break')],
   ['POST', /^\/api\/done-today$/, (r, e, s, c) => tighten(r, e, s, c, 'done')],
+  ['POST', /^\/api\/tighten-today$/, (r, e, s) => tightenToday(r, e, s)],
   ['GET', /^\/api\/today$/, today],
   ['GET', /^\/api\/stats$/, stats],
   ['PUT', /^\/api\/onboarding$/, saveOnboarding],
@@ -219,6 +220,37 @@ async function tighten(req: Request, env: Env, s: Session, ctx: Ctx, kind: 'brea
   return json({ ok: true, until });
 }
 
+/**
+ * POST /api/tighten-today {r1?, r8?}: a lower max trades and daily loss limit until the next reset (SPEC §6.5,
+ * EXPERIENCE §9.9). A second tighten the same day only goes lower.
+ */
+async function tightenToday(req: Request, env: Env, s: Session): Promise<Response> {
+  const t = clock(env);
+  const uc = await userCtx(env, s.user.id, t);
+  const b = await body(req);
+  const r1 = b.r1 === undefined ? undefined : Number(b.r1);
+  const r8 = b.r8 === undefined ? undefined : Number(b.r8);
+  if (r1 !== undefined && !(Number.isInteger(r1) && r1 >= 1 && r1 <= 100)) throw new HttpError(400, 'bad_r1');
+  if (r8 !== undefined && !(Number.isFinite(r8) && r8 > 0 && r8 <= 1e9)) throw new HttpError(400, 'bad_r8');
+  if (r1 === undefined && r8 === undefined) throw new HttpError(400, 'nothing');
+  const old = uc.tighten;
+  const low = (a?: number, b?: number) => (a === undefined ? b : b === undefined ? a : Math.min(a, b));
+  const next = { r1: low(old?.r1, r1), r8: low(old?.r8, r8), until: nextReset(uc.userResets, t) };
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO user_state (user_id, tighten_json) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET tighten_json = excluded.tighten_json')
+      .bind(s.user.id, JSON.stringify(next)),
+    env.DB.prepare('INSERT INTO events (id, user_id, type, t, received_at, payload) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(`web:tighten:${s.user.id}:${t}`, s.user.id, 'tighten', t, t, JSON.stringify(next)),
+  ]);
+  return json({ ok: true, tighten: next });
+}
+
+function tightenSuggest(uc: UserCtx): { r1: number; r8: number } {
+  const r = uc.asm.rules;
+  const amounts = r.R8.on ? uc.accounts.map((a) => r.accounts[a.id]?.r8).filter((x) => x?.unit === 'amount').map((x) => x!.value) : [];
+  return { r1: r.R1.on ? Math.max(1, Math.min(3, r.R1.max - 1)) : 3, r8: amounts.length ? Math.max(1, Math.round(Math.min(...amounts) / 2)) : 150 };
+}
+
 function stateFrom(snap: Awaited<ReturnType<typeof buildSnapshot>>, uc: UserCtx): State {
   const accounts: State['accounts'] = {};
   for (const a of uc.accounts) {
@@ -240,9 +272,10 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
   const snap = await buildSnapshot(env, uc);
   const state = stateFrom(snap, uc);
   const time = resolvedTime(uc);
-  const input = { rules: uc.asm.rules, time, state };
+  const rules = enforcedRules(uc);
+  const input = { rules, time, state };
   const day = dayOf(uc.userResets, t);
-  const cd = uc.asm.rules.R7.on ? activeCooldown(uc.asm.rules, state.closes, t) : undefined;
+  const cd = rules.R7.on ? activeCooldown(rules, state.closes, t) : undefined;
 
   const accounts = uc.accounts.map((a) => {
     const r8 = r8Status(input, a.id, t);
@@ -250,7 +283,7 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
       ...accountView(a, uc),
       loss: accountLoss(state.accounts[a.id]) ?? null,
       limit: r8.applies ? r8.limit : null,
-      r8On: uc.asm.rules.R8.on && !!uc.asm.rules.accounts[a.id]?.r8,
+      r8On: rules.R8.on && !!rules.accounts[a.id]?.r8,
       inLimit: r8.inLimit,
       limitUntil: r8.until ?? null,
     };
@@ -308,12 +341,15 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
     accounts,
     meters: {
       tradesToday: entriesToday(input, t),
-      r1Max: uc.asm.rules.R1.on ? uc.asm.rules.R1.max : null,
+      r1Max: rules.R1.on ? rules.R1.max : null,
       cooldownUntil: cd && cd.until > t ? cd.until : null,
       breakUntil: state.breakUntil && state.breakUntil > t ? state.breakUntil : null,
       doneUntil: state.doneUntil && state.doneUntil > t ? state.doneUntil : null,
-      hours: uc.asm.rules.R4.on ? { open: insideWindows({ rules: uc.asm.rules, time }, t), next: nextWindowStart({ rules: uc.asm.rules, time }, t) ?? null } : null,
+      hours: rules.R4.on ? { open: insideWindows({ rules, time }, t), next: nextWindowStart({ rules, time }, t) ?? null } : null,
     },
+    // Tighten for today (EXPERIENCE §9.9): what's on, and the suggested values for the check-in card.
+    tighten: uc.tighten ?? null,
+    tightenSuggest: tightenSuggest(uc),
     pending: uc.asm.pending,
     pauses: pauses.map((p) => ({ t: p.t, ...JSON.parse(p.payload) })),
     outside: outside.map((o) => ({ t: o.t, accountId: o.account_id, ...JSON.parse(o.payload) })),

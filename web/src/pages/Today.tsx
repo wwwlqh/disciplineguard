@@ -44,6 +44,57 @@ export function pendingLabel(key: string, value: any): string {
   return key;
 }
 
+const CHECKIN_KEY = 'dg_checkin';
+
+/** Session check-in (EXPERIENCE §9.9): tighten for today only. Optional, dismissible, once per trading day. */
+function CheckIn({ d, onDone }: { d: TodayData; onDone(): void }) {
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return localStorage.getItem(CHECKIN_KEY) === String(d.nextReset);
+    } catch {
+      return false;
+    }
+  });
+  const [r1, setR1] = useState(String(d.tightenSuggest.r1));
+  const [r8, setR8] = useState(String(d.tightenSuggest.r8));
+  const [useR1, setUseR1] = useState(true);
+  const [useR8, setUseR8] = useState(false);
+  const toast = useToast();
+  if (d.tighten || hidden) return null;
+  const hide = () => {
+    try {
+      localStorage.setItem(CHECKIN_KEY, String(d.nextReset));
+    } catch {}
+    setHidden(true);
+  };
+  const ok = (useR1 && Number(r1) >= 1) || (useR8 && Number(r8) > 0);
+  async function apply() {
+    await api('POST', '/api/tighten-today', { r1: useR1 ? Number(r1) : undefined, r8: useR8 ? Number(r8) : undefined });
+    toast(`Tighter until ${time(d.nextReset, d.now)}.`);
+    onDone();
+  }
+  return (
+    <div className="card">
+      <div className="row between">
+        <h2>Tighten for today only?</h2>
+        <button className="link small" onClick={hide}>Not today</button>
+      </div>
+      <label className="check" style={{ marginBottom: 8 }}>
+        <input type="checkbox" checked={useR1} onChange={(e) => setUseR1(e.target.checked)} />
+        <span>Stop after <input className="narrow" inputMode="numeric" value={r1} onChange={(e) => setR1(e.target.value)} aria-label="Trades" /> trades</span>
+      </label>
+      <label className="check" style={{ marginBottom: 10 }}>
+        <input type="checkbox" checked={useR8} onChange={(e) => setUseR8(e.target.checked)} />
+        <span>Pause after a loss of <input className="narrow" inputMode="decimal" value={r8} onChange={(e) => setR8(e.target.value)} aria-label="Loss" /></span>
+      </label>
+      <div className="row">
+        <button className="primary" disabled={!ok} onClick={() => void apply()}>Tighten until {time(d.nextReset, d.now)}</button>
+        <span className="small muted">Never looser than your rules.</span>
+      </div>
+    </div>
+  );
+}
+
 interface TodayData {
   now: number;
   nextReset: number;
@@ -52,6 +103,8 @@ interface TodayData {
   lockAt: number | null;
   connections: Connection[];
   accounts: (Me['accounts'][number] & { loss: number | null; limit: number | null; r8On: boolean; inLimit: boolean; limitUntil: number | null })[];
+  tighten: { r1?: number; r8?: number; until: number } | null;
+  tightenSuggest: { r1: number; r8: number };
   meters: { tradesToday: number; r1Max: number | null; cooldownUntil: number | null; breakUntil: number | null; doneUntil: number | null; hours: { open: boolean; next: number | null } | null };
   pending: { key: string; value: any; effectiveAt: number }[];
   pauses: { t: number; title: string; decision: string; symbol?: string; side?: string; size?: number }[];
@@ -148,6 +201,8 @@ export function Today({ me, reload }: PageProps) {
       {d.coverage.off.filter((o) => o.last3).map((o) => (
         <div key={o.t} className="banner amber">Account …{o.last3} moved to another login. Not you? Check Devices.</div>
       ))}
+
+      {!noDevice && <CheckIn d={d} onDone={() => void load()} />}
 
       <div className="card">
         <h2>Devices</h2>

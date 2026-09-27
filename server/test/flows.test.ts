@@ -436,3 +436,30 @@ describe('take a break for 1, 7 or 30 days (SPEC §6.5)', () => {
     expect((await web.get('/api/today')).data.meters.breakUntil).toBe(w.t + 7 * DAY);
   });
 });
+
+describe('tighten for today (SPEC §6.5, EXPERIENCE §9.9)', () => {
+  it('reaches the signed rules at once, only goes lower, and ends at the next reset', async () => {
+    const w = new World();
+    const web = await w.signIn('a@b.co');
+    await web.onboard({ rules: { R1: { on: true, max: 5 }, R8: { on: true, restHours: 12 } }, defaults: { r8: { unit: 'amount', value: 300 } } });
+    const ea = await web.connect();
+    await ea.sync();
+    const acct = (await web.get('/api/me')).data.accounts[0].id;
+    expect((await web.get('/api/today')).data.tightenSuggest).toEqual({ r1: 3, r8: 150 });
+
+    expect((await web.send('POST', '/api/tighten-today', { r1: 3, r8: 150 })).status).toBe(200);
+    const p = JSON.parse((await ea.sync()).data.signed.payload);
+    expect(p.rules.R1).toEqual({ on: true, max: 3 });
+    expect(p.rules.accounts[acct].r8).toEqual({ unit: 'amount', value: 150 });
+    expect((await web.get('/api/today')).data.meters.r1Max).toBe(3);
+    // The saved rules are unchanged; a looser tighten is ignored.
+    expect((await web.get('/api/me')).data.rules.R1.max).toBe(5);
+    await web.send('POST', '/api/tighten-today', { r1: 4, r8: 500 });
+    expect((await web.get('/api/today')).data.tighten).toMatchObject({ r1: 3, r8: 150 });
+    // At the next reset the saved rules are back.
+    w.t += DAY;
+    const next = JSON.parse((await ea.sync()).data.signed.payload);
+    expect(next.rules.R1).toEqual({ on: true, max: 5 });
+    expect(next.rules.accounts[acct].r8).toEqual({ unit: 'amount', value: 300 });
+  });
+});
