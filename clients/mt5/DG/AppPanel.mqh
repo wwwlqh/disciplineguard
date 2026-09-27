@@ -204,8 +204,8 @@ int PanelContent(const bool draw, const bool build)
      }
    if(mode == "connect")
      {
-      // Nothing to type here: the Windows app connects this terminal (SPEC §9.5).
-      y = PText(draw, pad, y, inner, gStatusText, 12, false, DGPal.text) + gap;
+      // Nothing to type here: the Windows app connects this terminal (SPEC §9.5). The status line above already
+      // says what to do, so this only explains what that means for orders.
       y = PText(draw, pad, y, inner, "Your rules are set on the website. Orders go through normally until this terminal is connected.", 11, false, DGPal.muted) + gap;
       return y + DGPx(10);
      }
