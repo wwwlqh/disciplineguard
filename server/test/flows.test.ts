@@ -422,3 +422,17 @@ describe('accounts, coverage and plans', () => {
     expect(m.data.funnel.signups).toBe(2);
   });
 });
+
+describe('take a break for 1, 7 or 30 days (SPEC §6.5)', () => {
+  it('pauses every entry until then, and a later 15-minute break never shortens it', async () => {
+    const w = new World();
+    const web = await w.signIn('a@b.co');
+    await web.onboard();
+    const r = await web.send('POST', '/api/break', { days: 7 });
+    expect(r.status).toBe(200);
+    expect(r.data.until).toBe(w.t + 7 * DAY);
+    expect((await web.send('POST', '/api/break', { days: 3 })).status).toBe(400);
+    await web.send('POST', '/api/break');
+    expect((await web.get('/api/today')).data.meters.breakUntil).toBe(w.t + 7 * DAY);
+  });
+});

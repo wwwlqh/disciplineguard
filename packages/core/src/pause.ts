@@ -12,6 +12,9 @@ export const BREAK_MINUTES = 15;
 export const BREAK_MIN_WAIT_SEC = 15;
 /** TradingView one-time pass after Place anyway (SPEC §7.5). */
 export const TV_PASS_SEC = 10;
+/** A break with more than this left is a long one (1, 7 or 30 days). A 15-minute break never is. */
+export const LONG_BREAK_AFTER_MS = (BREAK_MINUTES + 1) * MIN;
+export const LONG_BREAK_WAIT_SEC = 45;
 
 export const DEFAULT_POPUP: PopupSettings = {
   show: 'breaks',
@@ -54,6 +57,9 @@ export function planPause(input: EvalInput, violations: Violation[], popup: Popu
   }
   const title: TitleId | 'CHECK' = violations[0]?.rule ?? 'CHECK';
   if (title === 'BREAK' || title === 'DONE_TODAY') wait = Math.max(wait, BREAK_MIN_WAIT_SEC);
+  // A break of 1, 7 or 30 days (longer than a 15-minute one): 45 s and type to confirm (SPEC §6.5).
+  const long = title === 'BREAK' && (violations[0].clearsAt ?? 0) - t > LONG_BREAK_AFTER_MS;
+  if (long) wait = Math.max(wait, LONG_BREAK_WAIT_SEC);
 
   let reattemptAgoSec: number | undefined;
   const skip = state.lastSkip;
@@ -64,7 +70,7 @@ export function planPause(input: EvalInput, violations: Violation[], popup: Popu
 
   const tradeNumber = entriesToday(input, t) + 1;
   const tc = popup.typeConfirm;
-  const typeConfirm = tc.mode === 'always' || (tc.mode === 'after' && count >= tc.n) ? tradeNumber : undefined;
+  const typeConfirm = long || tc.mode === 'always' || (tc.mode === 'after' && count >= tc.n) ? tradeNumber : undefined;
 
   return { title, violations, waitSec: Math.max(0, Math.min(wait, 180)), typeConfirm, reattemptAgoSec, tradeNumber, placedAnyway: count };
 }

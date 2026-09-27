@@ -353,7 +353,7 @@ function pillView(): PillView | undefined {
   const parts: string[] = [];
   const lines: string[] = [];
   if (state.doneUntil && t < state.doneUntil) parts.push('done for today');
-  else if (state.breakUntil && t < state.breakUntil) parts.push(`break ${mmss(state.breakUntil - t)}`);
+  else if (state.breakUntil && t < state.breakUntil) parts.push(state.breakUntil - t > 3_600_000 ? `break until ${fmt.time(state.breakUntil)}` : `break ${mmss(state.breakUntil - t)}`);
   if (s.rules.R1.on) {
     const n = entriesToday({ rules: s.rules, time: s.time, state }, t);
     parts.push(`${n} of ${s.rules.R1.max} trades`);

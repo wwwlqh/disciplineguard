@@ -26,6 +26,36 @@ const ALERTS: [AlertKind, string][] = [
   ['stop', 'Stop loss removed or widened'],
 ];
 
+/** Take a break for 1, 7 or 30 days (EXPERIENCE §12): every new trade gets a 45 s pause and type to confirm. */
+function LongBreak() {
+  const toast = useToast();
+  const [days, setDays] = useState<1 | 7 | 30 | null>(null);
+  async function start() {
+    const r = await api<{ until: number }>('POST', '/api/break', { days });
+    setDays(null);
+    toast(`On a break until ${time(r.until)}.`);
+  }
+  return (
+    <div className="card" id="break">
+      <h2>Take a break</h2>
+      <p className="muted">Every new trade gets a 45-second pause, and you type to confirm. It can't be shortened.</p>
+      <div className="row">
+        {([1, 7, 30] as const).map((d) => <button key={d} onClick={() => setDays(d)}>{d === 1 ? '1 day' : `${d} days`}</button>)}
+      </div>
+      {days && (
+        <Sheet label="Take a break" onClose={() => setDays(null)}>
+          <h2>Take a {days}-day break?</h2>
+          <p className="muted">It starts now and can't be shortened.</p>
+          <div className="row">
+            <button className="primary" onClick={() => void start()}>Start the break</button>
+            <button onClick={() => setDays(null)}>Not now</button>
+          </div>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
 const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
 export function AccountPage({ me, reload }: PageProps) {
@@ -138,6 +168,8 @@ export function AccountPage({ me, reload }: PageProps) {
           </div>
         </Sheet>
       )}
+
+      <LongBreak />
 
       <div className="card" id="alerts">
         <h2>Alerts</h2>

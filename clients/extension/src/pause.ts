@@ -41,6 +41,8 @@ button.skip { background: #0f766e; border-color: #0f766e; color: #fff; font-weig
 button:disabled { opacity: .45; cursor: default; }
 button:focus-visible { outline: 3px solid #5eead4; outline-offset: 2px; }
 .foot { margin-top: 12px; }
+.type { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0 0; }
+.type input { width: 70px; min-height: 32px; border-radius: 8px; border: 1px solid rgba(127,127,127,.45); background: transparent; color: inherit; font: inherit; padding: 4px 8px; }
 .card { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 2147483647; background: #131722; color: #fff;
   padding: 10px 16px; border-radius: 10px; font: 13px system-ui, sans-serif; display: none; }
 `;
@@ -98,10 +100,13 @@ export class PauseUI {
       ${p.facts ? `<div class="facts">${esc(p.facts)}</div>` : ''}
       <span class="chip">${side} ${esc(p.fmt.size(p.order.size, p.order))} ${esc(p.order.symbol)}${p.order.sl !== undefined ? ` · SL ${p.order.sl}` : ''}</span>
       <div class="chips" role="group" aria-label="Name it (optional)">${REASONS.map(([id, label]) => `<button data-r="${id}" aria-pressed="false">${label}</button>`).join('')}</div>
+      ${p.plan.typeConfirm !== undefined ? `<label class="type">Type ${p.plan.typeConfirm} to place trade ${p.plan.typeConfirm} today <input inputmode="numeric" aria-label="Number to type"></label>` : ''}
       <div class="bar" aria-hidden="true"><i></i></div>
       <div class="row"><button class="skip">Skip this trade</button><button class="place" disabled>Place anyway</button></div>
       <div class="foot">${esc(PAUSE_FOOTER)}</div>`;
     const place = this.dlg.querySelector<HTMLButtonElement>('.place')!;
+    const typeBox = this.dlg.querySelector<HTMLInputElement>('.type input');
+    const typedOk = () => !typeBox || typeBox.value.trim() === String(p.plan.typeConfirm);
     const bar = this.dlg.querySelector<HTMLElement>('.bar i')!;
     let reason: string | undefined;
     for (const b of this.dlg.querySelectorAll<HTMLButtonElement>('.chips button')) {
@@ -123,7 +128,7 @@ export class PauseUI {
       const elapsed = performance.now() - opened;
       const left = Math.max(0, waitMs - elapsed);
       bar.style.width = waitMs ? `${100 - (left / waitMs) * 100}%` : '100%';
-      place.disabled = left > 0;
+      place.disabled = left > 0 || !typedOk();
       place.textContent = left > 0 ? `Place anyway · 0:${String(Math.ceil(left / 1000)).padStart(2, '0')}` : `Place ${side} ${p.fmt.size(p.order.size, p.order)} ${p.order.symbol} anyway`;
       if (elapsed > PAUSE_TIMEOUT_SEC * 1000) finish('timeout');
     };
@@ -132,7 +137,7 @@ export class PauseUI {
     this.dlg.querySelector('.skip')!.addEventListener('click', () => finish('skip'));
     // Only a real pointer click: keyboard activation arrives with detail 0 (SPEC §7.3).
     place.addEventListener('click', (e) => {
-      if (e.isTrusted && e.detail > 0 && performance.now() - opened >= waitMs) finish('place');
+      if (e.isTrusted && e.detail > 0 && performance.now() - opened >= waitMs && typedOk()) finish('place');
     });
     place.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && e.preventDefault());
     this.dlg.oncancel = (e) => {

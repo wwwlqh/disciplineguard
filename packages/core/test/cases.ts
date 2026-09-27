@@ -278,6 +278,7 @@ export const CASES: Case[] = [
     now: at('10:00:40'),
   }, { wait: 15, reattemptAgoSec: 40 }, DEFAULT_POPUP),
   c('BRK-01', { state: state({ breakUntil: at('10:29') }), now: at('10:20') }, { title: 'BREAK', clearsAt: at('10:29'), wait: 15 }, DEFAULT_POPUP),
+  c('BRK-03', { state: state({ breakUntil: at('10:00', 7) }), now: at('18:00') }, { title: 'BREAK', clearsAt: at('10:00', 7), wait: 45, typeConfirm: 1 }, DEFAULT_POPUP),
   c('BRK-02', { state: state({ doneUntil: at('00:00', 1) }), now: at('18:00') }, { title: 'DONE_TODAY', clearsAt: at('00:00', 1) }, DEFAULT_POPUP),
   c('EXIT-01', { rules: R8(300), state: state({ accounts: r8Acct({ dayStartBalance: 10000, equity: 9000 }) }), order: order({ kind: 'exit' }), now: at('10:00') }, { pass: true }, DEFAULT_POPUP),
 

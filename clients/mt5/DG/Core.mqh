@@ -725,6 +725,9 @@ public:
         }
       planTitle = ArraySize(vRule) > 0 ? vRule[0] : "CHECK";
       if(planTitle == "BREAK" || planTitle == "DONE_TODAY") wait = MathMax(wait, 15);
+      // A break of 1, 7 or 30 days (more than 16 minutes left): 45 s and type to confirm (SPEC §6.5).
+      bool longBreak = planTitle == "BREAK" && vClears[0] - t > 16 * DG_MIN;
+      if(longBreak) wait = MathMax(wait, 45);
       planReattempt = -1;
       if(hasLastSkip && lsSide == oSide && DGSameInstrument(lsSym, oSym) && t - lsT <= 180000 && t >= lsT)
         {
@@ -733,7 +736,7 @@ public:
         }
       planTradeNumber = EntriesToday(t) + 1;
       planPlaced = count;
-      planTypeConfirm = (pTcMode == "always" || (pTcMode == "after" && count >= pTcN)) ? planTradeNumber : -1;
+      planTypeConfirm = (longBreak || pTcMode == "always" || (pTcMode == "after" && count >= pTcN)) ? planTradeNumber : -1;
       planWait = MathMax(0, MathMin(wait, 180));
      }
 

@@ -202,15 +202,19 @@ async function lockRules(req: Request, env: Env, s: Session, ctx: Ctx): Promise<
 }
 
 /** Take a break (15 min) or done for today: stricter, immediate, never shortened (SPEC §6.5). */
+/** Take a break (15 minutes, or {days: 1 | 7 | 30} from Account), Done for today. Never shortened (SPEC §6.5). */
 async function tighten(req: Request, env: Env, s: Session, ctx: Ctx, kind: 'break' | 'done'): Promise<Response> {
   const t = clock(env);
   const uc = await userCtx(env, s.user.id, t);
-  const until = kind === 'break' ? t + 15 * MIN : nextReset(uc.userResets, t);
+  const b = await body(req).catch(() => ({}) as Record<string, unknown>);
+  const days = kind === 'break' && b.days !== undefined ? Number(b.days) : 0;
+  if (days && ![1, 7, 30].includes(days)) throw new HttpError(400, 'bad_days');
+  const until = kind === 'done' ? nextReset(uc.userResets, t) : t + (days ? days * DAY : 15 * MIN);
   const col = kind === 'break' ? 'break_until' : 'done_until';
   await env.DB.batch([
     env.DB.prepare(`INSERT INTO user_state (user_id, ${col}) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET ${col} = MAX(COALESCE(${col}, 0), excluded.${col})`).bind(s.user.id, until),
     env.DB.prepare('INSERT INTO events (id, user_id, type, t, received_at, payload) VALUES (?, ?, ?, ?, ?, ?)')
-      .bind(`web:${kind}:${s.user.id}:${t}`, s.user.id, kind === 'break' ? 'break' : 'done_today', t, t, JSON.stringify({ until, from: 'web' })),
+      .bind(`web:${kind}:${s.user.id}:${t}`, s.user.id, kind === 'break' ? 'break' : 'done_today', t, t, JSON.stringify({ until, from: 'web', days: days || undefined })),
   ]);
   return json({ ok: true, until });
 }
