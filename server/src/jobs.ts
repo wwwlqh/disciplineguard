@@ -2,6 +2,7 @@
 import { DAY, HOUR } from '@dg/core';
 import { offCheck, rollup, sendSummary, type AlertKind } from './alerts.ts';
 import { renewalReminder } from './billing.ts';
+import { runDeletion } from './data.ts';
 import { audit, scheduleJob, sendEmail, type Ctx } from './common.ts';
 import { userCtx } from './context.ts';
 import { now as clock, type Env } from './env.ts';
@@ -34,6 +35,8 @@ async function runJob(env: Env, job: { id: number; kind: string; payload: string
       return sendSummary(env, p);
     case 'renewal_reminder':
       return renewalReminder(env, p, ctx);
+    case 'delete_account':
+      return runDeletion(env, p, ctx);
     case 'trial_3days':
     case 'trial_ended': {
       const uc = await userCtx(env, p.userId, t);

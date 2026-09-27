@@ -1071,16 +1071,17 @@ A trader installs at most one thing per kind of platform, never one per platform
 ### 12.3 Pricing
 
 - **List prices**: $14.99 per month, $99 per year.
-- **Tax**: decided before the first checkout (inclusive or exclusive of tax) and stated on the Pricing page.
+- **Tax**: prices exclude tax. The payment provider adds any tax at checkout, and the Plans page says so.
 - **Early-bird**:
   - $79 per year, yearly only;
   - kept at every renewal while the plan renews without a gap; it ends if the plan lapses or the user switches to monthly;
   - for beta users who buy before Phase 2 opens.
+- **Plans** (`/plans`): yearly first (the early-bird for beta users), then monthly. Plan changes switch the provider's variant from the next renewal; switching to monthly ends the early-bird price.
 - **Checkout**: one line next to Pay: "Renews every <month|year> at <price>. Cancel anytime." Yearly is listed first.
 
 ### 12.4 Refunds and cancellation
 
-- **Refund**: a full refund on request within 14 days of a first payment. After that, cancelling stops the next renewal.
+- **Refund**: a full refund on request within 14 days of a first payment (Account → Plan → Request a full refund; the founder refunds it at the provider). After that, cancelling stops the next renewal.
 - **Cancel**: applies immediately (§6.2). Protection runs to the end of the paid period. No questions asked.
 
 ### 12.5 Trial abuse and account cap

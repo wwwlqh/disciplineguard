@@ -124,14 +124,14 @@ const STATUS: Article[] = [
   {
     slug: 'trial-used',
     title: 'This account already used a free trial',
-    body: ['This trading account had a trial under another login. It works once you subscribe on Account.'],
+    body: ['This trading account had a trial under another login. It works once you subscribe on Plans.'],
   },
   {
     slug: 'plan-ended',
     title: 'Trial or plan ended',
     body: [
       'Protection is off and orders go through normally. The panel keeps working with the lot calculator.',
-      'Subscribe on Account. Protection comes back at once with your last rules.',
+      'Subscribe on Plans (disciplineguard.com/plans). Protection comes back at once with your last rules.',
     ],
   },
   {

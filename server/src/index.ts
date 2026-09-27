@@ -6,6 +6,7 @@ import type { Ctx } from './common.ts';
 import type { Env } from './env.ts';
 import { HttpError, json } from './http.ts';
 import { runScheduled } from './jobs.ts';
+import { downloadExport } from './data.ts';
 import { baseline, sync } from './sync.ts';
 import { webApi } from './web.ts';
 
@@ -46,6 +47,7 @@ export async function handle(req: Request, env: Env, ctx: Ctx): Promise<Response
     const route = API[`${req.method} ${path}`];
     if (route) return withHeaders(await route(req, env, ctx));
     if (path.startsWith('/api/')) return withHeaders(await webApi(req, env, ctx));
+    if (req.method === 'GET' && path.startsWith('/v1/export/')) return withHeaders(await downloadExport(env, path.slice('/v1/export/'.length)));
     if (path.startsWith('/v1/')) throw new HttpError(404, 'not_found');
     if (env.ASSETS) {
       const res = await env.ASSETS.fetch(req);
@@ -57,7 +59,7 @@ export async function handle(req: Request, env: Env, ctx: Ctx): Promise<Response
   } catch (e) {
     if (e instanceof HttpError) return withHeaders(json({ error: e.code, message: e.message !== e.code ? e.message : undefined }, e.status));
     // Never log request bodies or query strings (SPEC §10.9).
-    console.log(JSON.stringify({ path, error: String(e).slice(0, 300) }));
+    console.log(JSON.stringify({ path: path.startsWith('/v1/export/') ? '/v1/export/…' : path, error: String(e).slice(0, 300) }));
     return withHeaders(json({ error: 'server_error' }, 500));
   }
 }

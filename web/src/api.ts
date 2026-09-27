@@ -110,6 +110,7 @@ export interface Me {
     portalUrl: string | null;
     updateCardUrl: string | null;
     refundable: boolean;
+    deletionAt: number | null;
   };
   license: License;
   rules: Rules;

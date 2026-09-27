@@ -118,6 +118,8 @@ export function sessionCookie(env: Env, value: string, maxAgeMs: number): string
 export interface Session {
   user: UserRow;
   sessionId: string;
+  /** When this session signed in: export needs one in the last 10 minutes (SPEC §10.9). */
+  signedInAt: number;
 }
 
 /** Resolves the web session. Mutating calls must carry the X-DG header (CSRF, with SameSite=Lax). */
@@ -131,7 +133,7 @@ export async function requireSession(req: Request, env: Env): Promise<Session> {
   const user = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(s.user_id).first<UserRow>();
   if (!user || user.deleted_at) throw new HttpError(401, 'signed_out');
   await env.DB.prepare('UPDATE sessions SET last_seen = ? WHERE id = ? AND last_seen < ?').bind(t, s.id, t - 60_000).run();
-  return { user, sessionId: s.id };
+  return { user, sessionId: s.id, signedInAt: s.created_at };
 }
 
 export async function signOut(req: Request, env: Env): Promise<Response> {

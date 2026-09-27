@@ -1,9 +1,9 @@
 // Account (EXPERIENCE §5.10): plan, privacy, security, report a problem, sign out.
 import { useEffect, useState } from 'react';
-import { api, type AlertKind } from '../api.ts';
+import { api, ApiError, type AlertKind } from '../api.ts';
 import { onLink } from '../router.ts';
 import { ago, date, time } from '../fmt.ts';
-import { Sheet, Switch, useToast } from '../ui/kit.tsx';
+import { DeletionBanner, Sheet, Switch, useToast } from '../ui/kit.tsx';
 import type { PageProps } from '../main.tsx';
 
 const REPORT_TYPES = [
@@ -68,6 +68,34 @@ export function AccountPage({ me, reload }: PageProps) {
     await reload();
   }
 
+  const [deleting, setDeleting] = useState<{ at: 'now' | number } | null>(null);
+  const [confirmText, setConfirmText] = useState('');
+
+  async function exportData() {
+    try {
+      await api('POST', '/api/export');
+      toast('Sent. Check your email for the download link.');
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'reauth') {
+        toast('For your safety, sign in again, then export.');
+        await api('POST', '/v1/auth/signout');
+        location.href = '/signin';
+      } else toast("That didn't work. Try again in a moment.");
+    }
+  }
+
+  async function openDelete() {
+    setConfirmText('');
+    setDeleting(await api('POST', '/api/account/delete', { dryRun: true }));
+  }
+
+  async function deleteAccount() {
+    const r = await api('POST', '/api/account/delete', { confirm: 'DELETE' });
+    setDeleting(null);
+    if (r.at === 'now') location.href = '/signin';
+    else await reload();
+  }
+
   const planLine =
     lic.state === 'trial' ? (lic.trialDay ? `Trial · day ${lic.trialDay} of 14 · ends ${time(lic.trialEndsAt ?? lic.validUntil)}` : 'Trial · starts when your first device turns on')
       : lic.state === 'active' ? `${me.user.planKind === 'earlybird_yearly' ? 'Early-bird yearly' : me.user.planKind === 'monthly' ? 'Monthly' : 'Yearly'} · ${me.user.cancelAtPeriodEnd ? 'ends' : 'renews'} ${time(lic.validUntil)}`
@@ -77,6 +105,7 @@ export function AccountPage({ me, reload }: PageProps) {
   return (
     <div className="stack">
       <h1>Account</h1>
+      <DeletionBanner me={me} reload={reload} />
       <div className="card" id="plan">
         <h2>Plan</h2>
         <p>{planLine}</p>
@@ -197,8 +226,31 @@ export function AccountPage({ me, reload }: PageProps) {
 
       <div className="card">
         <h2>Data</h2>
-        <p className="small">To export or delete your data, email <a href="mailto:support@disciplineguard.com">support@disciplineguard.com</a>.</p>
+        <div className="row">
+          <button onClick={exportData}>Email me an export</button>
+          {!me.user.deletionAt && <button className="link small" onClick={openDelete}>Delete my account</button>}
+        </div>
       </div>
+      {deleting && (
+        <Sheet label="Delete account" onClose={() => setDeleting(null)}>
+          <h2>Delete your account?</h2>
+          <p>
+            {deleting.at === 'now'
+              ? 'Deleted now.'
+              : `Deleted at ${time(deleting.at)}. DisciplineGuard is a commitment tool, so deletion waits like a loosening. Your plan is cancelled now, and you won't be charged again.`}
+          </p>
+          <p className="small muted">Deleted: your rules, notes, trades, pauses and devices. Kept: receipts at the payment provider, and a record that your email and trading accounts used a trial (12 months).</p>
+          <p className="small">Before you go: export your data, then uninstall DisciplineGuard for Windows.</p>
+          <label className="field">
+            Type DELETE to confirm
+            <input value={confirmText} onChange={(e) => setConfirmText(e.target.value)} aria-label="Type DELETE" />
+          </label>
+          <div className="row">
+            <button className="danger" disabled={confirmText !== 'DELETE'} onClick={deleteAccount}>Delete my account</button>
+            <button onClick={() => setDeleting(null)}>Keep it</button>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }

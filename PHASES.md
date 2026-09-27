@@ -30,10 +30,12 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 **Built**
 - Alerts and end-of-session summaries as Windows notifications from the app (SPEC §11). No Telegram.
 - Pause: reason chips, the save-reasons question on Today, reasons in Stats, the calibration prompt.
+- Full checkout: `/plans` with monthly and yearly, cancel, switch plan, refund request, billing links, the renewal reminder and the plan-state banners (SPEC §12).
+- Self-serve export (emailed ZIP link) and deletion (SPEC §12.6, §13.4).
 
 **Left**
 - TradingView extension, once spike Q1a passes. MT4 if wanted.
-- Full checkout (monthly and yearly, SPEC §12.3), self-serve export and delete, the full plan states (SPEC §12.2).
+- The founder: Lemon Squeezy products (yearly, monthly, early-bird), their redirect to `/plans?paid`, and the secrets in server/wrangler.toml.
 
 ## Phase 2: Public launch
 

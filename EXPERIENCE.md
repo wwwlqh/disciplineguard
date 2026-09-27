@@ -666,7 +666,7 @@ A [Stop] button is always available.
 **Plans**
 
 - Yearly (best value) and monthly, with nothing preselected.
-- The price shows whether tax is included.
+- One line under the plans: "Tax, if any, is added at checkout."
 - Beta users see the early-bird price and its terms: "$79 a year, kept at every renewal while your plan never lapses. Ends if you switch to monthly or the plan lapses."
 
 **Next to Pay**

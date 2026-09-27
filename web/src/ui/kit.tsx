@@ -1,7 +1,7 @@
 // Small shared widgets: switch, toast, sheet, verdict line, status dot, practice pause.
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { DAY, nextReset, type PausePlan, type Violation, type Order } from '@dg/core';
-import { saveSetting, type Me, type Verdict } from '../api.ts';
+import { api, saveSetting, type Me, type Verdict } from '../api.ts';
 import { coreFmt, inHours, time } from '../fmt.ts';
 import { Pause } from './Pause.tsx';
 
@@ -133,5 +133,16 @@ export function PracticePause({ me, onClose }: { me: Me; onClose(): void }) {
       keyboardPlace={me.popup.keyboardPlace}
       onDecision={onClose}
     />
+  );
+}
+
+/** While a deletion is pending (EXPERIENCE §13.5): "Deletes Tue 02:00. [Cancel deletion]". */
+export function DeletionBanner({ me, reload }: { me: Me; reload(): Promise<void> }) {
+  if (!me.user.deletionAt) return null;
+  return (
+    <div className="banner amber">
+      <span>Deletes {time(me.user.deletionAt)}.</span>
+      <button onClick={async () => { await api('POST', '/api/account/delete/cancel'); await reload(); }}>Cancel deletion</button>
+    </div>
   );
 }

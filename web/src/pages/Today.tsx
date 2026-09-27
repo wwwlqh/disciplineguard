@@ -4,7 +4,7 @@ import { RULE_NAMES, type TitleId } from '@dg/core';
 import { api, type Connection, type Me } from '../api.ts';
 import { ago, money, plural, time } from '../fmt.ts';
 import { onLink } from '../router.ts';
-import { Dot, PracticePause, Sheet, useToast, type StatusKind } from '../ui/kit.tsx';
+import { DeletionBanner, Dot, PracticePause, Sheet, useToast, type StatusKind } from '../ui/kit.tsx';
 import type { PageProps } from '../main.tsx';
 
 /** Maps what a device last reported to the status vocabulary (EXPERIENCE §8). */
@@ -105,6 +105,7 @@ export function Today({ me, reload }: PageProps) {
         <button onClick={() => setPractice(true)}>Practice pause</button>
       </div>
 
+      <DeletionBanner me={me} reload={reload} />
       {d.setupMode && (
         <div className="banner">
           <span>Setup mode: changes apply instantly{d.lockAt ? ` until ${time(d.lockAt, d.now)}` : ''}.</span>
