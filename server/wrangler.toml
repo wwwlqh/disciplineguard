@@ -1,0 +1,28 @@
+# Cloudflare Worker: API + web app (static assets) + cron. SPEC §10.1.
+# The web app is served from this Worker's static assets (same origin as the API), instead of a separate Pages project.
+name = "disciplineguard"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "../web/dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/v1/*", "/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "disciplineguard"
+database_id = "REPLACE_WITH_D1_ID"   # wrangler d1 create disciplineguard
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+APP_URL = "https://disciplineguard.com"
+EMAIL_FROM = "DisciplineGuard <hello@disciplineguard.com>"
+
+# Secrets (wrangler secret put NAME): HMAC_SECRET, SIGNING_KEY, SIGNING_PUB, RESEND_KEY,
+# LS_WEBHOOK_SECRET, LS_CHECKOUT_EARLYBIRD, OWNER_EMAILS, TURNSTILE_SECRET, KNOWN_BUILDS

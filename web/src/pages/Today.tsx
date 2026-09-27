@@ -1,0 +1,268 @@
+// Today (EXPERIENCE §5.4).
+import { useEffect, useState } from 'react';
+import { RULE_NAMES, type TitleId } from '@dg/core';
+import { api, type Connection, type Me } from '../api.ts';
+import { ago, money, plural, time } from '../fmt.ts';
+import { onLink } from '../router.ts';
+import { Dot, PracticePause, Sheet, useToast, type StatusKind } from '../ui/kit.tsx';
+import type { PageProps } from '../main.tsx';
+
+/** Maps what a device last reported to the status vocabulary (EXPERIENCE §8). */
+export function deviceStatus(c: Connection, now = Date.now()): { kind: StatusKind; label: string } {
+  if (c.offReason) return { kind: 'off', label: 'Off' };
+  if (!c.lastSeen) return { kind: 'setting_up', label: 'Setting up' };
+  if (now - c.lastSeen > 7 * 60_000) return { kind: 'not_running', label: 'Not running' };
+  switch (c.status) {
+    case 'needs_attention':
+      return { kind: 'attention', label: 'Needs attention' };
+    case 'setting_up':
+      return { kind: 'setting_up', label: 'Setting up' };
+    case 'off':
+      return { kind: 'off', label: 'Off' };
+    default:
+      return { kind: 'on', label: c.role === 'secondary' ? 'On (panel only)' : 'On' };
+  }
+}
+
+export function pendingLabel(key: string, value: any): string {
+  const [kind, id, sub] = key.split(':');
+  if (kind === 'rule') {
+    const name = RULE_NAMES[id as TitleId] ?? id;
+    if (!value?.on) return `${name}: turn off`;
+    if (id === 'R1' || id === 'R2') return `${name}: ${value.max}`;
+    if (id === 'R7' || id === 'R10') return `${name}: ${value.minutes} min`;
+    return `${name}: changed`;
+  }
+  if (kind === 'acct' && sub === 'removed') return 'Remove an account';
+  if (kind === 'conn') return 'Remove a device';
+  if (kind === 'popup') return 'Popup settings';
+  if (kind === 'note') return value ? 'Edit a note' : 'Delete a note';
+  if (kind === 'plan') return 'Your plan';
+  if (kind === 'tz') return `Timezone: ${value}`;
+  if (kind === 'reset') return 'Day reset';
+  if (kind === 'default' || kind === 'acct') return `Account limit (${sub ?? id})`;
+  return key;
+}
+
+interface TodayData {
+  now: number;
+  nextReset: number;
+  license: Me['license'];
+  setupMode: boolean;
+  lockAt: number | null;
+  connections: Connection[];
+  accounts: (Me['accounts'][number] & { loss: number | null; limit: number | null; r8On: boolean; inLimit: boolean; limitUntil: number | null })[];
+  meters: { tradesToday: number; r1Max: number | null; cooldownUntil: number | null; breakUntil: number | null; doneUntil: number | null; hours: { open: boolean; next: number | null } | null };
+  pending: { key: string; value: any; effectiveAt: number }[];
+  pauses: { t: number; title: string; decision: string; symbol?: string; side?: string; size?: number }[];
+  outside: { t: number; accountId: string; symbol: string; label?: string; violations: string[]; unprotected: boolean }[];
+  coverage: { gaps: { accountId: string; last3: string; from: number; to: number; trades: number }[]; unclassified: number; off: { t: number; reason?: string; last3?: string }[] };
+  week: { pauses: number; skipped: number; placed: number; daysTraded: number; daysKept: number; keptToday: boolean };
+  calibration: { rule: string; count: number } | null;
+}
+
+const DECISION: Record<string, string> = { skip: 'Skipped', timeout: 'Skipped (timed out)', place: 'Placed anyway', reinit: 'Closed' };
+
+export function Today({ me, reload }: PageProps) {
+  const [d, setD] = useState<TodayData | null>(null);
+  const [practice, setPractice] = useState(false);
+  const [confirm, setConfirm] = useState<'break' | 'done' | null>(null);
+  const toast = useToast();
+
+  const load = () => api<TodayData>('GET', '/api/today').then(setD).catch(() => {});
+  useEffect(() => {
+    void load();
+    const id = setInterval(load, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  async function tighten(kind: 'break' | 'done') {
+    const r = await api('POST', kind === 'break' ? '/api/break' : '/api/done-today');
+    setConfirm(null);
+    toast(kind === 'break' ? `Break until ${time(r.until)}.` : `Done for today. Trades are paused until ${time(r.until)}.`);
+    await load();
+  }
+
+  async function cancel(key: string) {
+    await api('POST', '/api/settings/cancel', { key });
+    toast('Cancelled. Your current rule stays.');
+    await Promise.all([load(), reload()]);
+  }
+
+  if (!d) return <p className="muted">Loading…</p>;
+  const lic = d.license;
+  const noDevice = d.connections.length === 0;
+  const r5Missing = me.rules.R5.on ? d.accounts.filter((a) => !a.r5Set) : [];
+
+  return (
+    <div className="stack">
+      <div className="page-head">
+        <div>
+          <h1>Today</h1>
+          <div className="muted small">Your trading day resets {time(d.nextReset, d.now)}.</div>
+        </div>
+        <button onClick={() => setPractice(true)}>Show a practice pause</button>
+      </div>
+
+      {d.setupMode && (
+        <div className="banner">
+          <span>Setup mode: changes apply instantly until you lock your rules{d.lockAt ? ` (on their own at ${time(d.lockAt, d.now)})` : ''}.</span>
+          <a className="btn primary" href="/rules?lock=1" onClick={onLink}>Lock my rules</a>
+        </div>
+      )}
+      {lic.state === 'trial' && lic.trialDay !== undefined && (
+        <div className={`banner ${lic.trialEndsAt && lic.trialEndsAt - d.now < 3 * 86_400_000 ? 'amber' : 'neutral'}`}>
+          <span>
+            Trial · day {lic.trialDay} of 14
+            {lic.trialEndsAt && lic.trialEndsAt - d.now < 3 * 86_400_000 ? ` · Trial ends ${time(lic.trialEndsAt, d.now)}. Protection stops then.` : ''}
+          </span>
+          <a className="btn" href="/account" onClick={onLink}>See plans</a>
+        </div>
+      )}
+      {lic.state === 'ended' && (
+        <div className="banner amber">
+          <span>Off: {me.user.planKind ? 'plan ended' : 'trial ended'}. Orders go through normally. Your rules are saved.</span>
+          <a className="btn primary" href="/account" onClick={onLink}>See plans</a>
+        </div>
+      )}
+      {lic.state === 'past_due' && <div className="banner amber">Payment failed. Update your card. Protection stays on until {time(lic.validUntil, d.now)}.</div>}
+      {r5Missing.map((a) => (
+        <div key={a.id} className="banner amber">
+          <span>Max size not set for {a.platform.toUpperCase()} …{a.last3}.</span>
+          <a className="btn" href="/rules#accounts" onClick={onLink}>Set it</a>
+        </div>
+      ))}
+      {d.coverage.off.filter((o) => o.last3).map((o) => (
+        <div key={o.t} className="banner amber">Account …{o.last3} was connected to another DisciplineGuard login. If that wasn't you, check Devices.</div>
+      ))}
+
+      <div className="card">
+        <h2>Devices</h2>
+        {noDevice ? (
+          <p className="muted">Connect TradingView or MT to start. Your rules are ready. <a href="/devices" onClick={onLink}>Connect a device</a></p>
+        ) : (
+          <ul className="list">
+            {d.connections.map((c) => {
+              const st = deviceStatus(c, d.now);
+              const accts = d.accounts.filter((a) => c.accounts.includes(a.id));
+              return (
+                <li key={c.id} className="row between">
+                  <span className="row"><Dot kind={st.kind} /> {c.name}</span>
+                  <span className="small muted">{st.label} · seen {ago(c.lastSeen, d.now)}{accts.some((a) => a.state === 'not_enforced') ? ' · an account isn\'t enforced' : ''}</span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="grid three">
+        <div className="card meter">
+          <span className="small muted">Trades today</span>
+          <span className="value num">{d.meters.r1Max ? (d.meters.tradesToday > d.meters.r1Max ? `${d.meters.tradesToday} · limit ${d.meters.r1Max}` : `${d.meters.tradesToday} of ${d.meters.r1Max}`) : d.meters.tradesToday}</span>
+          {d.meters.r1Max && <div className="bar"><i style={{ width: `${Math.min(100, (d.meters.tradesToday / d.meters.r1Max) * 100)}%` }} /></div>}
+        </div>
+        {d.accounts.filter((a) => a.r8On).map((a) => (
+          <div key={a.id} className="card meter">
+            <span className="small muted">Loss today · {a.nickname ?? `…${a.last3}`}</span>
+            <span className="value num">{a.loss !== null && a.limit !== null ? `Loss ${money(-a.loss, a.currency ?? 'USD', true)} of ${money(a.limit, a.currency ?? 'USD')}` : 'Not read yet'}</span>
+            {a.loss === null || a.limit === null ? <span className="small muted">Shows once the EA reports today's starting balance.</span> : null}
+            {a.inLimit && a.limitUntil && <span className="small">Rest until {time(a.limitUntil, d.now)}</span>}
+          </div>
+        ))}
+        {(d.meters.cooldownUntil || d.meters.breakUntil || d.meters.doneUntil) && (
+          <div className="card meter">
+            <span className="small muted">{d.meters.doneUntil ? 'Done for today' : d.meters.breakUntil ? 'Break' : 'Cooldown'}</span>
+            <span className="value num">until {time((d.meters.doneUntil ?? d.meters.breakUntil ?? d.meters.cooldownUntil)!, d.now)}</span>
+          </div>
+        )}
+        {d.meters.hours && (
+          <div className="card meter">
+            <span className="small muted">Trading hours</span>
+            <span className="value">{d.meters.hours.open ? 'Open' : 'Closed'}</span>
+            {!d.meters.hours.open && d.meters.hours.next && <span className="small">Next: {time(d.meters.hours.next, d.now)}</span>}
+          </div>
+        )}
+      </div>
+
+      <div className="row">
+        <button onClick={() => setConfirm('break')}>Take a 15-minute break</button>
+        <button onClick={() => setConfirm('done')}>Done for today</button>
+      </div>
+
+      {d.pending.length > 0 && (
+        <div className="card">
+          <h2>Scheduled changes</h2>
+          <ul className="list">
+            {d.pending.map((p) => (
+              <li key={p.key} className="row between">
+                <span>{pendingLabel(p.key, p.value)} · from {time(p.effectiveAt, d.now)}</span>
+                <button className="link" onClick={() => cancel(p.key)}>Cancel change</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="card">
+        <h2>Today's pauses</h2>
+        {d.pauses.length === 0 ? (
+          <p className="muted">{noDevice ? 'Stats start after your first trading day.' : 'No pauses yet.'} <button className="link" onClick={() => setPractice(true)}>Show a practice pause</button></p>
+        ) : (
+          <ul className="list">
+            {d.pauses.map((p) => (
+              <li key={p.t} className="row between">
+                <span>{time(p.t, d.now)} · {RULE_NAMES[p.title as TitleId] ?? 'Check your plan'}{p.symbol ? ` · ${p.side === 'sell' ? 'Sell' : 'Buy'} ${p.symbol}` : ''}</span>
+                <span className="small muted">{DECISION[p.decision] ?? p.decision}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {(d.coverage.gaps.length > 0 || d.outside.length > 0 || d.coverage.unclassified > 0) && (
+        <div className="card">
+          <h2>Coverage</h2>
+          <ul className="list">
+            {d.coverage.gaps.map((g) => (
+              <li key={`${g.accountId}${g.from}`}>DisciplineGuard was off on …{g.last3} from {time(g.from, d.now)} to {time(g.to, d.now)}{g.trades ? ` (${plural(g.trades, 'trade')})` : ''}.</li>
+            ))}
+            {d.outside.filter((o) => o.violations.length > 0).map((o) => (
+              <li key={o.t}>{time(o.t, d.now)} · A trade placed outside DisciplineGuard{o.label ? ` (${o.label})` : ''} went past {o.violations.map((v) => `"${RULE_NAMES[v as TitleId] ?? v}"`).join(', ')}. It counts toward today.</li>
+            ))}
+            {d.coverage.unclassified > 0 && <li>Orders we couldn't check: {d.coverage.unclassified}.</li>}
+          </ul>
+        </div>
+      )}
+
+      <div className="card">
+        <h2>This week</h2>
+        <div className="grid three">
+          <div><div className="stat num">{d.week.pauses}</div><div className="small muted">pauses</div></div>
+          <div><div className="stat num">{d.week.skipped}</div><div className="small muted">skipped</div></div>
+          <div><div className="stat num">{d.week.placed}</div><div className="small muted">placed anyway</div></div>
+          <div><div className="stat num">{d.week.daysKept} of {d.week.daysTraded}</div><div className="small muted">days you traded with your rules kept</div></div>
+        </div>
+      </div>
+
+      {d.calibration && (
+        <div className="banner neutral">
+          <span>{RULE_NAMES[d.calibration.rule as TitleId] ?? d.calibration.rule} paused {d.calibration.count} trades this week, and most were placed anyway. If the limit is wrong, schedule a change. It starts at your next day reset.</span>
+          <a className="btn" href="/rules" onClick={onLink}>Review rules</a>
+        </div>
+      )}
+
+      {confirm && (
+        <Sheet label="Confirm" onClose={() => setConfirm(null)}>
+          <h2>{confirm === 'break' ? 'Take a 15-minute break?' : 'Done for today?'}</h2>
+          <p>Every new trade will be paused until {confirm === 'break' ? time(d.now + 15 * 60_000, d.now) : time(d.nextReset, d.now)}. This can't be shortened.</p>
+          <div className="row">
+            <button className="primary" onClick={() => tighten(confirm)}>{confirm === 'break' ? 'Start the break' : "I'm done for today"}</button>
+            <button onClick={() => setConfirm(null)}>Not now</button>
+          </div>
+        </Sheet>
+      )}
+      {practice && <PracticePause me={me} onClose={() => setPractice(false)} />}
+    </div>
+  );
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@dg/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "node dev.ts",
+    "deploy": "wrangler deploy",
+    "migrate": "wrangler d1 migrations apply disciplineguard --remote",
+    "keys": "node scripts/keys.ts"
+  },
+  "dependencies": {
+    "@dg/core": "*"
+  }
+}

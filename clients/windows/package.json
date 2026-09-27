@@ -1,0 +1,11 @@
+{
+  "name": "@dg/windows",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "dev": "node src/dev.ts"
+  }
+}

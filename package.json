@@ -1,0 +1,20 @@
+{
+  "name": "disciplineguard",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "server",
+    "web",
+    "clients/windows"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.3",
+    "typescript": "7.0.2",
+    "vitest": "5.0.2"
+  }
+}

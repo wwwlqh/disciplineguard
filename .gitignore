@@ -1,0 +1,11 @@
+node_modules/
+.wrangler/
+dist/
+*.ex5
+.dev.vars
+spikes/tv-runner/.profile/
+.dev-state.json
+build.log
+.playwright-mcp/
+.dev.keys.json
+.dev.sqlite*
