@@ -90,6 +90,7 @@ export interface Me {
     hideAmounts: boolean;
     analyticsConsent: number | null;
     reasonConsent: number | null;
+    reasonAsked: boolean;
     onboarding: any;
     isBeta: boolean;
     owner: boolean;

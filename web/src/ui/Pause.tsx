@@ -3,6 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { headline, otherRules, PAUSE_FOOTER, PAUSE_TIMEOUT_SEC, placeLabel, wayOut, type Fmt, type Order, type PausePlan } from '@dg/core';
 
+/** Name it (EXPERIENCE §9.5). The ids match the EA's. */
+export const REASONS = [
+  ['fomo', 'Afraid to miss it'],
+  ['win_back', 'Winning back a loss'],
+  ['frustrated', 'Frustrated'],
+  ['bored', 'Bored'],
+  ['on_a_roll', 'On a roll'],
+  ['in_plan', 'In my plan'],
+] as const;
+
 export interface PauseProps {
   plan: PausePlan;
   order: Order;
@@ -22,6 +32,7 @@ export function Pause(p: PauseProps) {
   const [now, setNow] = useState(Date.now());
   const [typed, setTyped] = useState('');
   const [kbd, setKbd] = useState('');
+  const [reason, setReason] = useState('');
   const skipRef = useRef<HTMLButtonElement>(null);
   const [announce, setAnnounce] = useState(p.plan.waitSec > 0 ? `Place anyway available in ${p.plan.waitSec} seconds` : '');
 
@@ -88,6 +99,13 @@ export function Pause(p: PauseProps) {
             {p.order.side === 'buy' ? 'Buy' : 'Sell'} {p.fmt.size(p.order.size, p.order)} {p.order.symbol}
             {p.order.sl !== undefined ? ` · SL ${p.order.sl}` : ''}
           </span>
+        </div>
+        <div className="chips" role="group" aria-label="Name it (optional)">
+          {REASONS.map(([id, label]) => (
+            <button key={id} aria-pressed={reason === id} onClick={() => setReason(reason === id ? '' : id)}>
+              {label}
+            </button>
+          ))}
         </div>
         {p.plan.waitSec > 0 && (
           <div className="wait" aria-hidden="true">

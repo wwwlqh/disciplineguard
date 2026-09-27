@@ -62,10 +62,15 @@ export function AccountPage({ me, reload }: PageProps) {
         <h2>Privacy</h2>
         <ul className="list">
           <li className="row between">
+            <span>Save the reasons I pick <span className="small muted">(only you see them)</span></span>
+            <Switch label="Save the reasons I pick" checked={me.user.reasonConsent === 1} onChange={(v) => pref({ reasonConsent: v })} />
+          </li>
+          <li className="row between">
             <span>Hide amounts on screen <span className="small muted">(for streaming)</span></span>
             <Switch label="Hide amounts" checked={me.user.hideAmounts} onChange={(v) => pref({ hideAmounts: v })} />
           </li>
         </ul>
+        <button className="link small" onClick={async () => { await pref({ deleteReasons: true }); toast('Reason history deleted.'); }}>Delete my reason history</button>
       </div>
 
       <div className="card">

@@ -273,6 +273,10 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
         reason: uc.user.reason_consent ? clean(e.reason, 30) : undefined, variant: clean(e.variant, 20),
       };
       const stmts = [insert(`p:${pauseId}`, 'pause', payload), env.DB.prepare('UPDATE users SET last_real_pause_at = MAX(COALESCE(last_real_pause_at, 0), ?) WHERE id = ?').bind(t, userId)];
+      // Reasons are dropped until the trader says yes; the first one named asks the question on Today.
+      if (e.reason !== undefined && uc.user.reason_consent === null && uc.user.reason_asked_at === null) {
+        stmts.push(env.DB.prepare('UPDATE users SET reason_asked_at = ? WHERE id = ? AND reason_asked_at IS NULL').bind(t, userId));
+      }
       if (decision === 'place' && e.sent) stmts.push(insert(`p:${pauseId}:ov`, 'override', { from: 'pause', rules }));
       if (decision === 'skip' || decision === 'timeout') {
         stmts.push(

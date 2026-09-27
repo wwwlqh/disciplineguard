@@ -30,6 +30,7 @@ export interface UserRow {
   analytics_consent: number | null;
   analytics_id: string;
   reason_consent: number | null;
+  reason_asked_at: number | null;
   hide_amounts: number;
   country: string | null;
   risk_notice_version: string | null;

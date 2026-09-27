@@ -247,8 +247,18 @@ export function Today({ me, reload }: PageProps) {
 
       {d.calibration && (
         <div className="banner neutral">
-          <span>{RULE_NAMES[d.calibration.rule as TitleId] ?? d.calibration.rule} paused {d.calibration.count} trades this week, mostly placed anyway. Limit wrong? Change it.</span>
+          <span>{RULE_NAMES[d.calibration.rule as TitleId] ?? d.calibration.rule} paused {d.calibration.count} trades this week, mostly placed anyway or in your plan. Limit wrong? Change it.</span>
           <a className="btn" href="/rules" onClick={onLink}>Review rules</a>
+        </div>
+      )}
+
+      {me.user.reasonAsked && me.user.reasonConsent === null && (
+        <div className="banner neutral">
+          <span>Save the reasons you pick? Only you see them, in your stats.</span>
+          <span className="row">
+            <button className="primary" onClick={() => void api('PUT', '/api/prefs', { reasonConsent: true }).then(reload)}>Save my reasons</button>
+            <button onClick={() => void api('PUT', '/api/prefs', { reasonConsent: false }).then(reload)}>Don't save</button>
+          </span>
         </div>
       )}
 

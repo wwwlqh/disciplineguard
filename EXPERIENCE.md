@@ -525,7 +525,7 @@ The first line appears only when true.
 - Chips: "Afraid to miss it" · "Winning back a loss" · "Frustrated" · "Bored" · "On a roll" · "In my plan".
 - One tap, never required, available until the decision.
 - The chips never change the wait.
-- **First use**: "Save the reasons you pick? Only you see them, in your stats. [Save my reasons] [Don't save]". Without consent, chips still show, but nothing is stored.
+- **First use**: after the first chip, Today asks once: "Save the reasons you pick? Only you see them, in your stats. [Save my reasons] [Don't save]". Until then, nothing is stored. Account → Privacy has the switch and "Delete my reason history".
 - **[P2]** For trades placed anyway with no chip, the summary asks once: "What was going on at 10:32?"
 
 ### 9.6 Visual rules

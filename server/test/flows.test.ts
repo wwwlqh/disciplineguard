@@ -160,6 +160,24 @@ describe('sync (SPEC §10.3)', () => {
     expect(r.data.snapshot.lastSkip).toMatchObject({ symbol: 'XAUUSD', waitSec: 15 });
   });
 
+  it('reasons are dropped until the trader says yes; the first one asks (SPEC §13.2)', async () => {
+    const w = new World();
+    const web = await w.signIn('a@b.co');
+    await web.onboard();
+    const ea = await web.connect();
+    const pause = (id: string, reason: string) => ({ type: 'pause', pauseId: id, rules: ['R1'], title: 'R1', decision: 'place', sent: true, symbol: 'EURUSD', side: 'buy', size: 1, reason });
+    await ea.sync([pause('a', 'fomo')]);
+    const me = (await web.get('/api/me')).data;
+    expect(me.user).toMatchObject({ reasonAsked: true, reasonConsent: null });
+    await web.send('PUT', '/api/prefs', { reasonConsent: true });
+    await ea.sync([pause('b', 'in_plan')]);
+    let stats = (await web.get('/api/stats')).data;
+    expect(stats.byReason).toEqual({ in_plan: 1 });
+    await web.send('PUT', '/api/prefs', { deleteReasons: true });
+    stats = (await web.get('/api/stats')).data;
+    expect(stats.byReason).toEqual({});
+  });
+
   it('breaks and done-for-today are never shortened (SPEC §6.5)', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
@@ -236,7 +254,7 @@ describe('rule changes through the API (SPEC §6)', () => {
     const dry = await put(10, true);
     expect(dry.data).toEqual({ direction: 'looser', appliesAt: Date.UTC(2026, 9, 6) });
     await put(10);
-    let me = (await web.get('/api/me')).data;
+    const me = (await web.get('/api/me')).data;
     expect(me.rules.R1.max).toBe(8);
     expect(me.pending[0]).toMatchObject({ key: 'rule:R1', effectiveAt: Date.UTC(2026, 9, 6) });
     // Every protected change sends a security email.
@@ -375,7 +393,7 @@ describe('accounts, coverage and plans', () => {
     };
     expect((await w.call('POST', '/v1/webhooks/lemonsqueezy', '{}', { 'x-signature': 'bad' })).status).toBe(401);
     await send('subscription_created', { status: 'active', renews_at: '2027-10-05T10:00:00Z', customer_id: 1, updated_at: 'a' });
-    let me = (await web.get('/api/me')).data;
+    const me = (await web.get('/api/me')).data;
     expect(me.license.state).toBe('active');
     w.t = Date.UTC(2026, 9, 5, 20, 0);
     await send('subscription_payment_refunded', { status: 'active', updated_at: 'b' });

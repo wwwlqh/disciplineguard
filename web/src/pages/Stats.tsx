@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { RULE_NAMES, type TitleId } from '@dg/core';
 import { api } from '../api.ts';
 import { date } from '../fmt.ts';
+import { REASONS } from '../ui/Pause.tsx';
 import type { PageProps } from '../main.tsx';
 
 interface StatsData {
@@ -10,6 +11,7 @@ interface StatsData {
   pauses: number;
   byOutcome: Record<string, number>;
   byRule: Record<string, number>;
+  byReason: Record<string, number>;
   byHour: number[];
   daysTraded: number;
   daysKept: number;
@@ -67,6 +69,16 @@ export function Stats({ me }: PageProps) {
               </ul>
             </div>
           </div>
+          {Object.keys(s.byReason).length > 0 && (
+            <div className="card">
+              <h2>Reasons you named</h2>
+              <ul className="list">
+                {Object.entries(s.byReason).sort((a, b) => b[1] - a[1]).map(([r, n]) => (
+                  <li key={r} className="row between"><span>{REASONS.find(([id]) => id === r)?.[1] ?? r}</span><strong className="num">{n}</strong></li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="card">
             <h2>Pauses by hour of day</h2>
             <div className="bars" role="img" aria-label="Pauses by hour of day">

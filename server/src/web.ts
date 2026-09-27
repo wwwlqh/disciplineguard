@@ -98,7 +98,7 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
     user: {
       email: u.email, firstName: u.first_name, setupMode: !!u.setup_mode, lockedAt: u.locked_at, lockedBy: u.locked_by,
       lockAt: u.setup_mode && u.first_on_at ? autoLockAt(uc.userResets, u.first_on_at) : null, firstOnAt: u.first_on_at,
-      lastRealPauseAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts, analyticsConsent: u.analytics_consent, reasonConsent: u.reason_consent,
+      lastRealPauseAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts, analyticsConsent: u.analytics_consent, reasonConsent: u.reason_consent, reasonAsked: u.reason_asked_at !== null,
       onboarding: u.onboarding_json ? JSON.parse(u.onboarding_json) : null,
       isBeta: !!u.is_beta, owner: isOwner(env, u), country: u.country, planKind: u.plan_kind, cancelAtPeriodEnd: !!u.cancel_at_period_end,
     },
@@ -301,20 +301,23 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
   }
 
   const weekDays = await dayRows(env, uc, t - 7 * DAY, t + 1);
-  const pausesWeek = await env.DB.prepare("SELECT json_extract(payload, '$.decision') AS d, json_extract(payload, '$.title') AS title, COUNT(*) AS n FROM events WHERE user_id = ? AND type = 'pause' AND t >= ? GROUP BY d, title")
+  const pausesWeek = await env.DB.prepare(
+    "SELECT json_extract(payload, '$.decision') AS d, json_extract(payload, '$.title') AS title, json_extract(payload, '$.reason') = 'in_plan' AS ip, COUNT(*) AS n FROM events WHERE user_id = ? AND type = 'pause' AND t >= ? GROUP BY d, title, ip",
+  )
     .bind(uc.user.id, t - 7 * DAY)
-    .all<{ d: string; title: string; n: number }>();
-  const byTitle = new Map<string, { n: number; placed: number }>();
+    .all<{ d: string; title: string; ip: number | null; n: number }>();
+  // Calibration (EXPERIENCE §5.4): one rule caused most pauses, and most were placed anyway or marked "In my plan".
+  const byTitle = new Map<string, { n: number; overruled: number }>();
   for (const r of pausesWeek.results) {
-    const x = byTitle.get(r.title) ?? { n: 0, placed: 0 };
+    const x = byTitle.get(r.title) ?? { n: 0, overruled: 0 };
     x.n += r.n;
-    if (r.d === 'place') x.placed += r.n;
+    if (r.d === 'place' || r.ip === 1) x.overruled += r.n;
     byTitle.set(r.title, x);
   }
   const total = [...byTitle.values()].reduce((a, b) => a + b.n, 0);
   let calibration: { rule: string; count: number } | null = null;
   for (const [title, x] of byTitle) {
-    if (total >= 5 && x.n / total > 0.5 && x.placed / x.n > 0.5 && title !== 'CHECK') calibration = { rule: title, count: x.n };
+    if (total >= 5 && x.n / total > 0.5 && x.overruled / x.n > 0.5 && title !== 'CHECK') calibration = { rule: title, count: x.n };
   }
 
   return json({
@@ -365,12 +368,14 @@ async function stats(req: Request, env: Env, s: Session): Promise<Response> {
   const { results: pauses } = await bind(`SELECT t, payload FROM events WHERE user_id = ? AND type = 'pause' AND t >= ?${acctFilter}`).all<{ t: number; payload: string }>();
   const byOutcome = { skip: 0, place: 0, timeout: 0 } as Record<string, number>;
   const byRule: Record<string, number> = {};
+  const byReason: Record<string, number> = {};
   const byHour = new Array(24).fill(0);
   const time = resolvedTime(uc);
   for (const p of pauses) {
     const x = JSON.parse(p.payload);
     byOutcome[x.decision] = (byOutcome[x.decision] ?? 0) + 1;
     byRule[x.title ?? 'CHECK'] = (byRule[x.title ?? 'CHECK'] ?? 0) + 1;
+    if (x.reason) byReason[x.reason] = (byReason[x.reason] ?? 0) + 1;
     byHour[Math.floor(localParts(time.offsets, p.t).msOfDay / HOUR)]++;
   }
   const rows = await dayRows(env, uc, from, t + 1);
@@ -383,6 +388,7 @@ async function stats(req: Request, env: Env, s: Session): Promise<Response> {
     pauses: pauses.length,
     byOutcome,
     byRule,
+    byReason,
     byHour,
     daysTraded: traded.length,
     daysKept: traded.filter(isKept).length,
