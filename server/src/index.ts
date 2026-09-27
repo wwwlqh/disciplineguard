@@ -1,5 +1,6 @@
 // Worker entry: API routes, the web app's static files, and the cron trigger.
 import { linkInfo, requestSignIn, signOut, verifySignIn } from './auth.ts';
+import { authOptions, googleCallback, googleStart } from './google.ts';
 import { lemonWebhook } from './billing.ts';
 import { desktopAlerts, desktopToken, registerTerminal } from './desktop.ts';
 import type { Ctx } from './common.ts';
@@ -24,6 +25,9 @@ const API: Record<string, Route> = {
   'POST /v1/auth/link-info': linkInfo,
   'POST /v1/auth/verify': verifySignIn,
   'POST /v1/auth/signout': signOut,
+  'GET /v1/auth/options': authOptions,
+  'GET /v1/auth/google': googleStart,
+  'GET /v1/auth/google/callback': googleCallback,
   'POST /v1/auth/desktop': desktopToken,
   'POST /v1/desktop/terminals': registerTerminal,
   'POST /v1/desktop/alerts': desktopAlerts,

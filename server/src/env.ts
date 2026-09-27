@@ -41,6 +41,9 @@ export interface Env {
   /** Comma-separated emails that can open the owner dashboard. */
   OWNER_EMAILS?: string;
   TURNSTILE_SECRET?: string;
+  /** Google sign-in (OAuth client for a web application). Both unset: the button is hidden. */
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
   /** Comma-separated SHA-256 hashes of released EA builds (SPEC §10.9). */
   KNOWN_BUILDS?: string;
   /** "1" in local development: secure cookies off, emails kept in the outbox. */

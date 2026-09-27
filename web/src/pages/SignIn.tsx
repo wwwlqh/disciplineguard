@@ -1,4 +1,4 @@
-// Sign-up and sign-in: email → a link and a 6-digit code (EXPERIENCE §5.2, SPEC §10.9).
+// Sign-up and sign-in: Continue with Google, or email → a link and a 6-digit code (EXPERIENCE §5.2, SPEC §10.9).
 import { useEffect, useState } from 'react';
 import { TRUST_LINES } from '@dg/core';
 import { api, ApiError } from '../api.ts';
@@ -32,6 +32,18 @@ export function SignIn({ onDone }: { onDone(): void }) {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState<{ token: string; email: string; sameBrowser: boolean } | null>(null);
+  const [google, setGoogle] = useState(false);
+
+  useEffect(() => {
+    api<{ google: boolean }>('GET', '/v1/auth/options').then((o) => setGoogle(o.google)).catch(() => {});
+    if (new URLSearchParams(location.search).get('google') === 'failed') {
+      setErr("Google sign-in didn't work. Try again, or use your email.");
+      history.replaceState(null, '', '/signin');
+    }
+  }, []);
+
+  // Back to the page that asked (the Allow page keeps its query), like the email sign-in.
+  const next = location.pathname === '/signin' ? '/today' : location.pathname + location.search;
 
   useEffect(() => {
     const m = /#t=([\w-]+)/.exec(location.hash);
@@ -83,6 +95,14 @@ export function SignIn({ onDone }: { onDone(): void }) {
         {!sent ? (
           <form onSubmit={(e) => { e.preventDefault(); void run(async () => { await api('POST', '/v1/auth/email', { email, nonce: nonce() }); setSent(true); }); }}>
             <h1>Sign in or create your account</h1>
+            {google && (
+              <>
+                <a className="btn" style={{ width: '100%', margin: '10px 0 4px' }} href={`/v1/auth/google?next=${encodeURIComponent(next)}`}>
+                  Continue with Google
+                </a>
+                <p className="muted small" style={{ textAlign: 'center', margin: '8px 0' }}>or</p>
+              </>
+            )}
             <p className="muted">We'll email you a link and a code.</p>
             <label className="field">
               Email

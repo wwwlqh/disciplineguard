@@ -100,14 +100,21 @@ export async function verifySignIn(req: Request, env: Env): Promise<Response> {
   const used = await env.DB.prepare('UPDATE login_codes SET used_at = ? WHERE id = ? AND used_at IS NULL').bind(t, row.id).run();
   if (used.meta.changes !== 1) throw new HttpError(400, 'code_invalid');
 
-  let user = await env.DB.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL').bind(row.email).first<UserRow>();
+  const { isNew, cookie } = await signInAs(req, env, row.email);
+  return json({ ok: true, isNew }, 200, { 'set-cookie': cookie });
+}
+
+/** Signs in the user with this (verified) email, creating them on first sign-in. Returns the session cookie. */
+export async function signInAs(req: Request, env: Env, email: string): Promise<{ isNew: boolean; cookie: string }> {
+  const t = clock(env);
+  let user = await env.DB.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL').bind(email).first<UserRow>();
   const isNew = !user;
-  if (!user) user = await createUser(env, row.email, req.headers.get('cf-ipcountry'));
+  if (!user) user = await createUser(env, email, req.headers.get('cf-ipcountry'));
   const session = token(32);
   await env.DB.prepare('INSERT INTO sessions (id, user_id, token_hash, created_at, last_seen, user_agent) VALUES (?, ?, ?, ?, ?, ?)')
     .bind(randomId('s_'), user.id, await sha256(session), t, t, (req.headers.get('user-agent') ?? '').slice(0, 200))
     .run();
-  return json({ ok: true, isNew }, 200, { 'set-cookie': sessionCookie(env, session, SESSION_TTL) });
+  return { isNew, cookie: sessionCookie(env, session, SESSION_TTL) };
 }
 
 export function sessionCookie(env: Env, value: string, maxAgeMs: number): string {
