@@ -3,6 +3,7 @@ import { autoLockAt, dayOf, DAY, HOUR, MIN, nextReset } from '@dg/core';
 import { accountHashes, registerAccount, type ReportedAccount } from './accounts.ts';
 import { audit, rateLimit, scheduleJob, type Ctx } from './common.ts';
 import { resolvedTime, userCtx, type AccountRow, type UserCtx } from './context.ts';
+import * as alerts from './alerts.ts';
 import { addCoverage, wasCovered } from './coverage.ts';
 import { eventId, randomId, sha256, sign } from './crypto.ts';
 import { now as clock, type Env } from './env.ts';
@@ -247,7 +248,11 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
       };
       const stmts = [insert(id, 'entry', payload), env.DB.prepare('UPDATE trading_accounts SET last_entry_at = MAX(COALESCE(last_entry_at, 0), ?) WHERE id = ?').bind(t, acct.id)];
       if (source === 'outside' && rules.length > 0) stmts.push(insert(`${id}:ov`, 'override', { from: 'outside', rules }));
-      await env.DB.batch(stmts);
+      const [stored] = await env.DB.batch(stmts);
+      if (!stored.meta.changes) return;
+      await alerts.scheduleSummary(env, uc, t);
+      if (source === 'outside' && rules.length > 0) await alerts.outsideViolation(env, uc, rules, payload.label);
+      if (payload.unprotected) await alerts.unprotectedEntry(env, uc, acct);
       return;
     }
     case 'entry_void': {
@@ -284,7 +289,10 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
             .bind(userId, JSON.stringify({ t, symbol: payload.symbol, side: payload.side, waitSec: payload.waitSec ?? 0 })),
         );
       }
-      await env.DB.batch(stmts);
+      const [stored] = await env.DB.batch(stmts);
+      if (!stored.meta.changes) return;
+      await alerts.scheduleSummary(env, uc, t);
+      if (decision === 'place' && e.sent) await alerts.placedAnyway(env, uc, acct, { title: payload.title, rules, side: payload.side, size: payload.size, symbol: payload.symbol });
       return;
     }
     case 'pause_sent': {
@@ -310,11 +318,12 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
     case 'limit_reached': {
       if (!acct) return;
       const dayStart = finite(e.dayStart) ?? dayOf(uc.accountResets[acct.id] ?? uc.userResets, t).start;
-      await env.DB.batch([
+      const [first] = await env.DB.batch([
         env.DB.prepare('INSERT OR IGNORE INTO limit_state (account_id, day_start_utc, reached_at, loss, limit_value) VALUES (?, ?, ?, ?, ?)')
           .bind(acct.id, dayStart, t, finite(e.loss) ?? null, finite(e.limit) ?? null),
         insert(await eventId(acct.id, 'limit_reached', String(dayStart)), 'limit_reached', { loss: finite(e.loss), limit: finite(e.limit) }),
       ]);
+      if (first.meta.changes) await alerts.limitReached(env, uc, acct, finite(e.loss), finite(e.limit), t);
       return;
     }
     case 'day_start': {
@@ -334,11 +343,14 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
         insert(clientId, 'protection_off', { reason }, t, null),
         env.DB.prepare('UPDATE connections SET off_reason = ?, status = ? WHERE id = ?').bind(reason, 'off', conn.id),
       ]);
+      await alerts.scheduleOffCheck(env, userId, conn.id, t);
       return;
     }
     case 'stop_change': {
       if (!acct) return;
-      await insert(ticket ? await eventId(acct.id, 'stop_change', ticket, String(t)) : clientId, 'stop_change', { kind: e.kind === 'removed' ? 'removed' : 'widened' }).run();
+      const kind = e.kind === 'removed' ? 'removed' : 'widened';
+      const r = await insert(ticket ? await eventId(acct.id, 'stop_change', ticket, String(t)) : clientId, 'stop_change', { kind }).run();
+      if (r.meta.changes) await alerts.stopChanged(env, uc, acct, kind);
       return;
     }
     case 'exit': {
@@ -354,7 +366,7 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
       await insert(clientId, 'setup', { failed: Array.isArray(e.failed) ? (e.failed as unknown[]).map((x) => clean(x, 30)).slice(0, 10) : [] }, t, null).run();
       return;
     case 'unclassified':
-      await insert(clientId, 'unclassified', {}, t).run();
+      if ((await insert(clientId, 'unclassified', {}, t).run()).meta.changes) await alerts.unchecked(env, uc, t);
       return;
     default:
       return;

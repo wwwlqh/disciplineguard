@@ -1,11 +1,11 @@
 # DisciplineGuard for Windows
 
-The tray app that sets up MetaTrader 5 for the trader (SPEC §9.5, EXPERIENCE §7.1). The trader signs in with **Allow** in the browser, ticks their MetaTrader and presses **Protect**. Nothing is typed or clicked inside MetaTrader.
+The tray app that sets up MetaTrader 5 for the trader (SPEC §9.5, EXPERIENCE §7.1). The trader signs in with **Allow** in the browser, ticks their MetaTrader and presses **Protect**. Nothing is typed or clicked inside MetaTrader. The app also shows the trader's alerts as Windows notifications (SPEC §11.1).
 
 | Folder | What it is |
 |---|---|
-| `core` | Everything but the window: sign-in, finding terminals, Protect (MT's own files), the EA file bridge, the signed EA manifest, DPAPI storage. Builds and tests on any OS. |
-| `app` | The Tauri 2 shell: tray, first-run window (`ui/`), updater, installer (NSIS). Builds on Windows only. |
+| `core` | Everything but the window: sign-in, finding terminals, Protect (MT's own files), the EA file bridge, the signed EA manifest, DPAPI storage, fetching alerts. Builds and tests on any OS. |
+| `app` | The Tauri 2 shell: tray, first-run window (`ui/`), notifications, updater, installer (NSIS). Builds on Windows only. |
 
 **Why Tauri.** A ~5 MB installer, low memory (Rust in the background, the system WebView2 only while the window is open), a signed updater built in, and NSIS installers that code-sign in CI.
 

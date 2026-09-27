@@ -1,6 +1,7 @@
 // Account (EXPERIENCE §5.10): plan, privacy, security, report a problem, sign out.
 import { useEffect, useState } from 'react';
-import { api } from '../api.ts';
+import { api, type AlertKind } from '../api.ts';
+import { onLink } from '../router.ts';
 import { ago, time } from '../fmt.ts';
 import { Switch, useToast } from '../ui/kit.tsx';
 import type { PageProps } from '../main.tsx';
@@ -12,6 +13,20 @@ const REPORT_TYPES = [
   ['billing', 'Billing'],
   ['other', 'Other'],
 ] as const;
+
+const ALERTS: [AlertKind, string][] = [
+  ['limit', 'Daily loss limit reached'],
+  ['after_limit', 'Placed anyway after the daily loss limit'],
+  ['off', 'DisciplineGuard turned off, or trades while it was off'],
+  ['moved', 'Account connected to another login'],
+  ['outside', 'Outside trade went past a rule'],
+  ['unchecked', "Orders we couldn't check"],
+  ['summary', 'End-of-session summary'],
+  ['placed', 'Placed anyway (other rules)'],
+  ['stop', 'Stop loss removed or widened'],
+];
+
+const hm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
 export function AccountPage({ me, reload }: PageProps) {
   const toast = useToast();
@@ -25,6 +40,11 @@ export function AccountPage({ me, reload }: PageProps) {
 
   async function pref(p: Record<string, unknown>) {
     await api('PUT', '/api/prefs', p);
+    await reload();
+  }
+
+  async function alerts(p: Record<string, unknown>) {
+    await api('PUT', '/api/alerts', p);
     await reload();
   }
 
@@ -56,6 +76,35 @@ export function AccountPage({ me, reload }: PageProps) {
           </div>
         )}
         {lic.state === 'active' && <p className="small"><a href="mailto:support@disciplineguard.com?subject=Refund">Request a refund</a> · Manage billing from your receipt email.</p>}
+      </div>
+
+      <div className="card" id="alerts">
+        <h2>Alerts</h2>
+        <p className="small muted">
+          {me.user.hasApp ? 'Shown as notifications on your computer by DisciplineGuard for Windows.' : <>Alerts show on your computer through DisciplineGuard for Windows. <a href="/devices" onClick={onLink}>Install it</a></>}
+        </p>
+        <ul className="list">
+          {ALERTS.map(([k, label]) => (
+            <li key={k} className="row between">
+              <span>{label}</span>
+              <Switch label={label} checked={me.user.alerts.on[k]} onChange={(v) => alerts({ on: { [k]: v } })} />
+            </li>
+          ))}
+          <li className="row between">
+            <span>Summary time</span>
+            <select value={me.user.alerts.summaryAt ?? ''} onChange={(e) => alerts({ summaryAt: e.target.value === '' ? null : Number(e.target.value) })} aria-label="Summary time">
+              <option value="">End of trading hours, or 60 min after the last trade</option>
+              {Array.from({ length: 48 }, (_, i) => i * 30).map((m) => <option key={m} value={m}>{hm(m)}</option>)}
+            </select>
+          </li>
+          <li className="row between">
+            <span>Include amounts</span>
+            <Switch label="Include amounts" checked={me.user.alerts.amounts} onChange={(v) => alerts({ amounts: v })} />
+          </li>
+        </ul>
+        {me.user.hasApp && (
+          <button style={{ marginTop: 10 }} onClick={async () => { await api('POST', '/api/alerts/test'); toast('Sent. It shows within a minute.'); }}>Send a test</button>
+        )}
       </div>
 
       <div className="card">

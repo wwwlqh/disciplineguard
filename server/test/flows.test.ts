@@ -254,7 +254,7 @@ describe('rule changes through the API (SPEC §6)', () => {
     const dry = await put(10, true);
     expect(dry.data).toEqual({ direction: 'looser', appliesAt: Date.UTC(2026, 9, 6) });
     await put(10);
-    const me = (await web.get('/api/me')).data;
+    let me = (await web.get('/api/me')).data;
     expect(me.rules.R1.max).toBe(8);
     expect(me.pending[0]).toMatchObject({ key: 'rule:R1', effectiveAt: Date.UTC(2026, 9, 6) });
     // Every protected change sends a security email.
@@ -393,7 +393,7 @@ describe('accounts, coverage and plans', () => {
     };
     expect((await w.call('POST', '/v1/webhooks/lemonsqueezy', '{}', { 'x-signature': 'bad' })).status).toBe(401);
     await send('subscription_created', { status: 'active', renews_at: '2027-10-05T10:00:00Z', customer_id: 1, updated_at: 'a' });
-    const me = (await web.get('/api/me')).data;
+    let me = (await web.get('/api/me')).data;
     expect(me.license.state).toBe('active');
     w.t = Date.UTC(2026, 9, 5, 20, 0);
     await send('subscription_payment_refunded', { status: 'active', updated_at: 'b' });

@@ -1,5 +1,6 @@
 // The DisciplineGuard Windows app: sign-in with "Allow" in the browser, then one connection per
 // MT terminal the trader ticked (SPEC §9.5). There are no pairing codes.
+import { DAY } from '@dg/core';
 import { accountHashes, registerAccount } from './accounts.ts';
 import { audit, rateLimit, securityEmail, type Ctx } from './common.ts';
 import { userCtx, type UserRow } from './context.ts';
@@ -102,4 +103,22 @@ export async function registerTerminal(req: Request, env: Env, ctx: Ctx): Promis
   await env.DB.prepare('INSERT OR IGNORE INTO seen_by (connection_id, account_id, first_seen, last_seen) VALUES (?, ?, ?, ?)').bind(connId, account.id, t, t).run();
   const known = build !== null && (env.KNOWN_BUILDS ?? '').toLowerCase().split(',').map((s) => s.trim()).includes(build);
   return json({ token: deviceToken, connectionId: connId, knownBuild: known });
+}
+
+/**
+ * POST /v1/desktop/alerts {after}: alerts for the app to show as Windows notifications (SPEC §11.1). `after` is the
+ * cursor from the last call. The first call (no `after`) only returns the cursor, so a new install doesn't replay old alerts.
+ */
+export async function desktopAlerts(req: Request, env: Env): Promise<Response> {
+  const d = await requireDesktop(req, env);
+  const b = await body(req);
+  const after = typeof b.after === 'number' && Number.isInteger(b.after) && b.after >= 0 ? b.after : null;
+  if (after === null) {
+    const row = await env.DB.prepare('SELECT MAX(id) AS id FROM alerts WHERE user_id = ?').bind(d.user.id).first<{ id: number | null }>();
+    return json({ alerts: [], cursor: row?.id ?? 0 });
+  }
+  const { results } = await env.DB.prepare('SELECT id, kind, title, text, created_at AS t FROM alerts WHERE user_id = ? AND id > ? AND created_at > ? ORDER BY id LIMIT 20')
+    .bind(d.user.id, after, clock(env) - DAY)
+    .all<{ id: number; kind: string; title: string; text: string; t: number }>();
+  return json({ alerts: results, cursor: results.length ? results[results.length - 1].id : after });
 }

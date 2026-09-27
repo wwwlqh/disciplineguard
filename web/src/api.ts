@@ -76,6 +76,14 @@ export interface Note {
   setAt: number;
 }
 
+export type AlertKind = 'limit' | 'after_limit' | 'off' | 'moved' | 'outside' | 'unchecked' | 'summary' | 'placed' | 'stop';
+
+export interface AlertPrefs {
+  on: Record<AlertKind, boolean>;
+  summaryAt: number | null;
+  amounts: boolean;
+}
+
 export interface Me {
   now: number;
   user: {
@@ -91,6 +99,8 @@ export interface Me {
     analyticsConsent: number | null;
     reasonConsent: number | null;
     reasonAsked: boolean;
+    alerts: AlertPrefs;
+    hasApp: boolean;
     onboarding: any;
     isBeta: boolean;
     owner: boolean;

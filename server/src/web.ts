@@ -8,6 +8,7 @@ import { isOwner, requireSession, type Session } from './auth.ts';
 import { audit, rateLimit, securityEmail, sendEmail, type Ctx } from './common.ts';
 import { resolvedTime, userCtx, type AccountRow, type UserCtx } from './context.ts';
 import { coverageGaps } from './coverage.ts';
+import { dayRows, isKept } from './days.ts';
 import { now as clock, type Env } from './env.ts';
 import { body, HttpError, json, str } from './http.ts';
 import { allowDesktop } from './desktop.ts';
@@ -16,6 +17,7 @@ import { buildSnapshot } from './sync.ts';
 import { validateSetting } from './validate.ts';
 import { ownerMetrics } from './owner.ts';
 import { checkoutUrl } from './billing.ts';
+import { ALERT_KINDS, alertPrefs } from './alerts.ts';
 
 type Handler = (req: Request, env: Env, s: Session, ctx: Ctx, params: string[]) => Promise<Response>;
 
@@ -31,6 +33,8 @@ const routes: [string, RegExp, Handler][] = [
   ['PUT', /^\/api\/onboarding$/, saveOnboarding],
   ['POST', /^\/api\/onboarding\/apply$/, applyOnboarding],
   ['PUT', /^\/api\/prefs$/, prefs],
+  ['PUT', /^\/api\/alerts$/, putAlerts],
+  ['POST', /^\/api\/alerts\/test$/, testAlert],
   ['POST', /^\/api\/desktop\/allow$/, (r, e, s) => allowDesktop(r, e, s.user)],
   ['PUT', /^\/api\/accounts\/([\w-]+)$/, renameAccount],
   ['DELETE', /^\/api\/accounts\/([\w-]+)$/, removeAccount],
@@ -100,6 +104,7 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
       lockAt: u.setup_mode && u.first_on_at ? autoLockAt(uc.userResets, u.first_on_at) : null, firstOnAt: u.first_on_at,
       lastRealPauseAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts, analyticsConsent: u.analytics_consent, reasonConsent: u.reason_consent, reasonAsked: u.reason_asked_at !== null,
       onboarding: u.onboarding_json ? JSON.parse(u.onboarding_json) : null,
+      alerts: alertPrefs(u.alerts_json), hasApp: await hasApp(env, u.id),
       isBeta: !!u.is_beta, owner: isOwner(env, u), country: u.country, planKind: u.plan_kind, cancelAtPeriodEnd: !!u.cancel_at_period_end,
     },
     license: uc.license,
@@ -213,48 +218,6 @@ function stateFrom(snap: Awaited<ReturnType<typeof buildSnapshot>>, uc: UserCtx)
     entries: snap.entries, closes: snap.closes, overrides: snap.overrides, breakUntil: snap.breakUntil ?? undefined, doneUntil: snap.doneUntil ?? undefined,
     accounts, clock: { verified: true },
   };
-}
-
-interface DayRow {
-  start: number;
-  end: number;
-  entries: number;
-  pauses: number;
-  placed: number;
-  outside: number;
-  unprotected: number;
-}
-
-/** Trading days in [from, to) with counts, for "days kept" (SPEC §2). */
-async function dayRows(env: Env, uc: UserCtx, from: number, to: number): Promise<DayRow[]> {
-  const { results } = await env.DB.prepare(
-    "SELECT type, t, payload FROM events WHERE user_id = ? AND type IN ('entry', 'pause', 'override') AND t >= ? AND t < ? AND void_at IS NULL",
-  ).bind(uc.user.id, from, to).all<{ type: string; t: number; payload: string }>();
-  const days: DayRow[] = [];
-  for (let i = 0; i < uc.userResets.length - 1; i++) {
-    const s = uc.userResets[i];
-    const e = uc.userResets[i + 1];
-    if (e <= from || s >= to) continue;
-    days.push({ start: s, end: e, entries: 0, pauses: 0, placed: 0, outside: 0, unprotected: 0 });
-  }
-  for (const r of results) {
-    const d = days.find((x) => r.t >= x.start && r.t < x.end);
-    if (!d) continue;
-    const p = JSON.parse(r.payload ?? '{}');
-    if (r.type === 'entry') {
-      d.entries++;
-      if (p.unprotected) d.unprotected++;
-    } else if (r.type === 'pause') d.pauses++;
-    else if (r.type === 'override') {
-      if (p.from === 'outside') d.outside++;
-      else d.placed++;
-    }
-  }
-  return days;
-}
-
-export function isKept(d: DayRow): boolean {
-  return d.entries + d.pauses > 0 && d.placed === 0 && d.outside === 0 && d.unprotected === 0;
 }
 
 async function today(req: Request, env: Env, s: Session): Promise<Response> {
@@ -489,6 +452,30 @@ async function prefs(req: Request, env: Env, s: Session): Promise<Response> {
   if (b.deleteReasons === true) {
     await env.DB.prepare("UPDATE events SET payload = json_remove(payload, '$.reason') WHERE user_id = ? AND type = 'pause'").bind(s.user.id).run();
   }
+  return json({ ok: true });
+}
+
+async function hasApp(env: Env, userId: string): Promise<boolean> {
+  return !!(await env.DB.prepare('SELECT 1 FROM desktop_installs WHERE user_id = ? AND revoked_at IS NULL LIMIT 1').bind(userId).first());
+}
+
+/** PUT /api/alerts {on?, summaryAt?, amounts?}: the trader's own alerts are not protected (SPEC §6.2 last row). */
+async function putAlerts(req: Request, env: Env, s: Session): Promise<Response> {
+  const b = await body(req);
+  const cur = alertPrefs(s.user.alerts_json);
+  if (b.on && typeof b.on === 'object') for (const k of ALERT_KINDS) if (typeof b.on[k] === 'boolean') cur.on[k] = b.on[k];
+  if (b.summaryAt === null || (Number.isInteger(b.summaryAt) && b.summaryAt >= 0 && b.summaryAt < 1440)) cur.summaryAt = b.summaryAt;
+  if (typeof b.amounts === 'boolean') cur.amounts = b.amounts;
+  await env.DB.prepare('UPDATE users SET alerts_json = ? WHERE id = ?').bind(JSON.stringify(cur), s.user.id).run();
+  return json(cur);
+}
+
+/** POST /api/alerts/test: one notification on this trader's computers. */
+async function testAlert(req: Request, env: Env, s: Session): Promise<Response> {
+  await rateLimit(env, `alert_test:${s.user.id}`, 5, 3600_000);
+  await env.DB.prepare("INSERT INTO alerts (user_id, kind, title, text, created_at) VALUES (?, 'test', 'DisciplineGuard', 'Alerts work. They show here, on this computer.', ?)")
+    .bind(s.user.id, clock(env))
+    .run();
   return json({ ok: true });
 }
 

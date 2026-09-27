@@ -1,5 +1,6 @@
 // Cron every 5 minutes: due jobs, trial emails and retention purges (SPEC §10.2, §13.3).
 import { DAY, HOUR } from '@dg/core';
+import { offCheck, rollup, sendSummary, type AlertKind } from './alerts.ts';
 import { audit, scheduleJob, sendEmail, type Ctx } from './common.ts';
 import { userCtx } from './context.ts';
 import { now as clock, type Env } from './env.ts';
@@ -24,6 +25,12 @@ async function runJob(env: Env, job: { id: number; kind: string; payload: string
       if (r.meta.changes) await audit(env, p.userId, 'server', 'auto_locked');
       return;
     }
+    case 'alert_rollup':
+      return rollup(env, p.userId, p.kind as AlertKind);
+    case 'off_check':
+      return offCheck(env, p);
+    case 'summary':
+      return sendSummary(env, p);
     case 'trial_3days':
     case 'trial_ended': {
       const uc = await userCtx(env, p.userId, t);
@@ -70,6 +77,7 @@ export async function runScheduled(env: Env, ctx: Ctx): Promise<{ ran: number }>
   await env.DB.batch([
     env.DB.prepare("DELETE FROM events WHERE t < ? AND type NOT IN ('pause', 'override', 'entry', 'close')").bind(t - 90 * DAY),
     env.DB.prepare('DELETE FROM coverage WHERE to_utc < ?').bind(t - 30 * DAY),
+    env.DB.prepare('DELETE FROM alerts WHERE created_at < ?').bind(t - 7 * DAY),
     env.DB.prepare('DELETE FROM login_codes WHERE created_at < ?').bind(t - DAY),
     env.DB.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(t - 2 * HOUR),
     env.DB.prepare('DELETE FROM desktop_codes WHERE expires_at < ?').bind(t - DAY),

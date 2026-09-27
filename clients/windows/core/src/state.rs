@@ -44,6 +44,8 @@ pub struct AppState {
     pub dismissed: Vec<String>,
     /// The trader agreed to upload the last 90 days for their own before/after comparison (SPEC §14).
     pub baseline: bool,
+    /// The last alert shown as a notification (SPEC §11.1). None until the first fetch.
+    pub alerts_after: Option<i64>,
 }
 
 impl AppState {

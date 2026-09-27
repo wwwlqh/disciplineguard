@@ -1,4 +1,5 @@
 // Trading accounts: identity, cap, trial marks, moves between logins (SPEC §2, §10.6, §10.7, §12.5).
+import { accountMoved } from './alerts.ts';
 import { audit, sendEmail, type Ctx } from './common.ts';
 import type { AccountRow } from './context.ts';
 import { hmac, randomId } from './crypto.ts';
@@ -72,6 +73,7 @@ export async function registerAccount(env: Env, userId: string, planPaid: boolea
       `Account …${o.last3} was connected to another DisciplineGuard login. DisciplineGuard no longer protects it under your login.\n\nIf that wasn't you, sign in and check Devices: ${env.APP_URL}/devices\n\nDisciplineGuard`,
       ctx,
     );
+    await accountMoved(env, o.user_id, o.last3);
   }
 
   // One trial per trading account. TradingView Paper Trading is never matched (SPEC §12.5).

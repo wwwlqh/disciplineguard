@@ -67,6 +67,49 @@ impl Api {
     }
 }
 
+/// One alert for a Windows notification (SPEC §11.1).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Alert {
+    pub id: i64,
+    pub title: String,
+    pub text: String,
+}
+
+/// What `/v1/desktop/alerts` said.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Alerts {
+    New { alerts: Vec<Alert>, cursor: i64 },
+    /// The app's token is no longer valid.
+    SignedOut,
+}
+
+impl Api {
+    /// Alerts after `after`, the cursor from the last call. With no cursor the server only returns one, so a new
+    /// install doesn't show old alerts.
+    pub fn alerts(&self, app_token: &str, after: Option<i64>) -> Result<Alerts, NetError> {
+        let r = self.post("/v1/desktop/alerts", Some(app_token), &json!({ "after": after }).to_string())?;
+        if r.status == 401 {
+            return Ok(Alerts::SignedOut);
+        }
+        if r.status != 200 {
+            return Err(NetError(format!("http {}", r.status)));
+        }
+        let v = parse(&r.body);
+        let cursor = v["cursor"].as_i64().ok_or_else(|| NetError("no cursor".into()))?;
+        let alerts = v["alerts"]
+            .as_array()
+            .map(|a| {
+                a.iter()
+                    .filter_map(|x| {
+                        Some(Alert { id: x["id"].as_i64()?, title: x["title"].as_str()?.to_string(), text: x["text"].as_str()?.to_string() })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        Ok(Alerts::New { alerts, cursor })
+    }
+}
+
 pub fn parse(body: &str) -> Value {
     serde_json::from_str(body).unwrap_or(Value::Null)
 }

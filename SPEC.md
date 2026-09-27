@@ -835,7 +835,7 @@ A trader installs at most one thing per kind of platform, never one per platform
   - quiet-hours release;
   - retention purges.
 - Pending rule changes need no job (§6.4).
-- Telegram sends go through a queue, rate-limited below Telegram's limits.
+- Alert roll-ups, protection-off checks and end-of-session summaries run as jobs (§11.2).
 
 ### 10.3 Sync
 
@@ -843,8 +843,7 @@ A trader installs at most one thing per kind of platform, never one per platform
   - server time and license state with `valid_until`;
   - active rules, pending changes and settings with pre-resolved time (§3.3);
   - the snapshot (§8.4);
-  - the page-config version;
-  - MT push alerts assigned to this connection.
+  - the page-config version.
 - **Cadence**:
   - 60 s while active (an entry or exit in the last 30 minutes, or a focused TradingView tab);
   - 300 s while idle;
@@ -863,7 +862,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 | `POST /v1/sync` | Events, heartbeat, and the full sync response |
 | `GET /v1/tv-config` | The signed page config |
 | `GET /v1/uninstalled` | Target of the extension's uninstall URL |
-| `POST /v1/telegram` | Telegram webhook (secret header required) |
+| `POST /v1/desktop/alerts` | The Windows app fetches the trader's alerts after its cursor (app token, §11.1) |
 | Web app API | Rules, notes, settings, connections, stats, alerts, partner, plan, export, delete |
 
 ### 10.5 Offline and failure behavior
@@ -902,7 +901,7 @@ A trader installs at most one thing per kind of platform, never one per platform
   - from Phase 2, the partner is alerted when protection stays off for 30 minutes, or when entries are placed while it is off (§11.2).
 - **Removing the EA or uninstalling** sends protection-off at once (best effort). The partner alert waits 10 minutes for that user's accounts to be covered again, to avoid false alarms after a reinstall.
 - **Account moved to another login**: when a trading account's HMAC is connected under user B while it is connected, or pending removal, under user A:
-  - user A gets email, Telegram and a Today notice: "Account …123 was connected to another DisciplineGuard login";
+  - user A gets email, an alert and a Today notice: "Account …123 was connected to another DisciplineGuard login";
   - user A's partner is told (Phase 2);
   - user A's coverage for that account ends at that moment.
 
@@ -938,7 +937,6 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 - Account lists web sessions with "Sign out all". Signing out web sessions does not revoke connections.
 - Every change to a protected setting, note, plan, alert channel or connection emails the account address within 1 minute: what changed, when, browser and OS, and "Not you? Sign out all web sessions".
-- Moving trader alerts to another Telegram chat sends a final message to the old chat.
 - Export needs a sign-in within the last 10 minutes and is delivered as an emailed link.
 - Changing the account email needs confirmation from both addresses. The old address gets a 7-day undo link.
 
@@ -947,16 +945,14 @@ A trader installs at most one thing per kind of platform, never one per platform
 - The Allow code is single use, valid 2 minutes, and goes only to the app's loopback address (`127.0.0.1`, RFC 8252).
 - It is exchanged only with the PKCE verifier whose SHA-256 the app sent, so a forwarded Allow link is useless to anyone else.
 - 30 exchanges per IP per hour. Every Allow emails the account address with the computer's name.
-- The app token can only register terminals (`POST /v1/desktop/terminals`). Each terminal gets its own device token.
+- The app token can only register terminals (`POST /v1/desktop/terminals`) and fetch the trader's alerts (`POST /v1/desktop/alerts`). Each terminal gets its own device token.
 
 **Device tokens**
 
 - Bound to one connection. They may call only `/v1/sync`, receive only their own accounts' figures, and are limited to 120 events per minute in batches of at most 100.
 
-**Telegram**
+**Partner [P2]**
 
-- The webhook is set with a secret token. Updates without the matching header are rejected, and duplicate update ids are ignored.
-- Trader link tokens: single use, 128 bits, valid 15 minutes.
 - Partner invites: single use, valid 7 days.
 - Both work only in private chats. The partner's chat can never be the trader's own chat.
 
@@ -979,7 +975,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 - Health events, sync errors and diagnostics contain only check ids, error codes, versions and times.
 - They never contain account names or numbers, page text, query strings or tokens.
-- Worker logs never record request bodies or query strings for auth, the Windows app sign-in, uninstall or the Telegram webhook.
+- Worker logs never record request bodies or query strings for auth, the Windows app sign-in, or uninstall.
 
 ---
 
@@ -987,13 +983,9 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 ### 11.1 Channels
 
-- **Telegram bot**: the server sends every Telegram message. It is the only channel for alerts that start on TradingView. The trader links it with a deep link or a QR code (EXPERIENCE.md §5.9).
-- **MT push**:
-  - Each EA reports `push_ready` (notifications enabled and a MetaQuotes ID set).
-  - The server assigns each MT push alert to one push-ready EA on the user's accounts.
-  - The EA acknowledges the alert id after `SendNotification` returns true. An unacknowledged alert is reassigned once after 5 minutes.
-  - An alert about the EA's own account (R8 reached, outside violation) is sent locally at once and reported with its id.
-  - Limits: 255 characters, about 2 per second and 10 per minute, so the EA queues messages.
+- **Windows notifications**: the server decides every alert and queues it. Each DisciplineGuard for Windows signed in to the user fetches new ones every 30 seconds (`POST /v1/desktop/alerts`) and shows them as Windows notifications. Nothing to link or install. A new install starts from the latest alert and doesn't replay old ones. Alerts are kept 7 days, and one older than 24 hours is never shown.
+- **TradingView [with the extension]**: the extension shows the same alerts as browser notifications.
+- **MT push to the phone (later, optional)**: only for traders who already set a MetaQuotes ID in MT. Never a setup step.
 - **Email**: transactional only (§12.7).
 - SMS is out of scope.
 
@@ -1106,7 +1098,6 @@ A trader installs at most one thing per kind of platform, never one per platform
   - protection-off alerts are suppressed from the moment deletion is requested;
   - data is used only to keep rules running and send the alerts already set up until the deletion runs, never for analytics.
 - A deletion request sent by email follows the same schedule.
-- Deletion also deletes the user at the analytics provider. The bot sends a final message and forgets the chat.
 
 ### 12.7 Transactional emails
 
@@ -1411,8 +1402,8 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 | ALR-01 | Partner, amounts not shared | Place anyway on R8 | Partner real-time message without counts or amounts |
 | ALR-02 | Partner | Place anyway on R1 | In the partner digest, not real time |
 | ALR-03 | Partner | 4 unclassified orders | Trader told. Partner never |
-| ALR-04 | MT push, 12 alerts in 1 minute | Sending | At most 10 per minute, the rest queued |
-| ALR-05 | Two push-ready EAs | One alert | Delivered by exactly one. Reassigned once if not acknowledged within 5 min |
+| ALR-04 | Outside violations at 10:00, 10:05, 10:05 | Alerts | One at 10:00, then at 10:30 "2 more outside trades went past a rule since 10:00." |
+| ALR-05 | A new Windows app install | First fetch | No old alerts shown. Only alerts after that fetch |
 | ALR-06 | Partner blocked the bot | Next message | 403 counted as leaving. Trader told |
 | ALR-07 | Partner quiet hours 22:00–08:00 | Real-time events at 23:40 and 00:15 | One message at 08:00 listing both with times |
 

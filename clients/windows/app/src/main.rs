@@ -1,5 +1,6 @@
 //! DisciplineGuard for Windows (SPEC §9.5, EXPERIENCE §7.1): a tray app with a small first-run window.
-//! It signs in with Allow, protects MT5 terminals, serves the EA's file bridge and keeps itself and the EA updated.
+//! It signs in with Allow, protects MT5 terminals, serves the EA's file bridge, shows the trader's alerts as Windows
+//! notifications and keeps itself and the EA updated.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod core;
@@ -243,6 +244,7 @@ fn main() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(core.clone())
         .invoke_handler(tauri::generate_handler![view, sign_in, protect, restart, browse, open_web, hide])
         .setup(move |app| {
@@ -272,6 +274,16 @@ fn main() {
                     let _ = refresh_tray(&h, &tray, &c, &mut last);
                     std::thread::sleep(Duration::from_secs(5));
                 }
+            });
+            // Alerts from the server as Windows notifications, every 30 seconds (SPEC §11.1).
+            let c = core.clone();
+            let h = handle.clone();
+            std::thread::spawn(move || loop {
+                use tauri_plugin_notification::NotificationExt;
+                for a in c.poll_alerts() {
+                    let _ = h.notification().builder().title(&a.title).body(&a.text).show();
+                }
+                std::thread::sleep(Duration::from_secs(30));
             });
             tauri::async_runtime::spawn(updates(handle.clone()));
 

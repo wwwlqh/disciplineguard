@@ -102,6 +102,7 @@ pub fn apply(api: &Api, s: &mut AppState, signed: SignedIn) -> Result<(), SignIn
         // was the old person's consent, not the new one's.
         s.links.clear();
         s.baseline = false;
+        s.alerts_after = None;
     }
     s.app_token = Some(signed.token);
     s.email = Some(signed.email);

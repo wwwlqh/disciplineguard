@@ -87,7 +87,7 @@ These rules apply to product copy about the trader or their trades.
 | MT EA: panel, result line, details | P1 (MT5). MT4 in P2 if demand, or P1B if the P0 gate moves it | Trade and see today's status |
 | MT EA: setup checklist | P1 | Shown only while something needs fixing |
 | MT EA: pause | P1 | The core moment |
-| Telegram bot | P1 trader, P2 partner | Alerts and summaries |
+| Windows notifications | P1 | Alerts and summaries, from the Windows app. No bot to link |
 | Partner invite page (web) | P2 | Explain before Telegram |
 | Email | P1 | Sign-in, setup link, trial, renewal, security, deletion |
 | Internal: page-config editor and health monitor | P1 | Fix TradingView changes |
@@ -262,17 +262,18 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
   - Always with the line: "Small samples swing a lot. A few trades can't show whether breaking a rule pays."
   - Never a P/L total for trades placed anyway on its own.
 
-### 5.9 Alerts
+### 5.9 Alerts (on Account)
 
-- **Telegram**: "Connect Telegram" with a deep link and a **QR code** (Telegram usually lives on the phone). The bot confirms, then offers a test message.
+- One line: "Shown as notifications on your computer by DisciplineGuard for Windows." Without the app: "Install it".
 - One switch per alert type, following SPEC §11.2.
-- **Summary time**: "end of your trading hours, or 60 min after your last trade if you have none" (default), or a custom time. It is sent silently.
-- **MT push**: how to set the MetaQuotes ID, with a test from the EA menu.
-- An "Include amounts in my alerts" switch. Telegram and MetaQuotes deliver alerts under their own privacy policies.
+- **Summary time**: "End of trading hours, or 60 min after the last trade" (default), or a time every 30 minutes.
+- "Include amounts". "Hide amounts on screen" also hides them in alerts.
+- **Send a test**: shows a notification within a minute.
 - **Partner [P2]**: §11.2.
 
 ### 5.10 Account
 
+- **Alerts** (§5.9).
 - **Plan**:
   - status ("Trial · day 4 of 14", or the renewal date);
   - change plan, cancel, request a refund;
@@ -366,6 +367,7 @@ The three trust lines sit under the sign-in screen only.
 - "New MetaTrader found: IC Markets MT5. [Protect]".
 - Protected terminals show no tick to untick. Under them: "To remove protection, remove the account on the website. It's a loosening, so it waits like any other. [Open Devices]" (same as removing an account, §5.7).
 - Closing the window keeps the app in the tray. Help opens the help center.
+- The trader's alerts and end-of-session summary appear as Windows notifications (§11.1).
 
 **Never**: the app never closes MetaTrader without the Restart click, never shows ads or upsells in the tray, and never asks for a broker password.
 
@@ -425,7 +427,7 @@ When everything passes: "On. Try a practice pause."
 
 ## 8. Status vocabulary (every surface)
 
-Each state has one indicator, one reason line and one action. The same words appear on the extension badge, the pill, the MT status line, Devices, Telegram and help articles.
+Each state has one indicator, one reason line and one action. The same words appear on the extension badge, the pill, the MT status line, Devices, alerts and help articles.
 
 | State | Indicator | Example reason line | Action |
 |---|---|---|---|
@@ -581,7 +583,7 @@ The first time a device is On in a trading day, an optional, dismissible card of
 
 ## 11. Alerts and partner
 
-### 11.1 Trader messages (Telegram, MT push)
+### 11.1 Trader alerts (Windows notifications)
 
 | Alert | Message |
 |---|---|
@@ -593,7 +595,7 @@ The first time a device is On in a trading day, an optional, dismissible card of
 | End-of-session summary | "Today: 4 trades · 1 pause · 1 skipped · rules kept." After a day that wasn't kept, it ends with "New trading day. Same rules." |
 | **[P2]** Reflection | "How did today go? [On plan] [Mostly] [Not really]", then "One line for tomorrow's you?" The reply becomes the first note shown tomorrow |
 
-Commands and buttons: Today · Status · Help · Unlink.
+Each alert is a title and one or two lines, e.g. "Daily loss limit reached" / "FTMO …123: −$310 of $300. New trades are paused until Tue 11:10."
 
 ### 11.2 Accountability partner [P2]
 
@@ -692,8 +694,8 @@ Account → Plan → Cancel, then one confirm. No questions, no offers.
 - **When** deletion happens:
   - "Deleted now", when protection isn't active;
   - or "Deleted at Tue 02:00. DisciplineGuard is a commitment tool, so deletion waits like a loosening. Your plan is cancelled now, and you won't be charged again."
-- **What is deleted and what is kept**, and for how long (SPEC §13.3). Billing records stay with the payment provider. Messages already sent stay in Telegram.
-- **A leaving checklist**: remove the EA, uninstall the extension, leave the bot. No protection-off alerts are sent once deletion is requested.
+- **What is deleted and what is kept**, and for how long (SPEC §13.3). Billing records stay with the payment provider.
+- **A leaving checklist**: uninstall DisciplineGuard for Windows and the extension. No protection-off alerts are sent once deletion is requested.
 - Export first, then type DELETE to confirm.
 
 **While pending**: a banner, "Deletes Tue 02:00. [Cancel deletion]".

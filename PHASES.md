@@ -27,14 +27,17 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 
 ## Phase 1B: TradingView and self-serve
 
+**Built**
+- Alerts and end-of-session summaries as Windows notifications from the app (SPEC §11). No Telegram.
+- Pause: reason chips, the save-reasons question on Today, reasons in Stats, the calibration prompt.
+
+**Left**
 - TradingView extension, once spike Q1a passes. MT4 if wanted.
-- Telegram alerts and end-of-session summaries.
-- Pause: reason chips, the calibration prompt on Today.
 - Full checkout (monthly and yearly, SPEC §12.3), self-serve export and delete, the full plan states (SPEC §12.2).
 
 ## Phase 2: Public launch
 
-- Accountability partner (SPEC §11.3–11.4) and MT push.
+- Accountability partner (SPEC §11.3–11.4). Its channel to the partner's phone is the founder's call. Optional MT push for the trader.
 - Public Chrome listing (the same store item) and an Edge listing.
 - Launch website, comparison page, demo videos, status page and changelog.
 - Google sign-in.

@@ -1,7 +1,7 @@
 //! The app against the real server handler (`server/dev.ts` on an empty in-memory database).
 //! `npm test` in clients/windows starts the server and sets DG_TEST_API; without it these tests are skipped.
 
-use dg_core::api::Api;
+use dg_core::api::{Alerts, Api};
 use dg_core::bridge::Bridge;
 use dg_core::signin::{self, Allow, SignInError};
 use dg_core::state::{AppState, Terminal};
@@ -265,4 +265,21 @@ fn signing_in_as_another_person_turns_off_the_old_connections_first() {
     t.request("TERMA", 2, "/v1/sync", &sync_body("7654321"));
     assert_eq!(t.reply_head("TERMA"), "2 200");
     assert_eq!(b.me()["connections"].as_array().unwrap().len(), 1);
+}
+
+/// SPEC §11.1: the app shows only alerts that arrive after its first fetch.
+#[test]
+fn fetches_alerts_after_its_cursor() {
+    let Some(t) = Setup::new("alerts@test.dev") else { return };
+    let api = Api::new(&t.api);
+    let token = t.state.lock().unwrap().app_token.clone().unwrap();
+    assert_eq!(t.web.send("POST", "/api/alerts/test", json!({})).0, 200);
+    let Alerts::New { alerts, cursor } = api.alerts(&token, None).unwrap() else { panic!("signed out") };
+    assert!(alerts.is_empty(), "a new install doesn't replay old alerts");
+    assert_eq!(t.web.send("POST", "/api/alerts/test", json!({})).0, 200);
+    let Alerts::New { alerts, cursor: next } = api.alerts(&token, Some(cursor)).unwrap() else { panic!("signed out") };
+    assert_eq!(alerts.len(), 1);
+    assert_eq!(alerts[0].title, "DisciplineGuard");
+    assert!(next > cursor);
+    assert_eq!(api.alerts(&"z".repeat(43), Some(next)).unwrap(), Alerts::SignedOut);
 }

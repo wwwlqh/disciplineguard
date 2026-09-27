@@ -1,6 +1,6 @@
 //! What the window and the tray ask for: the app state, Protect, Restart and uninstall (SPEC §9.5, EXPERIENCE §7.1).
 
-use dg_core::api::Api;
+use dg_core::api::{Alert, Alerts, Api};
 use dg_core::bridge::Bridge;
 use dg_core::release;
 use dg_core::setup;
@@ -122,6 +122,26 @@ impl Core {
             browsed: Mutex::new(Vec::new()),
             ea: OnceLock::new(),
         }
+    }
+
+    /// New alerts to show as Windows notifications (SPEC §11.1). Empty when signed out or offline.
+    pub fn poll_alerts(&self) -> Vec<Alert> {
+        let (token, after) = {
+            let s = self.state.lock().unwrap();
+            (s.app_token.clone(), s.alerts_after)
+        };
+        let Some(token) = token else { return Vec::new() };
+        let Ok(Alerts::New { alerts, cursor }) = self.api.alerts(&token, after) else { return Vec::new() };
+        let mut s = self.state.lock().unwrap();
+        // A sign-in as someone else meanwhile starts its own cursor.
+        if s.app_token.as_deref() != Some(token.as_str()) {
+            return Vec::new();
+        }
+        if s.alerts_after != Some(cursor) {
+            s.alerts_after = Some(cursor);
+            self.save(&s);
+        }
+        alerts
     }
 
     pub fn save(&self, s: &AppState) {
