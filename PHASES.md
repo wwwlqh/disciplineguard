@@ -39,9 +39,15 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 
 ## Phase 2: Public launch
 
+MT5 and TradingView first; other platforms wait for Phase 3.
+
+**Built**
+- Launch website: one page at `/` for signed-out visitors (how it works, comparison, platforms, pricing, a live demo pause).
+
+**Left**
 - Accountability partner (SPEC §11.3–11.4). Its channel to the partner's phone is the founder's call. Optional MT push for the trader.
 - Public Chrome listing (the same store item) and an Edge listing.
-- Launch website, comparison page, demo videos, status page and changelog.
+- Demo videos, status page and changelog.
 - Google sign-in.
 - Session check-in, reflection in the summary, take a break for 1, 7 or 30 days.
 - Affiliate program for educators, and referral credit (give a month, get a month).
