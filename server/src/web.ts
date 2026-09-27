@@ -140,10 +140,6 @@ async function putSetting(req: Request, env: Env, s: Session, ctx: Ctx): Promise
   const t = clock(env);
   const uc = await userCtx(env, s.user.id, t);
   const value = validateSetting(key, b.value, (id) => uc.accounts.find((a) => a.id === id));
-  if (key.startsWith('note:') && value === null) {
-    const remaining = uc.asm.notes.filter((n) => `note:${n.id}` !== key).length;
-    if (remaining < 1) throw new HttpError(400, 'one_note_required');
-  }
   const cur = uc.settings.get(key);
   const res = requestChange(key, toRow(cur), value, {
     now: t, userResets: uc.userResets, setupMode: !!uc.user.setup_mode, lastRealPauseAt: uc.user.last_real_pause_at ?? undefined,
@@ -450,10 +446,10 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
       if (b.defaults[k] !== undefined && b.defaults[k] !== null) writes.push([`default:${k}`, validateSetting(`default:${k}`, b.defaults[k], () => undefined)]);
     }
   }
+  // Notes and plan are optional: onboarding asks the trader to type nothing.
   const notes = Array.isArray(b.notes) ? b.notes.slice(0, 3) : [];
-  if (notes.length < 1) throw new HttpError(400, 'one_note_required');
   notes.forEach((n: unknown, i: number) => writes.push([`note:${i + 1}`, validateSetting(`note:${i + 1}`, n, () => undefined)]));
-  writes.push(['plan', validateSetting('plan', b.plan, () => undefined)]);
+  if (typeof b.plan === 'string' && b.plan.trim()) writes.push(['plan', validateSetting('plan', b.plan, () => undefined)]);
   if (b.popup) writes.push(['popup', validateSetting('popup', b.popup, () => undefined)]);
 
   for (const [key, value] of writes) {

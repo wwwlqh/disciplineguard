@@ -320,15 +320,7 @@ When several rules are violated, the pause lists all of them. The title uses the
 
 ### 5.5 Notes and plan
 
-- **Notes**: one required, up to three, 1–200 characters each.
-  - Each note MAY have a trigger tag: `after_loss`, `too_many`, or `any` (default).
-  - The pause shows a note whose tag matches the title rule (`after_loss` for R7, R8 and R10; `too_many` for R1, R2 and R3). Otherwise it shows an `any` note.
-  - Among matching notes, it rotates in turn.
-- **Plan**: required, 1–120 characters, completing "When a pause stops a trade, I will…". It is shown in the pause and after a skip.
-- **Changes**:
-  - Adding a note applies immediately.
-  - After lock, editing or deleting a note or the plan is a looser change (§6.2).
-  - In setup mode, every edit applies immediately.
+Not asked for: the trader types nothing during setup. `note:1`–`note:3` and `plan` stay optional settings (none by default), and the pause shows them only when set.
 
 ---
 

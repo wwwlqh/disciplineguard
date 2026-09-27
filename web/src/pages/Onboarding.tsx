@@ -1,5 +1,5 @@
-// Onboarding (EXPERIENCE §5.2): four screens, Back always available, resumable.
-// 1 About you · 2 What costs you (starting rules inline) · 3 Your note and trading day · 4 Connect MT5.
+// Onboarding (EXPERIENCE §5.2): three screens, nothing to type, Back always available, resumable.
+// 1 About you · 2 Your rules (starting rules, trading day, analytics) · 3 Connect MT5.
 import { useEffect, useMemo, useState } from 'react';
 import { buildTemplate, DEFAULT_POPUP, type Choice, type Rules } from '@dg/core';
 import { api, type Me } from '../api.ts';
@@ -25,8 +25,6 @@ interface Draft {
   /** Set once the trader edits a starting rule; until then rules follow the template. */
   rules: Rules | null;
   defaults: Defaults | null;
-  notes: { text: string; tag: 'any' | 'after_loss' | 'too_many' }[];
-  plan: string;
   tz: string;
   reset: 'midnight' | 'forex_close' | 'futures_session' | 'firm' | 'custom';
   customAt: string;
@@ -58,7 +56,7 @@ const FIRMS: Record<string, { pct: number; reset: { at: string; tz: string }; ba
   FTMO: { pct: 5, reset: { at: '00:00', tz: 'Europe/Prague' }, basis: 'the day\'s starting balance or equity' },
 };
 
-const STEPS = ['About you', 'What costs you', 'Your note', 'Connect MT5'];
+const STEPS = ['About you', 'Your rules', 'Connect MT5'];
 
 const RESETS: Record<Draft['reset'], string> = {
   midnight: 'midnight in your timezone',
@@ -70,10 +68,10 @@ const RESETS: Record<Draft['reset'], string> = {
 
 function initial(me: Me): Draft {
   const saved = me.user.onboarding;
-  if (saved && typeof saved === 'object' && saved.step !== undefined && !saved.done && saved.step < STEPS.length) return saved as Draft;
+  if (saved && typeof saved === 'object' && saved.step !== undefined && !saved.done && saved.step < STEPS.length) return { ...(saved as Draft), step: saved.applied ? saved.step : Math.min(saved.step, 1) };
   return {
     step: 0, platforms: ['mt5'], accountType: 'own', firm: 'FTMO', firmDailyPct: 5, style: 'day', choices: [], session: 'london', usualSize: 0.5,
-    rules: null, defaults: null, notes: [{ text: '', tag: 'any' }], plan: '', tz: browserTz(), reset: 'midnight', customAt: '00:00',
+    rules: null, defaults: null, tz: browserTz(), reset: 'midnight', customAt: '00:00',
     analytics: null, applied: false,
   };
 }
@@ -132,10 +130,10 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
           r5: defaults.r5 ? { r5Max: defaults.r5.r5Max, r5Overrides: [] } : undefined,
           r6: defaults.r6, r8: defaults.r8, r7ignore: defaults.r7ignore,
         },
-        notes: d.notes.filter((n) => n.text.trim()), plan: d.plan, popup: DEFAULT_POPUP, choices: d.choices, style: d.style,
+        popup: DEFAULT_POPUP, choices: d.choices, style: d.style,
         platforms: d.platforms, accountTypes: d.accountType, tellMe: d.platforms.filter((p) => p !== 'mt5'),
       });
-      set({ applied: true, step: 3 });
+      set({ applied: true, step: 2 });
     } catch (e: any) {
       setErr(e.message === e.code ? 'Something is missing. Check the earlier screens.' : e.message);
     } finally {
@@ -145,14 +143,13 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
 
   const canNext = (() => {
     switch (d.step) {
-      case 1: return d.choices.length > 0 && RULE_ORDER.every((id) => validRule(id, (rules as any)[id]));
-      case 2: return d.plan.trim().length > 0 && d.plan.length <= 120 && d.notes.some((n) => n.text.trim()) && d.notes.every((n) => n.text.length <= 200) && d.analytics !== null;
+      case 1: return d.choices.length > 0 && RULE_ORDER.every((id) => validRule(id, (rules as any)[id])) && d.analytics !== null;
       default: return true;
     }
   })();
 
   function next() {
-    if (d.step === 2) return void apply();
+    if (d.step === 1) return void apply();
     set({ step: Math.min(STEPS.length - 1, d.step + 1) });
   }
 
@@ -161,7 +158,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
     await reload();
   }
 
-  const draftMe: Me = { ...me, rules, notes: d.notes.filter((n) => n.text).map((n, i) => ({ id: String(i + 1), text: n.text, tag: n.tag, setAt: Date.now() })), plan: d.plan, popup: DEFAULT_POPUP };
+  const draftMe: Me = { ...me, rules, notes: [], plan: '', popup: DEFAULT_POPUP };
 
   return (
     <div className="wizard">
@@ -305,34 +302,6 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
               </details>
             </div>
           )}
-        </section>
-      )}
-
-      {d.step === 2 && (
-        <section className="stack">
-          <h1>Your note</h1>
-          <p className="muted">The pause shows this. Kind and specific works best.</p>
-          <label className="field">
-            When a pause stops a trade, I will…
-            <input maxLength={120} placeholder="stand up and get water" value={d.plan} onChange={(e) => set({ plan: e.target.value })} />
-          </label>
-          {d.notes.map((n, i) => (
-            <label key={i} className="field">
-              {i === 0 ? 'What will you do instead of this trade?' : 'Another note'}
-              <textarea
-                maxLength={200}
-                placeholder={['I will wait for the next setup on my list.', 'Last time it cost me the whole account.', 'My kids, and the money I promised not to lose.'][i]}
-                value={n.text}
-                onChange={(e) => set({ notes: d.notes.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)) })}
-              />
-            </label>
-          ))}
-          <div className="row">
-            {d.notes.length < 3 && <button onClick={() => set({ notes: [...d.notes, { text: '', tag: 'any' }] })}>Add another note</button>}
-            <button onClick={() => setPracticeOpen(true)} disabled={!d.notes.some((n) => n.text.trim())}>Preview the pause</button>
-          </div>
-          <p className="small muted">Only you see these.</p>
-
           <details className="card">
             <summary>Your day resets at {d.reset === 'firm' && FIRMS[d.firm] ? `${d.firm}'s reset (midnight Prague time)` : RESETS[d.reset]} · {d.tz}</summary>
             <div className="stack" style={{ marginTop: 10 }}>
@@ -360,7 +329,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
         </section>
       )}
 
-      {d.step === 3 && (
+      {d.step === 2 && (
         <section className="stack">
           <h1>{phone ? 'Finish on your computer' : 'Connect MT5'}</h1>
           {phone ? (
@@ -386,9 +355,9 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
 
       <div className="wizard-nav">
         {!d.applied && <button onClick={() => set({ step: Math.max(0, d.step - 1) })} disabled={d.step === 0}>Back</button>}
-        {d.step < 3 && (
+        {d.step < 2 && (
           <button className="primary" disabled={!canNext || busy} onClick={next}>
-            {d.step === 2 ? 'Save my rules' : 'Next'}
+            {d.step === 1 ? 'Save my rules' : 'Next'}
           </button>
         )}
       </div>

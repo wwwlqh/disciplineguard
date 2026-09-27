@@ -9,7 +9,7 @@
 
 | # | Principle | In practice |
 |---|---|---|
-| 1 | Your calm self talks to your tilted self | The pause speaks in the trader's own words: their note and their plan. The app never judges, scolds or praises |
+| 1 | Your calm self talks to your tilted self | The pause states the trader's own rule. The app never judges, scolds or praises |
 | 2 | Your style, your popup | The trader decides when the popup shows and how long it waits. By default, a trade that breaks no rule goes straight through, with no confirmation, no sound and no wait for our server |
 | 3 | Always a safe way out | Skipping is the easy, default action. Closing a trade is never paused, and the UI says so wherever that fear comes up |
 | 4 | Honest numbers only | Show counts and facts. Never claim money saved. Never show a P/L total for trades placed anyway on its own. No dark patterns in billing |
@@ -132,23 +132,13 @@ These rules apply to product copy about the trader or their trades.
 - Email → an email with a sign-in link **and a 6-digit code**. The screen that asked offers "Enter code instead", so a link opened on the phone never strands the laptop.
 - **[P2]** Continue with Google.
 
-**Onboarding: four screens**
+**Onboarding: three screens, nothing to type**
 
 Back is always available until the rules are saved, and progress is saved so it can be resumed.
 
-1. **About your trading**, on one screen:
-   - account type: prop challenge · funded prop · own money · demo. For prop: the firm (with suggestions) and its daily loss limit. Choosing a firm with a known reset sets the day reset to match;
-   - how you trade (scalping · day · swing) and usual position size;
-   - "DisciplineGuard protects MT5 on Windows. Also trade somewhere else?" chips: TradingView, MT4, MT5 on Mac, MT on my phone, something else. Each shows its honest one-liner and records "tell me when it's ready" (the phone line: "Phone trades can't be paused. They still count, and show up when your computer's MT is running.").
-2. **What costs you the most?** Up to two choices (§5.3). Below them, "Your starting rules" names the rules they turn on, with the prop line where it applies ("We pause new trades at 4% down. Open trades can still lose more, and your firm's overall loss limit isn't tracked."). **Adjust** opens every rule card for editing. "Starting values, not advice. Set rules you'd keep on a normal day."
-   - "I give back profits after a good start" is collected for a **[P3]** rule.
-3. **Your note**:
-   - the plan ("When a pause stops a trade, I will…") and one note, with "Add another note" (up to three) and "Preview the pause";
-   - "Your day resets at <reset> · <timezone>", folded, with timezone and reset (midnight · forex close · futures session · match my prop firm · custom) inside;
-   - "How protection works": tightening applies now, loosening waits until the next reset or 12 hours; closing is never paused; you choose when the pause shows and how long it waits;
-   - **analytics consent** as equal Yes/No buttons;
-   - [Save my rules].
-4. **Connect MT5**: the three steps of §5.7 with the live "Waiting for your computer…" state. On a phone: "Finish on your computer" with the address to open. Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
+1. **About your trading**: account type (prop challenge · funded prop · own money · demo; for prop, the firm and its daily loss limit), how you trade, usual position size, and "Also trade somewhere else?" chips that record "tell me when it's ready".
+2. **Your rules**: "What costs you the most?", up to two choices (§5.3). "Your starting rules" names the rules they turn on; **Adjust** opens each rule. Below: the day reset (folded), "Tightening applies now. Loosening waits until your next day reset", **analytics consent** as equal Yes/No buttons, and [Save my rules].
+3. **Connect MT5**: the three steps of §5.7 with the live "Waiting for your computer…" state. On a phone: "Finish on your computer". Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
 
 ### 5.3 Starting templates
 
@@ -227,18 +217,7 @@ Top to bottom:
 
 ### 5.6 Plan and notes
 
-- **Plan (required)**: "When a pause stops a trade, I will…". Placeholders: "stand up and get water" · "close the chart for 10 minutes" · "write the setup down first".
-- **Notes** (one required, up to three), with three prompts, each filling an editable draft:
-  1. "What will you do instead of this trade?"
-  2. "Who or what are you doing this for?"
-  3. "Last time I ignored this rule, it cost me ___."
-- Examples appear as greyed placeholders, never pre-filled.
-- Hint: "Write it the way a good friend would say it to you. Kind and specific works better than harsh."
-- Each note can be tagged: "After a loss" · "Too many trades" · "Any pause".
-- A live pause preview, including the MT layout, so long notes are seen wrapping.
-- Privacy line: "Only you see your notes and plan. They're never sent to your partner or to analytics."
-- After lock, adding a note applies now. Editing or deleting shows the verdict line (looser).
-- **[P2]** After 30 showings or 3 weeks: "Your note has been shown 30 times. Still true? [Keep] [Rewrite]".
+Not asked for and not edited anywhere: the trader types nothing. The pause shows a note or plan only if one exists (SPEC §5.5).
 
 ### 5.7 Devices and accounts
 
@@ -474,8 +453,8 @@ Rules:
 1. **Label**, small: "PAUSE · YOUR RULE".
 2. **Headline**: one line, the fact in the trader's frame (§9.2).
 3. **Other rules also affected**: at most two lines, then "+1 more".
-4. **The note**: the largest text, in quotes, set in its own typeface, with the attribution "you, 12 Sep".
-5. **Your plan**: "Your plan: close the chart for 10 minutes."
+4. **The note**, only if one exists: the largest text, in quotes, with the attribution "you, 12 Sep".
+5. **Your plan**, only if one exists: "Your plan: close the chart for 10 minutes."
 6. **Way-out or fix line** (§9.2).
 7. **Protect-the-day line**, only when true: "Today is a kept day so far."
 8. **Situational lines**, each only when it applies:

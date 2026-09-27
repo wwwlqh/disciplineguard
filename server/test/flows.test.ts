@@ -297,11 +297,13 @@ describe('rule changes through the API (SPEC §6)', () => {
     expect((await web.send('PUT', '/api/settings', { key: 'tz', value: 'Mars/Base' })).status).toBe(400);
   });
 
-  it('keeps at least one note', async () => {
+  it('onboards with no note or plan typed', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
-    await web.onboard();
-    expect((await web.send('PUT', '/api/settings', { key: 'note:1', value: null })).status).toBe(400);
+    expect((await web.send('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, analyticsConsent: false, choices: ['too_many'] })).status).toBe(200);
+    const me = (await web.get('/api/me')).data;
+    expect(me.notes).toEqual([]);
+    expect(me.plan).toBe('');
   });
 });
 

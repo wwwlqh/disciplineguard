@@ -30,7 +30,7 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 
 - TradingView extension, once spike Q1a passes. MT4 if wanted.
 - Telegram alerts and end-of-session summaries.
-- Pause: reason chips, notes 2–3 with trigger tags, the calibration prompt on Today.
+- Pause: reason chips, the calibration prompt on Today.
 - Full checkout (monthly and yearly, SPEC §12.3), self-serve export and delete, the full plan states (SPEC §12.2).
 
 ## Phase 2: Public launch
@@ -39,7 +39,7 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 - Public Chrome listing (the same store item) and an Edge listing.
 - Launch website, comparison page, demo videos, status page and changelog.
 - Google sign-in.
-- Session check-in, reflection in the summary, note staleness prompts, take a break for 1, 7 or 30 days.
+- Session check-in, reflection in the summary, take a break for 1, 7 or 30 days.
 - Affiliate program for educators, and referral credit (give a month, get a month).
 
 ## Phase 3: Grow

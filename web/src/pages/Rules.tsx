@@ -129,7 +129,7 @@ function PopupCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
             {p.typeConfirm.mode === 'after' && <>after {num(p.typeConfirm.n, (n) => setP({ ...p, typeConfirm: { ...p.typeConfirm, n } }), 1, 10)}</>}
           </span>
         </label>
-        <label className="check"><input type="checkbox" checked={p.skipCard} onChange={(e) => setP({ ...p, skipCard: e.target.checked })} /> After a skip, show my plan with "Take a break" and "Done for today"</label>
+        <label className="check"><input type="checkbox" checked={p.skipCard} onChange={(e) => setP({ ...p, skipCard: e.target.checked })} /> After a skip, offer "Take a break" and "Done for today"</label>
         <label className="check"><input type="checkbox" checked={p.keyboardPlace} onChange={(e) => setP({ ...p, keyboardPlace: e.target.checked })} /> Accessibility: type PLACE instead of clicking</label>
       </div>
       <Scheduled me={me} k="popup" render={() => 'new popup settings'} />
@@ -235,52 +235,6 @@ function AccountSheet({ me, a, reload }: { me: Me; a: Account; reload(): Promise
   );
 }
 
-function NotesCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
-  const [plan, setPlan] = useState(me.plan);
-  const [notes, setNotes] = useState(me.notes.map((n) => ({ id: n.id, text: n.text, tag: n.tag })));
-  const save = useSave(reload);
-  const planV = useVerdict('plan', plan, plan !== me.plan && plan.trim().length > 0);
-  return (
-    <div className="card">
-      <h2>Your plan and notes</h2>
-      <label className="field">When a pause stops a trade, I will…
-        <input maxLength={120} value={plan} onChange={(e) => setPlan(e.target.value)} />
-      </label>
-      {plan !== me.plan && (
-        <div className="stack" style={{ marginTop: 8 }}>
-          <VerdictLine v={planV} setupMode={me.user.setupMode} />
-          <button className="primary" disabled={!planV} onClick={() => save('plan', plan)}>{applyLabel(planV)}</button>
-        </div>
-      )}
-      <Scheduled me={me} k="plan" render={(v) => `"${v}"`} />
-      <div className="stack" style={{ marginTop: 14 }}>
-        {notes.map((n, i) => {
-          const orig = me.notes.find((x) => x.id === n.id);
-          const changed = !orig || orig.text !== n.text || orig.tag !== n.tag;
-          return (
-            <div key={n.id}>
-              <textarea maxLength={200} value={n.text} onChange={(e) => setNotes(notes.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} />
-              <div className="row small">
-                <select value={n.tag} onChange={(e) => setNotes(notes.map((x, j) => (j === i ? { ...x, tag: e.target.value as any } : x)))}>
-                  <option value="any">Any pause</option><option value="after_loss">After a loss</option><option value="too_many">Too many trades</option>
-                </select>
-                {changed && n.text.trim() && <button className="primary" onClick={() => save(`note:${n.id}`, { text: n.text, tag: n.tag })}>{orig ? 'Save (looser: scheduled)' : 'Add note (applies now)'}</button>}
-                {orig && me.notes.length > 1 && <button className="link" onClick={() => save(`note:${n.id}`, null)}>Delete</button>}
-                {!me.user.setupMode && orig && <span className="faint">Editing or deleting a note is a looser change.</span>}
-              </div>
-              <Scheduled me={me} k={`note:${n.id}`} render={(v) => (v ? `"${v.text}"` : 'deleted')} />
-            </div>
-          );
-        })}
-        {notes.length < 3 && (
-          <button onClick={() => setNotes([...notes, { id: String([1, 2, 3].find((x) => !notes.some((n) => n.id === String(x)))), text: '', tag: 'any' }])}>Add a note</button>
-        )}
-      </div>
-      <p className="small muted" style={{ marginTop: 10 }}>Only you see these.</p>
-    </div>
-  );
-}
-
 function LockSheet({ me, onClose, reload }: { me: Me; onClose(): void; reload(): Promise<void> }) {
   const [name, setName] = useState(me.user.firstName ?? '');
   const [ok, setOk] = useState(false);
@@ -293,8 +247,6 @@ function LockSheet({ me, onClose, reload }: { me: Me; onClose(): void; reload():
         {on.map((id) => <li key={id}>{RULE_INFO[id].name}: {ruleSummary(id, me.rules)}</li>)}
         {on.length === 0 && <li>No rules on yet.</li>}
       </ul>
-      <p>Your plan: {me.plan || '—'}</p>
-      {me.notes.map((n) => <p key={n.id} style={{ fontFamily: 'var(--serif)' }}>“{n.text}”</p>)}
       <label className="check" style={{ margin: '10px 0' }}>
         <input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} />
         <span>I understand loosening waits until my next day reset (at least 12 hours).</span>
@@ -360,7 +312,6 @@ export function RulesPage({ me, reload }: PageProps) {
       </div>
       {RULE_ORDER.map((id) => <RuleCard key={id} me={me} id={id} reload={reload} />)}
       <PopupCard me={me} reload={reload} />
-      <NotesCard me={me} reload={reload} />
       <DayCard me={me} reload={reload} />
       <h2 id="accounts" style={{ marginTop: 24 }}>Accounts</h2>
       {me.accounts.length === 0 && <p className="muted">No accounts yet.</p>}
