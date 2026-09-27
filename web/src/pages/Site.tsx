@@ -113,6 +113,7 @@ export function Site() {
       <footer className="site-foot row">
         <a href="/help" onClick={onLink}>Help</a>
         <a href="/help/data" onClick={onLink}>What we store</a>
+        <a href="/status" onClick={onLink}>Status</a>
         <a href={SOURCE}>Source code</a>
         <span className="faint">© {new Date().getFullYear()} DisciplineGuard</span>
       </footer>

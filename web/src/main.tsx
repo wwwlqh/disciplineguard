@@ -17,6 +17,7 @@ import { Allow } from './pages/Allow.tsx';
 import { Help } from './pages/Help.tsx';
 import { Plans } from './pages/Plans.tsx';
 import { Site } from './pages/Site.tsx';
+import { Status } from './pages/Status.tsx';
 
 export interface PageProps {
   me: Me;
@@ -104,6 +105,7 @@ function App() {
 
   if (path.startsWith('/help')) return <Help path={path} signedIn={state === 'ready'} />;
   if (path === '/' && state !== 'ready') return <Site />;
+  if (path === '/status') return <Status />;
   // After signing in, return to the page that asked (the Windows app's Allow page keeps its query).
   if (path === '/signin' || state === 'signed_out') return <SignIn onDone={() => { navigate(path === '/signin' ? '/today' : location.pathname + location.search, true); void reload(); }} />;
   if (state === 'loading' || !me) return <div className="center-page muted">{state === 'error' ? "Can't reach DisciplineGuard. Try again in a moment." : 'Loading…'}</div>;
