@@ -49,12 +49,11 @@ MT5 and TradingView first; other platforms wait for Phase 3.
 - Session check-in on Today: tighten for today only (max trades, loss limit), in the signed rules so MT5 and TradingView enforce it until the next reset. No mood question.
 - Take a break for 1, 7 or 30 days (Account): 45 s and type to confirm on MT5 and TradingView. The TradingView pause now asks for type to confirm too.
 
-**Left**
-- Accountability partner (SPEC §11.3–11.4). Its channel to the partner's phone is the founder's call. Optional MT push for the trader.
+**Left** (the founder)
 - Public Chrome listing (the same store item) and an Edge listing.
-- The MT5 demo clip (the founder, from a demo account: a Buy past the limit, the pause, Skip).
-- Reflection in the summary (left out for now: it's a self-rating). The partner is told about long breaks once partners exist.
-- Affiliate program for educators, and referral credit (give a month, get a month).
+- The MT5 demo clip (from a demo account: a Buy past the limit, the pause, Skip).
+
+**Not now** (the founder, 27 Sep 2026): the accountability partner, the affiliate program, referral credit, and the reflection in the summary.
 
 ## Phase 3: Grow
 
