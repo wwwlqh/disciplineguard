@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node build.ts",
     "e2e": "node test/e2e.ts",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

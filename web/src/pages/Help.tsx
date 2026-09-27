@@ -170,6 +170,15 @@ const STATUS: Article[] = [
       'During setup mode, or for an Ended account, it applies at once.',
     ],
   },
+  {
+    slug: 'data',
+    title: 'What DisciplineGuard stores',
+    body: [
+      'Your email, your rules, each trade and pause (time, symbol, side, size, the net of each close), and what the daily loss limit needs.',
+      'Account numbers are stored scrambled, plus the last 3 characters. Account holder names and passwords are never sent.',
+      'Nothing is sold or shared. Account → Export or Delete, any time.',
+    ],
+  },
 ];
 
 const ALL = [...SETUP, ...STATUS];

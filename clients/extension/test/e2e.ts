@@ -58,15 +58,15 @@ try {
   if (b.status !== 0) throw new Error('build failed');
   const ext = join(here, '..', 'test-dist');
 
-  // The trader signs in on the web and onboards: at most 1 trade a day, a 2-second wait.
+  // The trader signs in on the web and onboards: at most 1 trade a day, a daily loss limit of 100, a 2-second wait.
   const email = 'e2e@test.dev';
   await call('POST', '/v1/auth/email', { email });
   const mail = (await call('GET', '/dev/outbox')).data.find((m: any) => m.to_email === email);
   const code = /code is (\d{6})/.exec(mail.body)![1];
   const cookie = (await call('POST', '/v1/auth/verify', { email, code })).cookie!;
   const popup = { show: 'breaks', wait: 2, lossWait: { on: false, seconds: 15, withinMinutes: 30 }, growing: { on: false, step: 5, cap: 45 }, typeConfirm: { mode: 'off', n: 3 }, skipCard: true, keyboardPlace: false };
-  const ob = await call('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 1 } }, popup }, cookie);
-  check(ob.status === 200, 'onboarded with R1 max 1');
+  const ob = await call('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 1 }, R8: { on: true, restHours: 12 } }, defaults: { r8: { unit: 'amount', value: 100 } }, popup }, cookie);
+  check(ob.status === 200, 'onboarded with R1 max 1 and R8 100');
 
   ctx = await chromium.launchPersistentContext(profile, {
     channel: 'chromium',
@@ -98,6 +98,10 @@ try {
   await until(async () => (await cache())?.status === 'on', 'extension On');
   const me = (await call('GET', '/api/me', undefined, cookie)).data;
   check(me.accounts.length === 1 && me.accounts[0].platform === 'tv' && me.accounts[0].last3 === 'eng', 'the Paper Trading account is protected (last 3 only)');
+
+  const pillText = () => chart.locator('dg-pill .text').textContent();
+  await until(async () => (await pillText())?.startsWith('On · 0 of 1 trades'), 'the pill shows On and the trade meter');
+  check(true, 'the pill shows On and the trade meter');
 
   const sent = () => chart.evaluate(() => (window as any).sent as number);
   // A real mouse click at the control, like the trader's (the pause covering the page is the point).
@@ -145,6 +149,35 @@ try {
   }, 'pauses reach the server');
   check(today.pauses.filter((p: any) => p.decision === 'skip').length === 2, 'two skips logged');
   check(today.meters.tradesToday === 2, 'two trades counted today');
+  check(today.outside.length === 0, 'guarded trades filling in the positions table are not counted again');
+
+  // A trade from outside the guarded buttons (the DOM, say) appears in the positions table: counted, and over R1.
+  await chart.evaluate(() => (window as any).setPosition('ETHUSD', 'sell', 2));
+  const out = await until(async () => {
+    const d = (await call('GET', '/api/today', undefined, cookie)).data;
+    return d.outside.length === 1 && d.outside[0];
+  }, 'the outside entry reaches the server');
+  check(out.symbol === 'ETHUSD' && out.side === 'sell' && out.size === 2 && out.violations.includes('R1'), 'an outside entry is counted as a violation of R1');
+
+  // Closing it loses 50: the close and its net reach the server.
+  await chart.evaluate(() => {
+    (window as any).setPosition('ETHUSD', 'sell', 0);
+    (window as any).setSummary(99_950, 99_950);
+  });
+  const close = await until(async () => (await cache())?.snapshot?.closes?.[0], 'the close reaches the server');
+  check(close.net === -50 && close.size === 2, 'a close is logged with its net');
+
+  // Floating loss takes today's loss to 110, past the 100 limit: the server is told and the next trade is paused for R8.
+  await chart.evaluate(() => (window as any).setSummary(99_950, 99_890));
+  const acct = await until(async () => {
+    const d = (await call('GET', '/api/today', undefined, cookie)).data;
+    return d.accounts[0]?.inLimit && d.accounts[0];
+  }, 'the daily loss limit reaches the server');
+  check(acct.inLimit, 'reaching the daily loss limit is reported');
+  await press('#submit');
+  check((await pauseOpen()) === 1 && (await sent()) === 2, 'after the loss limit, a new trade is paused');
+  check(/down \$110.*daily limit is \$100/.test((await chart.locator('dg-pause .head').textContent()) ?? ''), 'the pause names the daily loss limit');
+  await chart.keyboard.press('Escape');
 } catch (e) {
   console.log('FAIL', (e as Error).message);
   failed = true;

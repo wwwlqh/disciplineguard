@@ -34,7 +34,7 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 - Self-serve export (emailed ZIP link) and deletion (SPEC §12.6, §13.4).
 
 **Left**
-- TradingView extension (clients/extension): works on TradingView Paper Trading (spike Q1a passed 27 Sep 2026). Left: the founder's check on one real broker account, the status pill, outside detection, R8 from the Account Manager, the signed remote page config, and the Chrome Web Store listing. MT4 if wanted.
+- TradingView extension (clients/extension): works on TradingView Paper Trading (spike Q1a passed 27 Sep 2026), with the pill, outside detection, closes, R8 from the Account Manager and the signed remote page config. Left: the founder's check on one real broker account, uploading the unlisted Chrome Web Store item (`clients/extension/store/listing.md`), self-tests and health events for the page config, and the coach card. MT4 if wanted.
 - The founder: Lemon Squeezy products (yearly, monthly, early-bird), their redirect to `/plans?paid`, and the secrets in server/wrangler.toml.
 
 ## Phase 2: Public launch

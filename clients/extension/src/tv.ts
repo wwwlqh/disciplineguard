@@ -1,5 +1,5 @@
 // Reading TradingView's page (SPEC §9.1). Everything page-specific is in PAGE, the bundled page config: data only,
-// so a signed remote copy can replace it later without code. Anything that can't be read makes the click pass.
+// so a signed remote copy can replace it without a new release (src/pageconfig.ts). Anything that can't be read makes the click pass.
 // Selectors checked on a signed-in Paper Trading chart, 27 Sep 2026.
 import type { Order, OrderType, Position, Side } from '@dg/core';
 import type { TvAccount } from './messages.ts';
@@ -12,8 +12,13 @@ export interface PageConfig {
   floating: { buy: string; sell: string; qty: string };
   /** The chart's symbol. */
   symbol: string;
+  /** The chart area: the pill's default spot is its bottom-right. */
+  chart: string;
   /** The trading panel: broker name, account selector (name, then currency), positions and orders tables. */
   account: { broker: string; selector: string; name: string; positions: string; orders: string };
+  /** The Account Manager's summary fields (title, then value), and the field titles to read, lower case, per locale. */
+  summary: { field: string; title: string; value: string };
+  markers: { balance: string[]; equity: string[] };
 }
 
 export const PAGE: PageConfig = {
@@ -27,6 +32,7 @@ export const PAGE: PageConfig = {
   },
   floating: { buy: '[data-name="buy-order-button"]', sell: '[data-name="sell-order-button"]', qty: '[data-name="qtyEl"]' },
   symbol: '#header-toolbar-symbol-search',
+  chart: '.chart-container',
   account: {
     broker: '#footer-chart-panel [class*="titleText-"]',
     selector: '[data-qa-id="account-selector"]',
@@ -34,7 +40,15 @@ export const PAGE: PageConfig = {
     positions: 'table[data-name$=".positions-table"]',
     orders: 'table[data-name$=".orders-table"]',
   },
+  summary: { field: '.js-account-manager-header [class*="accountSummaryField-"]', title: '[class*="title-"]', value: '[class*="value-"]' },
+  markers: { balance: ['account balance', 'balance'], equity: ['equity'] },
 };
+
+/** The page config in use: the bundled one, or a newer signed remote copy (src/pageconfig.ts). */
+let active: PageConfig = PAGE;
+export function usePage(p: PageConfig): void {
+  active = p;
+}
 
 /** Words that mark a close, reduce or cancel. A control with them is never guarded (invariant 1), whatever the config says. */
 export const CLOSE_MARKERS = /\b(close|flatten|cancel|reduce|modify|exit|reverse)\b/i;
@@ -64,7 +78,7 @@ function matchUp(start: EventTarget[], sel: string): Element | null {
 }
 
 /** The guarded control this event is on, or null. Enter in an order-panel field counts as the panel's submit. */
-export function guardedTarget(e: Event, page = PAGE): Guarded | null {
+export function guardedTarget(e: Event, page = active): Guarded | null {
   const path = e.composedPath();
   if (e.type === 'keydown') {
     if ((e as KeyboardEvent).key !== 'Enter') return null;
@@ -86,12 +100,12 @@ function num(s: string | null | undefined): number | undefined {
   return t !== '' && Number.isFinite(n) ? n : undefined;
 }
 
-export function readSymbol(page = PAGE): string | undefined {
+export function readSymbol(page = active): string | undefined {
   const t = textOf(document.querySelector(page.symbol));
   return t ? t.split(' ')[0] : undefined;
 }
 
-export function readAccount(page = PAGE): TvAccount | undefined {
+export function readAccount(page = active): TvAccount | undefined {
   const broker = textOf(document.querySelector(page.account.broker));
   const sel = document.querySelector(page.account.selector);
   const login = textOf(sel?.querySelector(page.account.name));
@@ -113,7 +127,7 @@ function tableRows(sel: string): Record<string, string>[] {
 }
 
 /** Open positions on this account. Undefined when the table isn't in the page: the order is then "unclassified". */
-export function readPositions(page = PAGE): Position[] | undefined {
+export function readPositions(page = active): Position[] | undefined {
   if (!document.querySelector(page.account.positions)) return undefined;
   const out: Position[] = [];
   for (const r of tableRows(page.account.positions)) {
@@ -124,12 +138,28 @@ export function readPositions(page = PAGE): Position[] | undefined {
   return out;
 }
 
+/** Balance and equity from the Account Manager summary. Each is undefined when it can't be read. */
+export function readSummary(page = active): { balance?: number; equity?: number } {
+  const out: { balance?: number; equity?: number } = {};
+  for (const f of document.querySelectorAll(page.summary.field)) {
+    const title = textOf(f.querySelector(page.summary.title)).toLowerCase();
+    const v = num(textOf(f.querySelector(page.summary.value)));
+    if (page.markers.balance.includes(title)) out.balance = v;
+    else if (page.markers.equity.includes(title)) out.equity = v;
+  }
+  return out;
+}
+
 /** Rows in the positions and orders tables, to see an order arrive. */
-export function tradeRows(page = PAGE): number {
+export function tradeRows(page = active): number {
   return document.querySelectorAll(`${page.account.positions} tbody tr, ${page.account.orders} tbody tr`).length;
 }
 
-export function panelOpen(page = PAGE): boolean {
+export function chartRect(page = active): DOMRect | undefined {
+  return document.querySelector(page.chart)?.getBoundingClientRect();
+}
+
+export function panelOpen(page = active): boolean {
   const p = document.querySelector(page.panel.root) as HTMLElement | null;
   return !!p && p.getClientRects().length > 0;
 }
@@ -137,8 +167,13 @@ export function panelOpen(page = PAGE): boolean {
 /** "Buy 1 BTCUSD MARKET", "Sell 0.5 EURUSD @ 1.0850 LIMIT". */
 const SUBMIT = /^(buy|sell)\s+([\d.,]+)\s+(\S+)(?:\s+@\s*([\d.,]+))?\s+(market|limit|stop)\b/i;
 
+/** False when the panel's button isn't an order yet ("Start creating order" before a side is picked). */
+export function isOrder(g: Guarded): boolean {
+  return g.path === 'floating' || /^(buy|sell)/i.test(textOf(g.el));
+}
+
 /** The order this control would send, or undefined when it can't be read (the click then passes). */
-export function readOrder(g: Guarded, account: string, page = PAGE): Omit<Order, 'kind'> | undefined {
+export function readOrder(g: Guarded, account: string, page = active): Omit<Order, 'kind'> | undefined {
   if (g.path === 'floating') {
     const symbol = readSymbol(page);
     const size = num(textOf(document.querySelector(page.floating.qty)));

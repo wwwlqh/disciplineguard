@@ -3,6 +3,7 @@
 <html class="theme-light">
 <head><meta charset="utf-8"><title>Fixture chart</title></head>
 <body>
+  <div class="chart-container" style="position:fixed;left:0;top:420px;width:900px;height:250px;pointer-events:none"></div>
   <div id="header-toolbar-symbol-search">BTCUSD</div>
   <div data-name="buy-sell-buttons">
     <div data-name="sell-order-button">SELL</div><div data-name="qtyEl">1</div><div data-name="buy-order-button">BUY</div>
@@ -14,6 +15,10 @@
     <button data-name="place-and-modify-button" id="submit">Buy<br>1 BTCUSD MARKET</button>
   </div>
   <div id="footer-chart-panel"><button><span class="titleText-hvcu2Y0t">Paper Trading</span></button></div>
+  <div class="js-account-manager-header"><div class="accountSummaryRow-x0auruEs">
+    <div class="accountSummaryField-WrxTGWVE"><div class="titleContainer-WrxTGWVE"><span class="title-WrxTGWVE">Account balance</span></div><div class="value-WrxTGWVE" id="bal">100,000.00</div></div>
+    <div class="accountSummaryField-WrxTGWVE"><div class="titleContainer-WrxTGWVE"><span class="title-WrxTGWVE">Equity</span></div><div class="value-WrxTGWVE" id="eq">100,000.00</div></div>
+  </div></div>
   <button data-qa-id="account-selector"><span class="accountName-_BZVWXcP">leowqiheng</span> USD</button>
   <table data-name="Paper.positions-table">
     <thead><tr><th data-name="symbol-column">Symbol</th><th data-name="side-column">Side</th><th data-name="qty-column">Qty</th></tr></thead>
@@ -22,9 +27,25 @@
   <table data-name="Paper.orders-table"><thead><tr><th data-name="symbol-column">Symbol</th></tr></thead><tbody></tbody></table>
   <button id="close">Close position</button>
   <script>
-    // The page's own handler: counts orders that reached it.
+    // The page's own handler: counts orders that reached it, and fills them into the positions table.
     window.sent = 0;
-    document.getElementById('submit').addEventListener('click', () => { window.sent++; });
+    const money = (x) => x.toLocaleString('en-US', { minimumFractionDigits: 2 });
+    window.setSummary = (balance, equity) => {
+      document.getElementById('bal').textContent = money(balance);
+      document.getElementById('eq').textContent = money(equity);
+    };
+    window.setPosition = (symbol, side, qty) => {
+      const body = document.querySelector('table[data-name$=".positions-table"] tbody');
+      let row = [...body.rows].find((r) => r.cells[0].textContent === symbol);
+      if (!qty) return row?.remove();
+      if (!row) (row = body.insertRow()).innerHTML = `<td>${symbol}</td><td></td><td></td>`;
+      row.cells[1].textContent = side === 'buy' ? 'Long' : 'Short';
+      row.cells[2].textContent = String(qty);
+    };
+    document.getElementById('submit').addEventListener('click', () => {
+      window.sent++;
+      setTimeout(() => window.setPosition('BTCUSD', 'buy', window.sent), 300);
+    });
   </script>
 </body>
 </html>

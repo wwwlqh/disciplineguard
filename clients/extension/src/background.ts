@@ -1,6 +1,7 @@
 // The service worker (SPEC §9.1): sign-in, one connection per TradingView broker account, sync, and the trader's
 // alerts as browser notifications. Tokens live only here, in IndexedDB, never in content scripts.
 import { API, PUBKEY, VERSION } from './config.ts';
+import { PAGE_STORE, acceptPage } from './pageconfig.ts';
 import { CACHE_KEY, accountKey, type Cache, type Msg, type QueuedEvent, type Status, type TvAccount } from './messages.ts';
 
 //--- token store (IndexedDB: the service worker's own origin) --------------------------------------------
@@ -260,9 +261,23 @@ async function alerts(): Promise<void> {
   await withSecrets((x) => void (x.alertsAfter = r.data.cursor));
 }
 
+/** The signed page config, checked every 30 minutes. The content scripts pick it up from storage. */
+async function pageConfig(): Promise<void> {
+  const v = await chrome.storage.local.get([PAGE_STORE, 'dg_bucket', 'dg_page_at']);
+  if (typeof v.dg_page_at === 'number' && Date.now() - v.dg_page_at < 30 * 60_000) return;
+  let bucket = v.dg_bucket as number | undefined;
+  if (typeof bucket !== 'number') bucket = crypto.getRandomValues(new Uint32Array(1))[0] % 100;
+  await chrome.storage.local.set({ dg_bucket: bucket, dg_page_at: Date.now() });
+  const res = await fetch(`${API}/tv-page.json`, { cache: 'no-cache' });
+  if (!res.ok) return;
+  const page = await acceptPage(await res.json(), (v[PAGE_STORE] as { version?: number } | undefined)?.version ?? 0, bucket);
+  if (page) await chrome.storage.local.set({ [PAGE_STORE]: page });
+}
+
 async function tick(): Promise<void> {
   await syncAll().catch(() => {});
   await alerts().catch(() => {});
+  await pageConfig().catch(() => {});
 }
 
 //--- wiring ------------------------------------------------------------------------------------------------

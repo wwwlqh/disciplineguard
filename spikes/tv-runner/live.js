@@ -42,23 +42,28 @@ async function until(f, what, ms = 20000) {
     await chart.locator('#footer-chart-panel button:has-text("Paper Trading")').first().click();
     await chart.waitForTimeout(2000);
   }
-  if (!(await chart.locator('[data-name="order-panel"]').count())) {
-    await chart.locator('[data-name="buy-order-button"]').click();
-    await chart.waitForTimeout(2000);
-  }
+  // The order panel: Shift+T over the chart ("Add order"). The floating Buy/Sell buttons may be hidden.
+  const openPanel = async () => {
+    await chart.keyboard.press('Escape');
+    await chart.mouse.move(700, 300);
+    await chart.keyboard.press('Shift+T');
+    await chart.waitForTimeout(1500);
+  };
+  if (!(await chart.locator('[data-name="order-panel"]').count())) await openPanel();
 
-  // A DisciplineGuard account: at most 1 trade a day, 3-second wait.
+  // A DisciplineGuard account: at most 1 trade a day, a daily loss limit of 1,000, 3-second wait.
   const email = `live${Date.now()}@test.dev`;
   await call('POST', '/v1/auth/email', { email });
   const mail = (await call('GET', '/dev/outbox')).data.find((m) => m.to_email === email);
   const cookie = (await call('POST', '/v1/auth/verify', { email, code: /code is (\d{6})/.exec(mail.body)[1] })).cookie;
   const popup = { show: 'breaks', wait: 3, lossWait: { on: false, seconds: 15, withinMinutes: 30 }, growing: { on: false, step: 5, cap: 45 }, typeConfirm: { mode: 'off', n: 3 }, skipCard: true, keyboardPlace: false };
-  const ob = await call('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 1 } }, popup }, cookie);
-  check(ob.status === 200, 'DisciplineGuard account with max 1 trade a day');
+  const ob = await call('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 1 }, R8: { on: true, restHours: 12 } }, defaults: { r8: { unit: 'amount', value: 1000 } }, popup }, cookie);
+  check(ob.status === 200, 'DisciplineGuard account with max 1 trade a day and a 1,000 loss limit');
 
   // Sign the extension in (Allow + PKCE).
-  const sw = ctx.serviceWorkers().find((w) => w.url().startsWith('chrome-extension://')) ?? (await ctx.waitForEvent('serviceworker'));
-  const extId = new URL(sw.url()).host;
+  // The service worker may be asleep; the unpacked extension's id is stable for its path.
+  const sw = ctx.serviceWorkers().find((w) => w.url().startsWith('chrome-extension://'));
+  const extId = sw ? new URL(sw.url()).host : process.env.EXT_ID || 'cmmbcfajikklhpgdbccldebinpchgmbd';
   const pop = await ctx.newPage();
   await pop.goto(`chrome-extension://${extId}/popup.html`);
   const allowTab = ctx.waitForEvent('page', (p) => p.url().includes('/allow?'));
@@ -82,11 +87,13 @@ async function until(f, what, ms = 20000) {
   const posText = () => chart.evaluate(() => [...document.querySelectorAll('table[data-name$=".positions-table"] tbody tr')].map((r) => r.innerText.replace(/\s+/g, ' ')).join(' / '));
   const pauseOpen = () => chart.locator('dg-pause dialog[open]').count();
   const press = async (sel) => {
-    // TradingView closes the order panel after an order; the chart's Buy button opens it again (one-click off).
+    // TradingView closes the order panel after an order; Shift+T opens it again.
     if (sel.includes('place-and-modify') || sel.includes('side-control')) {
-      if (!(await chart.locator(sel).count())) {
-        await chart.locator('[data-name="buy-order-button"]').click();
-        await chart.waitForTimeout(1500);
+      if (!(await chart.locator(sel).count())) await openPanel();
+      // After an order the panel shows "Start creating order" until a side is picked again.
+      if (sel.includes('place-and-modify') && /^start/i.test(await chart.locator(sel).innerText())) {
+        await chart.locator('[data-name="side-control-buy"]').click();
+        await chart.waitForTimeout(500);
       }
     }
     const box = await chart.locator(sel).first().boundingBox();
@@ -172,6 +179,19 @@ async function until(f, what, ms = 20000) {
   }, 'pauses on the server', 90000);
   check(today.pauses.some((p) => p.decision === 'skip') && today.pauses.some((p) => p.decision === 'place'), 'skip and place anyway logged on the server');
   console.log('trades counted today:', today.meters.tradesToday);
+
+  // The Account Manager: the guarded fills aren't counted again, the close is logged with its net, the pill shows On.
+  check(today.outside.length === 0, 'guarded trades filling in the positions table are not counted again as outside trades');
+  const closes = await until(async () => {
+    const c = (await cache())?.snapshot?.closes ?? [];
+    return c.length > 0 && c;
+  }, 'close synced', 90000);
+  check(closes.every((c) => Number.isFinite(c.net)), `closes logged with their net: ${closes.map((c) => `${c.net} on ${c.size}`).join(', ')}`);
+  const ds = await pop.evaluate(() => chrome.storage.local.get('dg_day_start').then((v) => v.dg_day_start));
+  check(ds && Object.values(ds).some((x) => x.balance > 0), `day-start balance read for the loss limit: ${JSON.stringify(Object.values(ds ?? {}))}`);
+  const pill = await chart.locator('dg-pill .text').textContent().catch(() => null);
+  check(pill && pill.startsWith('On'), `the pill: "${pill}"`);
+  await shot(5);
   await pop.close();
   process.exit(failed ? 1 : 0);
 })().catch((e) => {

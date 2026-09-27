@@ -2,6 +2,7 @@
 // Every script is bundled: no remote code, no eval (SPEC §9.1). Content scripts can't be modules, so all are IIFE.
 // Usage: node build.ts            production (https://disciplineguard.com)
 //        DG_API=http://localhost:8787 DG_PUBKEY=<hex> node build.ts   a dev build against a local server
+//        DG_PAGE_PUBKEY=<hex> checks the page config with a test key
 //        DG_TEST=1 adds nothing but an open shadow root, for test/e2e.ts
 import { build } from 'rolldown';
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -12,6 +13,7 @@ const out = join(here, process.env.DG_OUT ?? 'dist');
 const api = process.env.DG_API ?? 'https://disciplineguard.com';
 const define: Record<string, string> = { __DG_API__: JSON.stringify(api) };
 if (process.env.DG_PUBKEY) define.__DG_PUBKEY__ = JSON.stringify(process.env.DG_PUBKEY);
+if (process.env.DG_PAGE_PUBKEY) define.__DG_PAGE_PUBKEY__ = JSON.stringify(process.env.DG_PAGE_PUBKEY);
 if (process.env.DG_TEST) define.__DG_TEST__ = 'true';
 
 rmSync(out, { recursive: true, force: true });
