@@ -1,9 +1,8 @@
 // Stats, Phase 1 (EXPERIENCE §5.8). Counts and facts only. Never money saved.
 import { useEffect, useState } from 'react';
-import { RULE_NAMES, type TitleId } from '@dg/core';
+import { REASONS, RULE_NAMES, type TitleId } from '@dg/core';
 import { api } from '../api.ts';
 import { date } from '../fmt.ts';
-import { REASONS } from '../ui/Pause.tsx';
 import type { PageProps } from '../main.tsx';
 
 interface StatsData {

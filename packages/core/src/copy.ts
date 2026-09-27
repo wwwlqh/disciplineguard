@@ -115,4 +115,12 @@ export const TRUST_LINES = [
 
 export const PAUSE_FOOTER = 'Closing, moving SL/TP and cancelling orders are never paused. To close a position, skip first.';
 
-export const REASON_CHIPS = ['Afraid to miss it', 'Winning back a loss', 'Frustrated', 'Bored', 'On a roll', 'In my plan'];
+/** Name it (EXPERIENCE §9.5): [id, chip]. The EA's DGChipIds match the ids. */
+export const REASONS = [
+  ['fomo', 'Afraid to miss it'],
+  ['win_back', 'Winning back a loss'],
+  ['frustrated', 'Frustrated'],
+  ['bored', 'Bored'],
+  ['on_a_roll', 'On a roll'],
+  ['in_plan', 'In my plan'],
+] as const;

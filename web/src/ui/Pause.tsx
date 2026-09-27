@@ -1,17 +1,7 @@
 // The pause card (EXPERIENCE §9, SPEC §7.3). Used for the practice pause in the web app;
 // the extension renders the same layout. Place anyway needs a real pointer click after the wait.
 import { useEffect, useRef, useState } from 'react';
-import { headline, otherRules, PAUSE_FOOTER, PAUSE_TIMEOUT_SEC, placeLabel, wayOut, type Fmt, type Order, type PausePlan } from '@dg/core';
-
-/** Name it (EXPERIENCE §9.5). The ids match the EA's. */
-export const REASONS = [
-  ['fomo', 'Afraid to miss it'],
-  ['win_back', 'Winning back a loss'],
-  ['frustrated', 'Frustrated'],
-  ['bored', 'Bored'],
-  ['on_a_roll', 'On a roll'],
-  ['in_plan', 'In my plan'],
-] as const;
+import { headline, otherRules, PAUSE_FOOTER, PAUSE_TIMEOUT_SEC, placeLabel, REASONS, wayOut, type Fmt, type Order, type PausePlan } from '@dg/core';
 
 export interface PauseProps {
   plan: PausePlan;
