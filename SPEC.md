@@ -40,7 +40,6 @@ This spec uses precise internal terms. Users see the words in EXPERIENCE.md §2.
 
    When the trader turned on type to confirm (§7.2) and it applies, it comes first. A single key press never places, and nothing continues automatically.
 6. **Symbols, prices, sizes, P/L amounts, notes, plans, reason tags and free-text onboarding answers never reach analytics, partners or coaches.**
-   - Onboarding choices reach analytics only as `template_id` and `account_type` (§13.3).
    - P/L amounts reach a partner only when the trader turns on "Share amounts with partner".
 7. **A client that has synced at least once keeps enforcing its saved rules** when the network fails, when its web access is blocked, or when the server rejects it. Enforcement ends only in the cases listed in §10.5.
 
@@ -374,7 +373,7 @@ Every change is compared with the **active** value. If a change is not clearly s
 | Connect a new connection or trading account | Now | — |
 | Delete the DisciplineGuard account | Now, if protection is not active | Otherwise looser (§12.6) |
 | Cancel the plan | Now (runs to the end of the paid period) | — |
-| Trader's own alert channels, "Hide amounts on screen", analytics consent | Now (not protected) | — |
+| Trader's own alert channels, "Hide amounts on screen" | Now (not protected) | — |
 
 ### 6.3 When a looser change takes effect
 
@@ -1128,17 +1127,8 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 ### 13.1 Analytics
 
-- Events are either **service events** (needed to run the product) or **analytics events**.
-- Analytics events are forwarded to PostHog only if the user's setting **"Share product usage (never trade details)"** is on:
-  - EU, EEA and UK users are asked once in onboarding, with equal Yes and No buttons, and the setting is off until they answer;
-  - users elsewhere are asked the same question with Yes preselected;
-  - changing it applies immediately.
-- Clients never talk to PostHog. The server:
-  - drops any property not on the whitelist;
-  - sets `timestamp` to the client event time, `uuid` to the event id, no `$ip`, and `$geoip_disable: true`;
-  - uses a **random analytics id**, never the user id or email;
-  - forwards asynchronously, never in the sync response path.
-- **Website**: PostHog loads only after cookie consent, with EU hosting, "discard client IP data" on, autocapture off, session replay off, and remote script loading off. UTM and referrer are read from the landing URL and sent with the sign-up form, not stored on the device before consent.
+- Counts only, from the server's own database, shown on the owner dashboard (§14): how many users, activation, retention, pauses and outcomes.
+- No third-party analytics tool and no consent screen. No user's settings, rules or trades leave the server for analytics.
 - **Country** comes only from sign-up: the hosting provider's country header or the billing country.
 
 ### 13.2 Reason tags
@@ -1148,13 +1138,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 - Reasons never reach analytics, partners or coaches (invariant 6).
 - Onboarding answers are stored only as the resulting template ids.
 
-### 13.3 Analytics whitelist
-
-`platform, client_version, rule_id, decision, seconds_shown, wait_length, typed_step, reattempt, held, overrides_bucket (0, 1, 2–3, 4+), overshoot_bucket, change_direction, change_setting, template_id, onboarding_step, setup_check_failed, hold_basis (table_live/model/unknown), broker_or_firm_name, account_type (demo/real/prop), balance_range (<5k, 5–25k, 25–100k, 100k+), account_currency, country, utm_source, utm_medium, utm_campaign, referrer_domain, browser, os, protection_state, sync_error_code`
-
-`broker_or_firm_name`, `account_type`, `balance_range` and `account_currency` are sent only when the analytics setting is on. Chrome's Limited Use policy applies: extension data is used for marketing only as aggregated, anonymized totals.
-
-### 13.4 Retention
+### 13.3 Retention
 
 | Data | Kept |
 |---|---|
@@ -1166,10 +1150,9 @@ A trader installs at most one thing per kind of platform, never one per platform
 | Support reports | 12 months |
 | Partner Telegram data | 7 days after leaving, decline, block or removal |
 | Unaccepted partner invites | Expire after 7 days |
-| PostHog | 24 months. The person is deleted when the account is deleted |
 | Backups | Deleted data leaves backups within 30 days |
 
-### 13.5 Export
+### 13.4 Export
 
 A ZIP containing:
 

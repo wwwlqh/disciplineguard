@@ -40,8 +40,6 @@ export interface Env {
   TURNSTILE_SECRET?: string;
   /** Comma-separated SHA-256 hashes of released EA builds (SPEC §10.9). */
   KNOWN_BUILDS?: string;
-  POSTHOG_KEY?: string;
-  POSTHOG_HOST?: string;
   /** "1" in local development: secure cookies off, emails kept in the outbox. */
   DEV?: string;
   /** Test hook: fixed clock. */

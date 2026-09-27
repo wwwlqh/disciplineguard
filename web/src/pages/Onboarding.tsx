@@ -1,5 +1,5 @@
 // Onboarding (EXPERIENCE §5.2): three screens, nothing to type, Back always available, resumable.
-// 1 About you · 2 Your rules (starting rules, trading day, analytics) · 3 Connect MT5.
+// 1 About you · 2 Your rules (each ticked cost opens its rules; trading day) · 3 Connect MT5.
 import { useEffect, useMemo, useState } from 'react';
 import { buildTemplate, DEFAULT_POPUP, type Choice, type Rules } from '@dg/core';
 import { api, type Me } from '../api.ts';
@@ -28,7 +28,6 @@ interface Draft {
   tz: string;
   reset: 'midnight' | 'forex_close' | 'futures_session' | 'firm' | 'custom';
   customAt: string;
-  analytics: boolean | null;
   applied: boolean;
 }
 
@@ -72,7 +71,7 @@ function initial(me: Me): Draft {
   return {
     step: 0, platforms: ['mt5'], accountType: 'own', firm: 'FTMO', firmDailyPct: 5, style: 'day', choices: [], session: 'london', usualSize: 0.5,
     rules: null, defaults: null, tz: browserTz(), reset: 'midnight', customAt: '00:00',
-    analytics: null, applied: false,
+    applied: false,
   };
 }
 
@@ -93,7 +92,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
   }, [d]);
 
   const template = useMemo(() => buildTemplate({
-    choices: isProp ? [...d.choices, 'bad_days'].slice(0, 3) as Choice[] : d.choices,
+    choices: isProp && !d.choices.includes('bad_days') ? [...d.choices, 'bad_days'] : d.choices,
     style: d.style,
     userTz: d.tz,
     session: d.session,
@@ -112,6 +111,71 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
   const editDefaults = (p: Partial<Defaults>) => set({ rules, defaults: { ...defaults, ...p } });
   const rulesOn = RULE_ORDER.filter((id) => (rules as any)[id]?.on);
 
+  /** Which rules each choice turns on by itself, so a ticked choice opens its own rules. */
+  const choiceRules = useMemo(() => {
+    const out: Partial<Record<Choice, string[]>> = {};
+    for (const c of COSTS) {
+      const t = buildTemplate({ choices: [c.id], style: d.style, userTz: d.tz, session: d.session, accounts: [{ id: 'default', platform: 'mt5', type: d.accountType, usualSize: d.usualSize }] });
+      out[c.id] = RULE_ORDER.filter((id) => (t.rules as any)[id]?.on);
+    }
+    return out;
+  }, [d.style, d.tz, d.session, d.accountType, d.usualSize]);
+  /** Rules already shown under an earlier ticked choice: each rule shows once. */
+  const shownBefore = (c: Choice) => {
+    const seen = new Set<string>();
+    for (const x of COSTS) {
+      if (x.id === c) break;
+      if (d.choices.includes(x.id)) for (const id of choiceRules[x.id] ?? []) seen.add(id);
+    }
+    return seen;
+  };
+  const underChoices = new Set(d.choices.flatMap((c) => choiceRules[c] ?? []));
+  const extraRules = d.choices.length ? rulesOn.filter((id) => !underChoices.has(id)) : [];
+
+  const ruleEditor = (id: string) => {
+    const v = (rules as any)[id];
+    return (
+      <div key={id}>
+        <div className="row between">
+          <div>
+            <strong>{RULE_INFO[id as keyof typeof RULE_INFO].name}</strong>
+            <div className="small muted">{RULE_INFO[id as keyof typeof RULE_INFO].meaning}</div>
+          </div>
+          <Switch label={RULE_INFO[id as keyof typeof RULE_INFO].name} checked={v.on} onChange={(on) => editRule(id, { ...v, on })} />
+        </div>
+        {v.on && (
+          <div style={{ marginTop: 8 }}>
+            {id === 'R5' ? (
+              <label className="field">Max size (lots)
+                <input type="number" className="narrow" min={0.01} step={0.01} value={defaults.r5?.r5Max ?? ''} onChange={(e) => editDefaults({ r5: { r5Max: Number(e.target.value) } })} />
+              </label>
+            ) : id === 'R6' ? (
+              <label className="field">Max risk per trade (% of the day's starting balance)
+                <input type="number" className="narrow" min={0.1} max={10} step={0.1} value={defaults.r6?.value ?? 1} onChange={(e) => editDefaults({ r6: { unit: 'pct', value: Number(e.target.value) } })} />
+              </label>
+            ) : (
+              <RuleFields inWizard id={id as any} value={v} onChange={(nv) => editRule(id, nv)} />
+            )}
+            {id === 'R8' && (
+              <div className="row" style={{ marginTop: 8 }}>
+                <label className="field">Daily loss limit
+                  <input type="number" className="narrow" min={0.1} step={0.1} value={defaults.r8?.value ?? ''} onChange={(e) => editDefaults({ r8: { unit: defaults.r8?.unit ?? 'pct', value: Number(e.target.value) } })} />
+                </label>
+                <label className="field">Unit
+                  <select value={defaults.r8?.unit ?? 'pct'} onChange={(e) => editDefaults({ r8: { unit: e.target.value as 'pct' | 'amount', value: defaults.r8?.value ?? 2 } })}>
+                    <option value="pct">% of the day's starting balance</option>
+                    <option value="amount">amount in account currency</option>
+                  </select>
+                </label>
+              </div>
+            )}
+            {id === 'R8' && isProp && <p className="small muted">Your firm's overall limit isn't tracked.</p>}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   async function apply() {
     setBusy(true);
     setErr('');
@@ -125,7 +189,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
       const payloadRules: Record<string, unknown> = {};
       for (const id of RULE_ORDER) payloadRules[id] = (rules as any)[id];
       await api('POST', '/api/onboarding/apply', {
-        tz: d.tz, reset, analyticsConsent: d.analytics, rules: payloadRules,
+        tz: d.tz, reset, rules: payloadRules,
         defaults: {
           r5: defaults.r5 ? { r5Max: defaults.r5.r5Max, r5Overrides: [] } : undefined,
           r6: defaults.r6, r8: defaults.r8, r7ignore: defaults.r7ignore,
@@ -143,7 +207,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
 
   const canNext = (() => {
     switch (d.step) {
-      case 1: return d.choices.length > 0 && RULE_ORDER.every((id) => validRule(id, (rules as any)[id])) && d.analytics !== null;
+      case 1: return d.choices.length > 0 && RULE_ORDER.every((id) => validRule(id, (rules as any)[id]));
       default: return true;
     }
   })();
@@ -224,84 +288,41 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
       {d.step === 1 && (
         <section className="stack">
           <h1>What costs you the most?</h1>
-          <p className="muted">Pick up to two.</p>
+          <p className="muted">Tick all that apply. Each one opens its rules.</p>
           <div className="stack">
-            {COSTS.map((c) => (
-              <label key={c.id} className="choice">
-                <input
-                  type="checkbox"
-                  checked={d.choices.includes(c.id)}
-                  disabled={!d.choices.includes(c.id) && d.choices.length >= 2}
-                  onChange={(e) => set({ choices: e.target.checked ? [...d.choices, c.id] : d.choices.filter((x) => x !== c.id), rules: null, defaults: null })}
-                />
-                <span>
-                  <strong>{c.label}</strong>
-                  {c.id === 'give_back' && <div className="small muted">Coming later.</div>}
-                </span>
-              </label>
-            ))}
-          </div>
-          {d.choices.includes('hours') && (
-            <div className="row">
-              <span className="small muted">Session:</span>
-              <label className="check small"><input type="radio" name="sess" checked={d.session === 'london'} onChange={() => set({ session: 'london', rules: null, defaults: null })} /> London 08:00–11:00</label>
-              <label className="check small"><input type="radio" name="sess" checked={d.session === 'new_york'} onChange={() => set({ session: 'new_york', rules: null, defaults: null })} /> New York 14:30–17:00</label>
-            </div>
-          )}
-          {d.choices.length > 0 && (
-            <div className="card">
-              <strong>Your starting rules</strong>
-              <p className="small muted">{rulesOn.map((id) => RULE_INFO[id].name).join(' · ') || 'None yet'}</p>
-              {isProp && defaults.r8 && <p className="small">New trades pause at {defaults.r8.value}% down. Your firm's overall limit isn't tracked.</p>}
-              <details>
-                <summary className="small">Adjust</summary>
-                <div className="stack" style={{ marginTop: 10 }}>
-                  {RULE_ORDER.map((id) => {
-                    const v = (rules as any)[id];
-                    return (
-                      <div key={id}>
-                        <div className="row between">
-                          <div>
-                            <strong>{RULE_INFO[id].name}</strong>
-                            <div className="small muted">{RULE_INFO[id].meaning}</div>
-                          </div>
-                          <Switch label={RULE_INFO[id].name} checked={v.on} onChange={(on) => editRule(id, { ...v, on })} />
-                        </div>
-                        {v.on && (
-                          <div style={{ marginTop: 8 }}>
-                            {id === 'R5' ? (
-                              <label className="field">Max size (lots)
-                                <input type="number" className="narrow" min={0.01} step={0.01} value={defaults.r5?.r5Max ?? ''} onChange={(e) => editDefaults({ r5: { r5Max: Number(e.target.value) } })} />
-                              </label>
-                            ) : id === 'R6' ? (
-                              <label className="field">Max risk per trade (% of the day's starting balance)
-                                <input type="number" className="narrow" min={0.1} max={10} step={0.1} value={defaults.r6?.value ?? 1} onChange={(e) => editDefaults({ r6: { unit: 'pct', value: Number(e.target.value) } })} />
-                              </label>
-                            ) : (
-                              <RuleFields inWizard id={id} value={v} onChange={(nv) => editRule(id, nv)} />
-                            )}
-                            {id === 'R8' && (
-                              <div className="row" style={{ marginTop: 8 }}>
-                                <label className="field">Daily loss limit
-                                  <input type="number" className="narrow" min={0.1} step={0.1} value={defaults.r8?.value ?? ''} onChange={(e) => editDefaults({ r8: { unit: defaults.r8?.unit ?? 'pct', value: Number(e.target.value) } })} />
-                                </label>
-                                <label className="field">Unit
-                                  <select value={defaults.r8?.unit ?? 'pct'} onChange={(e) => editDefaults({ r8: { unit: e.target.value as 'pct' | 'amount', value: defaults.r8?.value ?? 2 } })}>
-                                    <option value="pct">% of the day's starting balance</option>
-                                    <option value="amount">amount in account currency</option>
-                                  </select>
-                                </label>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+            {COSTS.map((c) => {
+              const on = d.choices.includes(c.id);
+              const ids = on ? (choiceRules[c.id] ?? []).filter((id) => !shownBefore(c.id).has(id)) : [];
+              return (
+                <div key={c.id} className={on ? 'card stack' : ''}>
+                  <label className="choice">
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={(e) => set({ choices: e.target.checked ? [...d.choices, c.id] : d.choices.filter((x) => x !== c.id), rules: null, defaults: null })}
+                    />
+                    <span>
+                      <strong>{c.label}</strong>
+                      {c.id === 'give_back' && <div className="small muted">Coming later.</div>}
+                    </span>
+                  </label>
+                  {on && c.id === 'hours' && (
+                    <div className="row">
+                      <label className="check small"><input type="radio" name="sess" checked={d.session === 'london'} onChange={() => set({ session: 'london', rules: null, defaults: null })} /> London 08:00–11:00</label>
+                      <label className="check small"><input type="radio" name="sess" checked={d.session === 'new_york'} onChange={() => set({ session: 'new_york', rules: null, defaults: null })} /> New York 14:30–17:00</label>
+                    </div>
+                  )}
+                  {ids.map(ruleEditor)}
                 </div>
-              </details>
-            </div>
-          )}
+              );
+            })}
+            {extraRules.length > 0 && (
+              <div className="card stack">
+                <strong>{isProp ? 'For your prop account' : 'Also on'}</strong>
+                {extraRules.map(ruleEditor)}
+              </div>
+            )}
+          </div>
           <details className="card">
             <summary>Your day resets at {d.reset === 'firm' && FIRMS[d.firm] ? `${d.firm}'s reset (midnight Prague time)` : RESETS[d.reset]} · {d.tz}</summary>
             <div className="stack" style={{ marginTop: 10 }}>
@@ -317,14 +338,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
             </div>
           </details>
 
-          <div className="card stack">
-            <p className="small">Tightening applies now. Loosening waits until your next day reset (at least 12 hours).</p>
-            <div className="row">
-              <span className="small">Share product usage (never trade details)?</span>
-              <button className={d.analytics === true ? 'primary' : ''} aria-pressed={d.analytics === true} onClick={() => set({ analytics: true })}>Yes</button>
-              <button className={d.analytics === false ? 'primary' : ''} aria-pressed={d.analytics === false} onClick={() => set({ analytics: false })}>No</button>
-            </div>
-          </div>
+          <p className="small muted">Tightening applies now. Loosening waits until your next day reset (at least 12 hours).</p>
           {err && <p role="alert">{err}</p>}
         </section>
       )}

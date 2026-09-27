@@ -1,4 +1,4 @@
-// Cron every 5 minutes: due jobs, trial emails and retention purges (SPEC §10.2, §13.4).
+// Cron every 5 minutes: due jobs, trial emails and retention purges (SPEC §10.2, §13.3).
 import { DAY, HOUR } from '@dg/core';
 import { audit, scheduleJob, sendEmail, type Ctx } from './common.ts';
 import { userCtx } from './context.ts';
@@ -66,7 +66,7 @@ export async function runScheduled(env: Env, ctx: Ctx): Promise<{ ran: number }>
       console.log(JSON.stringify({ job: job.kind, error: String(e).slice(0, 200) }));
     }
   }
-  // Retention (SPEC §13.4).
+  // Retention (SPEC §13.3).
   await env.DB.batch([
     env.DB.prepare("DELETE FROM events WHERE t < ? AND type NOT IN ('pause', 'override', 'entry', 'close')").bind(t - 90 * DAY),
     env.DB.prepare('DELETE FROM coverage WHERE to_utc < ?').bind(t - 30 * DAY),

@@ -416,7 +416,7 @@ async function saveOnboarding(req: Request, env: Env, s: Session): Promise<Respo
 const CHOICES: Choice[] = ['too_many', 'win_back', 'size_up', 'hours', 'skip_sl', 'bad_days', 'give_back'];
 
 /**
- * POST /api/onboarding/apply: writes the starting rules, notes, plan, trading day and analytics consent.
+ * POST /api/onboarding/apply: writes the starting rules and trading day (notes and plan are optional).
  * Only in setup mode, where every change applies at once.
  */
 async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Promise<Response> {
@@ -428,7 +428,7 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
   const tzv = validateSetting('tz', b.tz, () => undefined);
   writes.push(['tz', tzv]);
   writes.push(['reset', validateSetting('reset', b.reset ?? { preset: 'midnight' }, () => undefined)]);
-  const choices = (Array.isArray(b.choices) ? b.choices : []).filter((c: unknown): c is Choice => CHOICES.includes(c as Choice)).slice(0, 2);
+  const choices = (Array.isArray(b.choices) ? b.choices : []).filter((c: unknown): c is Choice => CHOICES.includes(c as Choice));
   if (b.rules && typeof b.rules === 'object') {
     // The rules screen already shows the template; the user may have edited it.
     for (const id of ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10']) {
@@ -470,7 +470,7 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
   return json({ ok: true });
 }
 
-/** Not protected: analytics consent, reason consent, hide amounts, first name (SPEC §6.2 last row). */
+/** Not protected: reason consent, hide amounts, first name (SPEC §6.2 last row). */
 async function prefs(req: Request, env: Env, s: Session): Promise<Response> {
   const b = await body(req);
   const sets: string[] = [];

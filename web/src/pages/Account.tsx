@@ -62,10 +62,6 @@ export function AccountPage({ me, reload }: PageProps) {
         <h2>Privacy</h2>
         <ul className="list">
           <li className="row between">
-            <span>Share product usage <span className="small muted">(never trade details)</span></span>
-            <Switch label="Share product usage" checked={me.user.analyticsConsent === 1} onChange={(v) => pref({ analyticsConsent: v })} />
-          </li>
-          <li className="row between">
             <span>Hide amounts on screen <span className="small muted">(for streaming)</span></span>
             <Switch label="Hide amounts" checked={me.user.hideAmounts} onChange={(v) => pref({ hideAmounts: v })} />
           </li>

@@ -137,12 +137,12 @@ These rules apply to product copy about the trader or their trades.
 Back is always available until the rules are saved, and progress is saved so it can be resumed.
 
 1. **About your trading**: account type (prop challenge · funded prop · own money · demo; for prop, the firm and its daily loss limit), how you trade, usual position size, and "Also trade somewhere else?" chips that record "tell me when it's ready".
-2. **Your rules**: "What costs you the most?", up to two choices (§5.3). "Your starting rules" names the rules they turn on; **Adjust** opens each rule. Below: the day reset (folded), "Tightening applies now. Loosening waits until your next day reset", **analytics consent** as equal Yes/No buttons, and [Save my rules].
+2. **Your rules**: "What costs you the most?", tick all that apply (§5.3). Each ticked choice opens its rules right under it, ready to adjust; a rule shows once. Below: the day reset (folded), "Tightening applies now. Loosening waits until your next day reset", and [Save my rules].
 3. **Connect MT5**: the three steps of §5.7 with the live "Waiting for your computer…" state. On a phone: "Finish on your computer". Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
 
 ### 5.3 Starting templates
 
-These are starting values, not advice. If two choices set the same rule, the stricter value wins.
+If two choices set the same rule, the stricter value wins.
 
 | Choice | Starting rules |
 |---|---|
@@ -278,7 +278,6 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
   - change plan, cancel, request a refund;
   - the billing portal.
 - **Privacy**:
-  - "Share product usage (never trade details)";
   - "Save the reasons I pick", with "Delete my reason history";
   - "Hide amounts on screen", which replaces money on the pill, panel and pause with "—" for screen sharing and streaming.
 - **Security**:
@@ -693,7 +692,7 @@ Account → Plan → Cancel, then one confirm. No questions, no offers.
 - **When** deletion happens:
   - "Deleted now", when protection isn't active;
   - or "Deleted at Tue 02:00. DisciplineGuard is a commitment tool, so deletion waits like a loosening. Your plan is cancelled now, and you won't be charged again."
-- **What is deleted and what is kept**, and for how long (SPEC §13.4). Billing records stay with the payment provider. Messages already sent stay in Telegram.
+- **What is deleted and what is kept**, and for how long (SPEC §13.3). Billing records stay with the payment provider. Messages already sent stay in Telegram.
 - **A leaving checklist**: remove the EA, uninstall the extension, leave the bot. No protection-off alerts are sent once deletion is requested.
 - Export first, then type DELETE to confirm.
 

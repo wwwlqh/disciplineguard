@@ -22,7 +22,6 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 - Early-bird checkout: $79 a year, offered when the trial ends.
 
 **Left**
-- Analytics: forward analytics events to PostHog (SPEC §13.1). The consent setting exists; nothing is forwarded yet.
 - Setup help: one short article per status line and setup step (EXPERIENCE §8).
 - First release: code signing and the release workflow (the founder adds the secrets, clients/windows/README.md).
 
