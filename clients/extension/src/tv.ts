@@ -1,18 +1,19 @@
 // Reading TradingView's page (SPEC §9.1). Everything page-specific is in PAGE, the bundled page config: data only,
 // so a signed remote copy can replace it later without code. Anything that can't be read makes the click pass.
-import type { Order, Position, Side } from '@dg/core';
+// Selectors checked on a signed-in Paper Trading chart, 27 Sep 2026.
+import type { Order, OrderType, Position, Side } from '@dg/core';
 import type { TvAccount } from './messages.ts';
 
 export interface PageConfig {
   version: number;
-  /** Order panel: its root, the submit button, and the fields read for the order. */
-  panel: { root: string; submit: string; side: string; qty: string; sl: string; limitPrice: string; typeTab: string };
-  /** The chart's floating Buy/Sell buttons (one-click trading). */
-  floating: { buy: string; sell: string; oneClickOn: string };
+  /** Order panel: its root, the submit button ("Buy 1 BTCUSD MARKET"), and the stop-loss switch, mode and field. */
+  panel: { root: string; submit: string; slOn: string; slMode: string; sl: string };
+  /** The chart's floating Buy/Sell buttons and their quantity. They send an order only with one-click trading on. */
+  floating: { buy: string; sell: string; qty: string };
   /** The chart's symbol. */
   symbol: string;
-  /** Account Manager: broker name, account id, positions table rows and their cells. */
-  account: { broker: string; login: string; currency: string; positionRow: string; posSymbol: string; posSide: string; posQty: string };
+  /** The trading panel: broker name, account selector (name, then currency), positions and orders tables. */
+  account: { broker: string; selector: string; name: string; positions: string; orders: string };
 }
 
 export const PAGE: PageConfig = {
@@ -20,26 +21,18 @@ export const PAGE: PageConfig = {
   panel: {
     root: '[data-name="order-panel"]',
     submit: '[data-name="place-and-modify-button"]',
-    side: '[data-name="side-control-buy"][aria-pressed="true"], [data-name="side-control-sell"][aria-pressed="true"]',
-    qty: '[data-name="units-input"] input, input[data-name="quantity-input"]',
-    sl: '[data-name="stop-loss-price-input"] input',
-    limitPrice: '[data-name="price-input"] input',
-    typeTab: '[data-name="order-type-tabs"] [aria-selected="true"]',
+    slOn: 'input[data-qa-id^="order-ticket-stop-loss-checkbox"]',
+    slMode: '[data-qa-id="order-ticket-stop-loss-dropdown-button"]',
+    sl: 'input[data-qa-id~="order-ticket-stop-loss-input"]',
   },
-  floating: {
-    buy: '[data-name="buy-order-button"]',
-    sell: '[data-name="sell-order-button"]',
-    oneClickOn: '[data-name="buy-order-button"][data-one-click="true"]',
-  },
-  symbol: '#header-toolbar-symbol-search, [data-name="legend-source-title"]',
+  floating: { buy: '[data-name="buy-order-button"]', sell: '[data-name="sell-order-button"]', qty: '[data-name="qtyEl"]' },
+  symbol: '#header-toolbar-symbol-search',
   account: {
-    broker: '[data-name="account-manager"] [data-name="broker-name"]',
-    login: '[data-name="account-manager"] [data-name="account-id"]',
-    currency: '[data-name="account-manager"] [data-name="account-currency"]',
-    positionRow: '[data-name="account-manager"] [data-name="positions-table"] tbody tr',
-    posSymbol: '[data-label="Symbol"]',
-    posSide: '[data-label="Side"]',
-    posQty: '[data-label="Qty"]',
+    broker: '#footer-chart-panel [class*="titleText-"]',
+    selector: '[data-qa-id="account-selector"]',
+    name: '[class*="accountName-"]',
+    positions: 'table[data-name$=".positions-table"]',
+    orders: 'table[data-name$=".orders-table"]',
   },
 };
 
@@ -53,8 +46,8 @@ export interface Guarded {
   path: Path;
 }
 
-function textOf(el: Element | null): string {
-  return (el?.textContent ?? '').trim().replace(/\s+/g, ' ');
+function textOf(el: Element | null | undefined): string {
+  return ((el as HTMLElement | null)?.innerText ?? el?.textContent ?? '').trim().replace(/\s+/g, ' ');
 }
 
 function matchUp(start: EventTarget[], sel: string): Element | null {
@@ -81,66 +74,89 @@ export function guardedTarget(e: Event, page = PAGE): Guarded | null {
   }
   const submit = matchUp(path, page.panel.submit);
   if (submit) return CLOSE_MARKERS.test(textOf(submit)) ? null : { el: submit, path: 'panel' };
-  // Floating buttons send an order only with one-click trading on; otherwise they open the panel (SPEC §9.1).
   const floating = matchUp(path, `${page.floating.buy}, ${page.floating.sell}`);
-  if (floating && document.querySelector(page.floating.oneClickOn)) return CLOSE_MARKERS.test(textOf(floating)) ? null : { el: floating, path: 'floating' };
+  if (floating) return CLOSE_MARKERS.test(textOf(floating)) ? null : { el: floating, path: 'floating' };
   return null;
 }
 
 function num(s: string | null | undefined): number | undefined {
   if (!s) return undefined;
-  const n = Number(s.replace(/[^\d.\-]/g, ''));
-  return Number.isFinite(n) && s.trim() !== '' ? n : undefined;
-}
-
-function inputValue(sel: string, root: ParentNode = document): string | undefined {
-  const el = root.querySelector(sel);
-  return el instanceof HTMLInputElement ? el.value : undefined;
+  const t = s.replace(/[,\s]/g, '').replace(/[^\d.\-]/g, '');
+  const n = Number(t);
+  return t !== '' && Number.isFinite(n) ? n : undefined;
 }
 
 export function readSymbol(page = PAGE): string | undefined {
   const t = textOf(document.querySelector(page.symbol));
-  return t ? t.split(/\s/)[0] : undefined;
+  return t ? t.split(' ')[0] : undefined;
 }
 
 export function readAccount(page = PAGE): TvAccount | undefined {
   const broker = textOf(document.querySelector(page.account.broker));
-  const login = textOf(document.querySelector(page.account.login));
+  const sel = document.querySelector(page.account.selector);
+  const login = textOf(sel?.querySelector(page.account.name));
   if (!broker || !login) return undefined;
-  return { broker, login, currency: textOf(document.querySelector(page.account.currency)) || undefined };
+  const currency = textOf(sel).replace(login, '').trim().split(' ')[0] || undefined;
+  return { broker, login, currency };
 }
 
-export function readPositions(page = PAGE): Position[] {
+/** Rows of a trading-panel table as {column data-name: text}. Cells are matched to headers by position. */
+function tableRows(sel: string): Record<string, string>[] {
+  const table = document.querySelector(sel);
+  if (!table) return [];
+  const cols = [...table.querySelectorAll('thead th')].map((th) => th.getAttribute('data-name') ?? '');
+  return [...table.querySelectorAll('tbody tr')].map((tr) => {
+    const row: Record<string, string> = {};
+    [...tr.children].forEach((td, i) => cols[i] && (row[cols[i]] = textOf(td)));
+    return row;
+  });
+}
+
+/** Open positions on this account. Undefined when the table isn't in the page: the order is then "unclassified". */
+export function readPositions(page = PAGE): Position[] | undefined {
+  if (!document.querySelector(page.account.positions)) return undefined;
   const out: Position[] = [];
-  for (const row of document.querySelectorAll(page.account.positionRow)) {
-    const symbol = textOf(row.querySelector(page.account.posSymbol));
-    const side: Side = /sell|short/i.test(textOf(row.querySelector(page.account.posSide))) ? 'sell' : 'buy';
-    const size = num(textOf(row.querySelector(page.account.posQty)));
-    if (symbol && size) out.push({ symbol, side, size: Math.abs(size) });
+  for (const r of tableRows(page.account.positions)) {
+    const size = num(r['qty-column']);
+    const symbol = (r['symbol-column'] ?? '').split(' ')[0];
+    if (symbol && size) out.push({ symbol, side: /sell|short/i.test(r['side-column'] ?? '') ? 'sell' : 'buy', size: Math.abs(size) });
   }
   return out;
 }
 
+/** Rows in the positions and orders tables, to see an order arrive. */
+export function tradeRows(page = PAGE): number {
+  return document.querySelectorAll(`${page.account.positions} tbody tr, ${page.account.orders} tbody tr`).length;
+}
+
+export function panelOpen(page = PAGE): boolean {
+  const p = document.querySelector(page.panel.root) as HTMLElement | null;
+  return !!p && p.getClientRects().length > 0;
+}
+
+/** "Buy 1 BTCUSD MARKET", "Sell 0.5 EURUSD @ 1.0850 LIMIT". */
+const SUBMIT = /^(buy|sell)\s+([\d.,]+)\s+(\S+)(?:\s+@\s*([\d.,]+))?\s+(market|limit|stop)\b/i;
+
 /** The order this control would send, or undefined when it can't be read (the click then passes). */
 export function readOrder(g: Guarded, account: string, page = PAGE): Omit<Order, 'kind'> | undefined {
-  const symbol = readSymbol(page);
-  if (!symbol) return undefined;
   if (g.path === 'floating') {
+    const symbol = readSymbol(page);
+    const size = num(textOf(document.querySelector(page.floating.qty)));
+    if (!symbol || !size) return undefined;
     const side: Side = g.el.matches(page.floating.sell) ? 'sell' : 'buy';
-    const size = num(inputValue(page.panel.qty)) ?? num(g.el.getAttribute('data-qty'));
-    if (!size) return undefined;
     return { platform: 'tv', account, symbol, side, size, type: 'market' };
   }
+  const m = SUBMIT.exec(textOf(g.el));
+  if (!m) return undefined;
+  const size = num(m[2]);
+  if (!size) return undefined;
+  const type = m[5].toLowerCase() as OrderType;
   const root = g.el.closest(page.panel.root) ?? document;
-  const sideEl = root.querySelector(page.panel.side);
-  const side: Side | undefined = sideEl ? (/sell/i.test(sideEl.getAttribute('data-name') ?? '') ? 'sell' : 'buy') : /sell/i.test(textOf(g.el)) ? 'sell' : /buy/i.test(textOf(g.el)) ? 'buy' : undefined;
-  const size = num(inputValue(page.panel.qty, root));
-  if (!side || !size) return undefined;
-  const typeText = textOf(root.querySelector(page.panel.typeTab)).toLowerCase();
-  const type = typeText.includes('limit') ? 'limit' : typeText.includes('stop') ? 'stop' : 'market';
-  const sl = num(inputValue(page.panel.sl, root));
-  const price = type === 'market' ? undefined : num(inputValue(page.panel.limitPrice, root));
-  return { platform: 'tv', account, symbol, side, size, type, sl, price };
+  const slOn = (root.querySelector(page.panel.slOn) as HTMLInputElement | null)?.checked;
+  const slPrice = /price/i.test(textOf(root.querySelector(page.panel.slMode)));
+  const slField = root.querySelector(page.panel.sl);
+  const sl = slOn && slPrice && slField instanceof HTMLInputElement ? num(slField.value) : undefined;
+  return { platform: 'tv', account, symbol: m[3], side: m[1].toLowerCase() as Side, size, type, sl, price: type === 'market' ? undefined : num(m[4]) };
 }
 
 /** Binds a Place anyway pass to exactly this order (SPEC §7.5 step 3). */

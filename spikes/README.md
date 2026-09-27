@@ -33,7 +33,7 @@ If a control can't be picked ("No data-name"), use Mode **1. Log**, click it, an
 
 | Spike | Result | Date |
 |---|---|---|
-| Q1a hold on Paper Trading | | |
+| Q1a hold on Paper Trading | Pass with the product extension (`clients/extension`, `tv-runner/live.js`): held Buy in the order panel, skip, Place anyway then the trader's own click, closes never paused. BTCUSD | 27 Sep 2026 |
 | Q1a hold on a real broker | | |
 | Q3 DEAL_REASON labels | | |
 | Q4 push on prop build | | |

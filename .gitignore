@@ -13,3 +13,4 @@ clients/windows/target/
 clients/windows/app/gen/
 clients/windows/app/release.conf.json
 clients/extension/test-dist/
+clients/extension/live-dist/

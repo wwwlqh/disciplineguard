@@ -4,7 +4,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 
 (async () => {
-  const ext = path.resolve(__dirname, '../tradingview-extension');
+  const ext = process.env.EXT ? path.resolve(process.env.EXT) : path.resolve(__dirname, '../tradingview-extension');
   const ctx = await chromium.launchPersistentContext(path.resolve(__dirname, '.profile'), {
     headless: false,
     viewport: null,

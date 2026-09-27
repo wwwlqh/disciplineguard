@@ -610,7 +610,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 **Guarded paths**
 
 - The order panel submit button, including Enter in its fields.
-- The floating Buy/Sell buttons, **only when one-click trading is on**. When it is off, those buttons only open the order panel, so the click passes and the panel is guarded instead.
+- The floating Buy/Sell buttons, **only when one-click trading is on**. When it is off, those buttons only open the order panel, so the click passes and the panel is guarded instead. The extension learns which it is from what a floating click does (the order panel opens, or an order appears); until it knows, floating clicks pass.
 - The position "Reverse" button, if Q1 confirms it can be held.
 - Everything else is outside: the DOM ladder, chart right-click Trade, dragging order lines, and keyboard shortcuts not listed in the page config.
 

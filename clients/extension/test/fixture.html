@@ -1,24 +1,26 @@
 <!doctype html>
-<!-- A stand-in for a TradingView chart with an order panel and the Account Manager, using the controls in src/tv.ts. -->
+<!-- A stand-in for a TradingView chart, with the structure of a signed-in Paper Trading chart (src/tv.ts PAGE). -->
 <html class="theme-light">
 <head><meta charset="utf-8"><title>Fixture chart</title></head>
 <body>
-  <div id="header-toolbar-symbol-search">EURUSD</div>
+  <div id="header-toolbar-symbol-search">BTCUSD</div>
+  <div data-name="buy-sell-buttons">
+    <div data-name="sell-order-button">SELL</div><div data-name="qtyEl">1</div><div data-name="buy-order-button">BUY</div>
+  </div>
   <div data-name="order-panel">
-    <div data-name="order-type-tabs"><span aria-selected="true">Market</span></div>
-    <button data-name="side-control-buy" aria-pressed="true">Buy</button>
-    <button data-name="side-control-sell" aria-pressed="false">Sell</button>
-    <div data-name="units-input"><input value="1000"></div>
-    <div data-name="stop-loss-price-input"><input value=""></div>
-    <button data-name="place-and-modify-button" id="submit">Buy 1000 EURUSD MKT</button>
+    <input data-qa-id="order-ticket-stop-loss-checkbox-bracket" type="checkbox" role="switch">
+    <button data-qa-id="order-ticket-stop-loss-dropdown-button">Stop loss, price</button>
+    <input data-qa-id="ui-lib-Input-input order-ticket-stop-loss-input" value="84816">
+    <button data-name="place-and-modify-button" id="submit">Buy<br>1 BTCUSD MARKET</button>
   </div>
+  <div id="footer-chart-panel"><button><span class="titleText-hvcu2Y0t">Paper Trading</span></button></div>
+  <button data-qa-id="account-selector"><span class="accountName-_BZVWXcP">leowqiheng</span> USD</button>
+  <table data-name="Paper.positions-table">
+    <thead><tr><th data-name="symbol-column">Symbol</th><th data-name="side-column">Side</th><th data-name="qty-column">Qty</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <table data-name="Paper.orders-table"><thead><tr><th data-name="symbol-column">Symbol</th></tr></thead><tbody></tbody></table>
   <button id="close">Close position</button>
-  <div data-name="account-manager">
-    <span data-name="broker-name">Paper Trading</span>
-    <span data-name="account-id">PT12345678</span>
-    <span data-name="account-currency">USD</span>
-    <table data-name="positions-table"><tbody></tbody></table>
-  </div>
   <script>
     // The page's own handler: counts orders that reached it.
     window.sent = 0;

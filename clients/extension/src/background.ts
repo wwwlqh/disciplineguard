@@ -15,6 +15,8 @@ interface Link {
 interface Secrets {
   appToken?: string;
   email?: string;
+  /** The signed-in user's id, so a sign-in as someone else is noticed (SEC-01). */
+  user?: string;
   links: Record<string, Link>;
   alertsAfter?: number;
   queue: Record<string, QueuedEvent[]>;
@@ -129,26 +131,39 @@ chrome.runtime.onMessageExternal.addListener((msg, sender, reply) => {
     const r = await post('/v1/auth/desktop', undefined, { code: msg.code, verifier, version: VERSION });
     if (r.status !== 200) return reply({ ok: false });
     await chrome.storage.session.remove('verifier');
-    await withSecrets((s) => {
-      // Another person: the old links are dropped; their protection-off went out at sign-out.
+    await withSecrets(async (s) => {
+      // Another person: the old person's connections are turned off and forgotten (SEC-01).
+      if (s.user !== r.data.user) {
+        await protectionOff(s, 'switched_login');
+        s.links = {};
+        s.queue = {};
+        s.alertsAfter = undefined;
+      }
       s.appToken = r.data.token;
       s.email = r.data.email;
-      s.alertsAfter = undefined;
+      s.user = r.data.user;
     });
-    await setCache({ ...(await getCache()), status: 'setting_up' });
+    await setCache({ status: 'setting_up', accounts: {}, skew: 0, syncedAt: 0 });
     reply({ ok: true });
     await tick();
   })();
   return true;
 });
 
+/** Protection-off for every connection, best effort (SPEC §10.6). */
+async function protectionOff(s: Secrets, reason: string): Promise<void> {
+  for (const l of Object.values(s.links)) {
+    const off = { type: 'protection_off', id: `off_${Date.now()}_${l.terminalId}`, t: Date.now(), reason };
+    await post('/v1/sync', l.token, { v: 1, role: 'primary', version: VERSION, accounts: [], events: [off] }).catch(() => {});
+  }
+}
+
 async function signOut(): Promise<void> {
   await withSecrets(async (s) => {
-    for (const l of Object.values(s.links)) {
-      await post('/v1/sync', l.token, { v: 1, role: 'primary', version: VERSION, accounts: [], events: [{ type: 'protection_off', id: `off_${Date.now()}`, t: Date.now(), reason: 'signed_out' }] }).catch(() => {});
-    }
+    await protectionOff(s, 'signed_out');
     s.appToken = undefined;
     s.email = undefined;
+    s.user = undefined;
     s.links = {};
     s.queue = {};
   });
@@ -158,6 +173,8 @@ async function signOut(): Promise<void> {
 //--- accounts: every broker account seen on a chart is protected, like a new MT login after Protect ---------
 
 async function register(account: TvAccount): Promise<void> {
+  const known = await load();
+  if (!known.appToken || known.links[accountKey(account)]) return;
   await withSecrets(async (s) => {
     const k = accountKey(account);
     if (!s.appToken || s.links[k]) return;
@@ -225,6 +242,8 @@ async function syncAll(): Promise<void> {
     const a = (d.accounts ?? []).find((x: any) => x.key === k);
     if (a?.id) next.accounts[k] = { id: a.id, enforced: a.state === 'active', last3: a.last3 };
   }
+  // A sign-in as someone else during this sync starts over.
+  if ((await load()).user !== s.user) return;
   // Rules keep working from the last sync in every failure (SPEC §10.5).
   next.status = authFail ? 'attention' : !next.signed ? 'setting_up' : !next.signed.license.enforcing ? 'off' : ok ? 'on' : 'offline';
   await setCache(next);

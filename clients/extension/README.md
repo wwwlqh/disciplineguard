@@ -25,3 +25,5 @@ A build against a local server: `DG_API=http://localhost:8787 DG_PUBKEY=<hex fro
 `npm run e2e --workspace clients/extension` runs the built extension in Chromium against the real server handler
 (`server/dev.ts`, empty database) and a stand-in chart (`test/fixture.html`) served at the TradingView URL: sign-in,
 account registration, straight-through trades, the held trade, skip, closes never paused, and Place anyway.
+
+On real TradingView: `spikes/tv-runner/live.js` drives a signed-in Paper Trading chart with a live-test build (see its header). Paper Trading only, never a real broker.

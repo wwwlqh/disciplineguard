@@ -97,7 +97,7 @@ try {
   await chart.goto('https://www.tradingview.com/chart/');
   await until(async () => (await cache())?.status === 'on', 'extension On');
   const me = (await call('GET', '/api/me', undefined, cookie)).data;
-  check(me.accounts.length === 1 && me.accounts[0].platform === 'tv' && me.accounts[0].last3 === '678', 'the Paper Trading account is protected (last 3 only)');
+  check(me.accounts.length === 1 && me.accounts[0].platform === 'tv' && me.accounts[0].last3 === 'eng', 'the Paper Trading account is protected (last 3 only)');
 
   const sent = () => chart.evaluate(() => (window as any).sent as number);
   // A real mouse click at the control, like the trader's (the pause covering the page is the point).
