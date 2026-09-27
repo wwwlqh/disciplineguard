@@ -1,12 +1,13 @@
 # DisciplineGuard for Windows (SPEC §9.5).
-# Every change: the app's tests against the real server handler, clippy, and a debug build, on Windows.
+# Every change: the app's tests against the real server handler, clippy, a debug build, and the EA compiled with
+# MetaEditor in a fresh portable MetaTrader 5 (so nobody compiles it by hand).
 # Run by hand with "release" ticked: signs the EA manifest, builds the signed installer and publishes it with the
 # signed update manifest to github.com/wwwlqh/disciplineguard-clients/releases, where disciplineguard.com/downloads
 # points (web/public/_redirects). Secrets are listed in clients/windows/README.md.
 name: Windows app
 on:
   push:
-    branches: [main]
+    branches: [main, 'main-*']
     paths: ['clients/windows/**', 'clients/mt5/**', 'server/**', '.github/workflows/windows.yml']
   pull_request:
     paths: ['clients/windows/**', 'clients/mt5/**', 'server/**', '.github/workflows/windows.yml']
@@ -34,14 +35,29 @@ jobs:
         working-directory: clients/windows
         run: cargo build -p disciplineguard
 
+  ea:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile the EA
+        shell: pwsh
+        run: clients/mt5/compile.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DisciplineGuard-ea
+          path: clients/mt5/DisciplineGuard.ex5
+          if-no-files-found: error
+
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.release
-    needs: test
+    needs: [test, ea]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm }
+      - uses: actions/download-artifact@v4
+        with: { name: DisciplineGuard-ea, path: ea-build }
       - name: Version
         id: v
         shell: pwsh
@@ -51,7 +67,7 @@ jobs:
       - name: Sign the EA manifest
         env:
           DG_RELEASE_KEY: ${{ secrets.DG_RELEASE_KEY }}
-        run: node scripts/sign-ea-manifest.ts clients/mt5/release/DisciplineGuard.ex5 ${{ steps.v.outputs.version }}
+        run: node scripts/sign-ea-manifest.ts ea-build/DisciplineGuard.ex5 ${{ steps.v.outputs.version }}
       - run: cargo install trusted-signing-cli --locked
       - name: Build and code-sign
         working-directory: clients/windows/app

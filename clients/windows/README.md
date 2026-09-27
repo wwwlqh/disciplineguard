@@ -39,9 +39,8 @@ cd clients\windows && cargo run -p disciplineguard
 
 ## Releasing
 
-1. On a PC with MetaTrader 5: `clients/mt5/release.ps1`, then commit `clients/mt5/release/DisciplineGuard.ex5`.
-2. Bump `version` in `clients/windows/Cargo.toml`.
-3. Run the `Windows app` workflow with **release** ticked. It signs the EA manifest, builds and code-signs the installer, and publishes `DisciplineGuard-Setup.exe` and `latest.json` to the releases of `wwwlqh/disciplineguard-clients`. `disciplineguard.com/downloads/…` redirects there (`web/public/_redirects`), so the web app's download button and the updater always get the latest release. Installed apps update themselves within 6 hours.
+1. Bump `version` in `clients/windows/Cargo.toml`.
+2. Run the `Windows app` workflow with **release** ticked. It compiles the EA with MetaEditor on the runner (`clients/mt5/compile.ps1`), signs the EA manifest, builds and code-signs the installer, and publishes `DisciplineGuard-Setup.exe` and `latest.json` to the releases of `wwwlqh/disciplineguard-clients`. `disciplineguard.com/downloads/…` redirects there (`web/public/_redirects`), so the web app's download button and the updater always get the latest release. Installed apps update themselves within 6 hours.
 
 Repository secrets for the release:
 
