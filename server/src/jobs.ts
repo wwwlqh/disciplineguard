@@ -1,6 +1,7 @@
 // Cron every 5 minutes: due jobs, trial emails and retention purges (SPEC §10.2, §13.3).
 import { DAY, HOUR } from '@dg/core';
 import { offCheck, rollup, sendSummary, type AlertKind } from './alerts.ts';
+import { renewalReminder } from './billing.ts';
 import { audit, scheduleJob, sendEmail, type Ctx } from './common.ts';
 import { userCtx } from './context.ts';
 import { now as clock, type Env } from './env.ts';
@@ -31,6 +32,8 @@ async function runJob(env: Env, job: { id: number; kind: string; payload: string
       return offCheck(env, p);
     case 'summary':
       return sendSummary(env, p);
+    case 'renewal_reminder':
+      return renewalReminder(env, p, ctx);
     case 'trial_3days':
     case 'trial_ended': {
       const uc = await userCtx(env, p.userId, t);

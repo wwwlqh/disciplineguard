@@ -15,6 +15,7 @@ import { AccountPage } from './pages/Account.tsx';
 import { Owner } from './pages/Owner.tsx';
 import { Allow } from './pages/Allow.tsx';
 import { Help } from './pages/Help.tsx';
+import { Plans } from './pages/Plans.tsx';
 
 export interface PageProps {
   me: Me;
@@ -35,6 +36,7 @@ function Shell({ me, reload, path }: PageProps & { path: string }) {
     if (path.startsWith('/devices')) return <Devices me={me} reload={reload} />;
     if (path.startsWith('/stats')) return <Stats me={me} reload={reload} />;
     if (path.startsWith('/account')) return <AccountPage me={me} reload={reload} />;
+    if (path.startsWith('/plans')) return <Plans me={me} reload={reload} />;
     if (path.startsWith('/owner') && me.user.owner) return <Owner />;
     return <Today me={me} reload={reload} />;
   })();

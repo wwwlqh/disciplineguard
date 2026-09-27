@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import { api, type AlertKind } from '../api.ts';
 import { onLink } from '../router.ts';
-import { ago, time } from '../fmt.ts';
-import { Switch, useToast } from '../ui/kit.tsx';
+import { ago, date, time } from '../fmt.ts';
+import { Sheet, Switch, useToast } from '../ui/kit.tsx';
 import type { PageProps } from '../main.tsx';
 
 const REPORT_TYPES = [
@@ -33,6 +33,7 @@ export function AccountPage({ me, reload }: PageProps) {
   const [sessions, setSessions] = useState<{ sessions: any[]; events: any[] } | null>(null);
   const [report, setReport] = useState({ type: 'setup', text: '' });
   const lic = me.license;
+  const [sheet, setSheet] = useState<'cancel' | 'monthly' | 'yearly' | 'refund' | null>(null);
 
   useEffect(() => {
     api('GET', '/api/sessions').then(setSessions).catch(() => {});
@@ -48,13 +49,23 @@ export function AccountPage({ me, reload }: PageProps) {
     await reload();
   }
 
-  async function checkout() {
+  async function planAction(action: 'cancel' | 'monthly' | 'yearly' | 'refund') {
+    setSheet(null);
     try {
-      const r = await api('POST', '/api/checkout', { plan: 'earlybird_yearly' });
-      location.href = r.url;
+      if (action === 'cancel') {
+        const r = await api('POST', '/api/plan/cancel');
+        toast(`Cancelled. Protection stays on until ${date(r.until)}. Your rules are saved for 90 days after that.`);
+      } else if (action === 'refund') {
+        await api('POST', '/api/plan/refund');
+        toast("Refund requested. You won't be charged again.");
+      } else {
+        await api('POST', '/api/plan/change', { plan: action });
+        toast(`Switched to ${action}. It applies from your next renewal.`);
+      }
     } catch {
-      toast('Checkout isn\'t open yet. It opens when your trial ends.');
+      toast("That didn't work. Try again in a moment.");
     }
+    await reload();
   }
 
   const planLine =
@@ -66,17 +77,38 @@ export function AccountPage({ me, reload }: PageProps) {
   return (
     <div className="stack">
       <h1>Account</h1>
-      <div className="card">
+      <div className="card" id="plan">
         <h2>Plan</h2>
         <p>{planLine}</p>
-        {lic.state !== 'active' && me.user.isBeta && (
-          <div className="stack">
-            <p className="muted small">$79 a year, kept while your plan renews. Full refund within 14 days.</p>
-            <button className="primary" onClick={checkout}>Get the early-bird plan</button>
+        {lic.state === 'past_due' && me.user.updateCardUrl && <a className="btn primary" href={me.user.updateCardUrl}>Update your card</a>}
+        {lic.state === 'active' || lic.state === 'past_due' ? (
+          <div className="row" style={{ marginTop: 10 }}>
+            {me.user.planKind === 'monthly' ? <button onClick={() => setSheet('yearly')}>Switch to yearly</button> : <button onClick={() => setSheet('monthly')}>Switch to monthly</button>}
+            {me.user.portalUrl && <a className="btn" href={me.user.portalUrl}>Billing and receipts</a>}
+            {me.user.refundable && <button className="link small" onClick={() => setSheet('refund')}>Request a full refund</button>}
+            {!me.user.cancelAtPeriodEnd && <button className="link small" onClick={() => setSheet('cancel')}>Cancel plan</button>}
           </div>
+        ) : (
+          <a className="btn primary" href="/plans" onClick={onLink}>See plans</a>
         )}
-        {lic.state === 'active' && <p className="small"><a href="mailto:support@disciplineguard.com?subject=Refund">Request a refund</a> · Manage billing from your receipt email.</p>}
       </div>
+      {sheet && (
+        <Sheet label="Plan" onClose={() => setSheet(null)}>
+          <h2>{sheet === 'cancel' ? 'Cancel your plan?' : sheet === 'refund' ? 'Request a full refund?' : `Switch to ${sheet}?`}</h2>
+          <p>
+            {sheet === 'cancel' && `Protection stays on until ${date(lic.validUntil)}. You won't be charged again.`}
+            {sheet === 'refund' && 'The full amount goes back to your card, and the plan ends.'}
+            {sheet === 'monthly' && `From your next renewal.${me.user.planKind === 'earlybird_yearly' ? ' The early-bird price ends.' : ''}`}
+            {sheet === 'yearly' && 'From your next renewal.'}
+          </p>
+          <div className="row">
+            <button className={sheet === 'cancel' || sheet === 'refund' ? 'danger' : 'primary'} onClick={() => planAction(sheet)}>
+              {sheet === 'cancel' ? 'Cancel plan' : sheet === 'refund' ? 'Request refund' : `Switch to ${sheet}`}
+            </button>
+            <button onClick={() => setSheet(null)}>Keep it</button>
+          </div>
+        </Sheet>
+      )}
 
       <div className="card" id="alerts">
         <h2>Alerts</h2>

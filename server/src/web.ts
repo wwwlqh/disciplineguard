@@ -16,7 +16,7 @@ import { saveSetting, toRow } from './settings.ts';
 import { buildSnapshot } from './sync.ts';
 import { validateSetting } from './validate.ts';
 import { ownerMetrics } from './owner.ts';
-import { checkoutUrl } from './billing.ts';
+import { REFUND_DAYS, cancelPlan, changePlan, checkoutUrl, plans, requestRefund } from './billing.ts';
 import { ALERT_KINDS, alertPrefs } from './alerts.ts';
 
 type Handler = (req: Request, env: Env, s: Session, ctx: Ctx, params: string[]) => Promise<Response>;
@@ -44,6 +44,10 @@ const routes: [string, RegExp, Handler][] = [
   ['POST', /^\/api\/report$/, report],
   ['POST', /^\/api\/tell-me$/, tellMe],
   ['POST', /^\/api\/checkout$/, async (r, e, s) => checkoutUrl(r, e, s.user)],
+  ['GET', /^\/api\/plans$/, async (_r, e, s) => plans(e, s.user)],
+  ['POST', /^\/api\/plan\/cancel$/, async (_r, e, s, c) => cancelPlan(e, s.user, c)],
+  ['POST', /^\/api\/plan\/change$/, async (r, e, s) => changePlan(r, e, s.user)],
+  ['POST', /^\/api\/plan\/refund$/, async (_r, e, s, c) => requestRefund(e, s.user, c)],
   ['GET', /^\/api\/owner\/metrics$/, async (r, e, s) => {
     if (!isOwner(e, s.user)) throw new HttpError(404, 'not_found');
     return ownerMetrics(r, e);
@@ -106,6 +110,8 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
       onboarding: u.onboarding_json ? JSON.parse(u.onboarding_json) : null,
       alerts: alertPrefs(u.alerts_json), hasApp: await hasApp(env, u.id),
       isBeta: !!u.is_beta, owner: isOwner(env, u), country: u.country, planKind: u.plan_kind, cancelAtPeriodEnd: !!u.cancel_at_period_end,
+      portalUrl: u.portal_url, updateCardUrl: u.update_card_url,
+      refundable: u.first_paid_at !== null && uc.now - u.first_paid_at <= REFUND_DAYS * DAY,
     },
     license: uc.license,
     rules: uc.asm.rules,

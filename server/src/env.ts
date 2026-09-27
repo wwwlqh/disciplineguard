@@ -35,6 +35,9 @@ export interface Env {
   LS_CHECKOUT_YEARLY?: string;
   LS_CHECKOUT_MONTHLY?: string;
   LS_API_KEY?: string;
+  /** Variant ids, to switch a subscription between monthly and yearly (SPEC §12.3). */
+  LS_VARIANT_MONTHLY?: string;
+  LS_VARIANT_YEARLY?: string;
   /** Comma-separated emails that can open the owner dashboard. */
   OWNER_EMAILS?: string;
   TURNSTILE_SECRET?: string;

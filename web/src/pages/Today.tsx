@@ -117,16 +117,27 @@ export function Today({ me, reload }: PageProps) {
             Trial · day {lic.trialDay} of 14
             {lic.trialEndsAt && lic.trialEndsAt - d.now < 3 * 86_400_000 ? ` · ends ${time(lic.trialEndsAt, d.now)}` : ''}
           </span>
-          <a className="btn" href="/account" onClick={onLink}>See plans</a>
+          <a className="btn" href="/plans" onClick={onLink}>See plans</a>
         </div>
       )}
       {lic.state === 'ended' && (
         <div className="banner amber">
           <span>Off: {me.user.planKind ? 'plan ended' : 'trial ended'}. Your rules are saved.</span>
-          <a className="btn primary" href="/account" onClick={onLink}>See plans</a>
+          <a className="btn primary" href="/plans" onClick={onLink}>See plans</a>
         </div>
       )}
-      {lic.state === 'past_due' && <div className="banner amber">Payment failed. Update your card by {time(lic.validUntil, d.now)}.</div>}
+      {lic.state === 'past_due' && (
+        <div className="banner amber">
+          <span>Payment failed. Update your card by {time(lic.validUntil, d.now)}.</span>
+          {me.user.updateCardUrl && <a className="btn primary" href={me.user.updateCardUrl}>Update card</a>}
+        </div>
+      )}
+      {lic.enforcing && lic.validUntil - d.now <= 60 * 60_000 && !(lic.state === 'active' && !me.user.cancelAtPeriodEnd) && (
+        <div className="banner amber">
+          <span>Protection ends at {time(lic.validUntil, d.now)}.</span>
+          <a className="btn" href="/plans" onClick={onLink}>See plans</a>
+        </div>
+      )}
       {r5Missing.map((a) => (
         <div key={a.id} className="banner amber">
           <span>Max size not set for {a.platform.toUpperCase()} …{a.last3}.</span>

@@ -107,6 +107,9 @@ export interface Me {
     country: string | null;
     planKind: string | null;
     cancelAtPeriodEnd: boolean;
+    portalUrl: string | null;
+    updateCardUrl: string | null;
+    refundable: boolean;
   };
   license: License;
   rules: Rules;

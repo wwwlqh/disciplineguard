@@ -32,6 +32,10 @@ export interface UserRow {
   reason_consent: number | null;
   reason_asked_at: number | null;
   alerts_json: string | null;
+  first_paid_at: number | null;
+  portal_url: string | null;
+  update_card_url: string | null;
+  deletion_at: number | null;
   hide_amounts: number;
   country: string | null;
   risk_notice_version: string | null;
