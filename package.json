@@ -6,7 +6,8 @@
     "packages/core",
     "server",
     "web",
-    "clients/windows"
+    "clients/windows",
+    "clients/extension"
   ],
   "scripts": {
     "test": "npm run test --workspaces --if-present",

@@ -34,7 +34,7 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 - Self-serve export (emailed ZIP link) and deletion (SPEC §12.6, §13.4).
 
 **Left**
-- TradingView extension, once spike Q1a passes. MT4 if wanted.
+- TradingView extension (clients/extension): built and passing its end-to-end test on a stand-in chart. Left: confirm the order panel and Account Manager selectors on a signed-in Paper Trading chart (spike Q1a), then the pill, outside detection and the signed remote page config. MT4 if wanted.
 - The founder: Lemon Squeezy products (yearly, monthly, early-bird), their redirect to `/plans?paid`, and the secrets in server/wrangler.toml.
 
 ## Phase 2: Public launch

@@ -49,7 +49,7 @@ export async function desktopToken(req: Request, env: Env, ctx: Ctx): Promise<Re
     .bind(id, user.id, await sha256(appToken), row.name, typeof b.version === 'string' ? b.version.slice(0, 20) : null, t, t)
     .run();
   await audit(env, user.id, 'user', 'desktop_allowed', { desktop: id });
-  await securityEmail(env, user.email, `DisciplineGuard for Windows was allowed on ${row.name}.`, req, ctx);
+  await securityEmail(env, user.email, `DisciplineGuard was allowed on ${row.name}.`, req, ctx);
   return json({ token: appToken, email: maskEmail(user.email), user: user.id });
 }
 
@@ -74,7 +74,8 @@ export async function registerTerminal(req: Request, env: Env, ctx: Ctx): Promis
   const b = await body(req);
   const terminalId = str(b.terminalId, 64);
   if (!/^[0-9A-Za-z_-]{4,64}$/.test(terminalId)) throw new HttpError(400, 'bad_terminal');
-  const kind = b.kind === 'mt4' ? 'mt4' : 'mt5';
+  // The Windows app registers MT terminals; the browser extension registers TradingView broker accounts.
+  const kind = b.kind === 'mt4' ? 'mt4' : b.kind === 'tv' ? 'tv' : 'mt5';
   const server = str(b.server ?? '', 80);
   const login = str(typeof b.login === 'number' ? String(b.login) : b.login, 32);
   if (!login) throw new HttpError(400, 'no_account');
@@ -90,7 +91,7 @@ export async function registerTerminal(req: Request, env: Env, ctx: Ctx): Promis
   const deviceToken = token(32);
   const existing = await env.DB.prepare('SELECT id FROM connections WHERE desktop_id = ? AND install_id = ? AND removed_at IS NULL').bind(d.id, terminalId).first<{ id: string }>();
   const connId = existing?.id ?? randomId('c_');
-  const name = `${kind.toUpperCase()} · ${server} …${hashes.last3}`;
+  const name = `${kind === 'tv' ? 'TradingView' : kind.toUpperCase()} · ${server} …${hashes.last3}`;
   if (existing) {
     await env.DB.prepare('UPDATE connections SET token_hash = ?, version = ?, build_hash = ? WHERE id = ?').bind(await sha256(deviceToken), version, build, connId).run();
   } else {

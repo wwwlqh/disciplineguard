@@ -601,11 +601,11 @@ A trader installs at most one thing per kind of platform, never one per platform
 **Basics**
 
 - Manifest V3.
-- Host permissions: the TradingView chart pages that host the order panel (confirmed in Q1), and the DisciplineGuard API.
+- Host permissions: `https://www.tradingview.com/*` and the DisciplineGuard API. The content script matches only `https://www.tradingview.com/chart/*`.
 - Content scripts match only those pages.
 - All code is bundled: no remote scripts, no `eval`.
 
-**Timers**: sync, heartbeat and self-tests use `chrome.alarms` (minimum 30 s).
+**Timers**: sync, heartbeat, alerts and self-tests use `chrome.alarms`, every minute.
 
 **Guarded paths**
 
@@ -670,10 +670,9 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 **Sign-in**
 
-- `externally_connectable` lists only the production web app origin.
-- The web app sends a single-use 60-second code to the known extension id. The extension checks the sender origin and exchanges the code at `POST /v1/auth/extension`, using PKCE with a verifier created by the welcome tab.
-- For email sign-in, the welcome tab shows a code and polls. The emailed link approves that code from any device.
-- The token lives in service-worker storage, never in content scripts.
+- The same Allow as the Windows app (§9.5): the extension opens `/allow?ext=<its id>&challenge=<PKCE>`, the trader presses Allow, and the web app hands the single-use code to that extension id (`externally_connectable` lists only the web app origin, and the extension checks the sender origin). The extension redeems it at `POST /v1/auth/desktop` with its verifier.
+- Each TradingView broker account seen on a chart is protected at once, like a new MT login after Protect: the extension registers it at `POST /v1/desktop/terminals` (kind `tv`) and gets a device token for it.
+- The tokens live in the service worker's IndexedDB, never in content scripts.
 - The Phase 2 public listing is **the same store item** as the Phase 1 unlisted one. The web app keeps both the Chrome and the Edge extension ids.
 
 ### 9.2 MT5 EA
