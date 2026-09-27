@@ -112,8 +112,10 @@ pub fn remove_ea(t: &Terminal) -> io::Result<()> {
     }
 }
 
+/// The profile's folder name. Dots are allowed in profile names, but a name of only dots can't climb out of Charts.
 fn sanitize(profile: &str) -> String {
-    profile.chars().filter(|c| !matches!(c, '\\' | '/' | ':' | '.')).collect()
+    let s: String = profile.chars().filter(|c| !matches!(c, '\\' | '/' | ':')).collect();
+    if s.trim_matches('.').is_empty() { "Default".into() } else { s }
 }
 
 fn edit_chart_file(path: &Path, add: bool) -> io::Result<bool> {
@@ -206,6 +208,13 @@ mod tests {
         assert!(!read(&charts.join("chart02.chr")).contains(EA_REL));
         assert!(!ea_path(&t).exists());
         fs::remove_dir_all(&t.data_dir).ok();
+    }
+
+    #[test]
+    fn keeps_dots_in_profile_names() {
+        assert_eq!(sanitize("EU.Session"), "EU.Session");
+        assert_eq!(sanitize(".."), "Default");
+        assert_eq!(sanitize(r"..\..\x"), "....x");
     }
 
     #[test]

@@ -153,8 +153,8 @@ fn tray_rows(core: &Core) -> (TrayRows, Option<Status>) {
         add("protect", "Tick your MetaTrader to protect it".into(), true);
     }
     if !protected.is_empty() {
-        for t in core.new_terminals() {
-            add("protect", format!("New MetaTrader found: {}. Protect it", t.name), true);
+        for r in v.rows.iter().filter(|r| !r.protected && !r.dismissed) {
+            add("protect", format!("New MetaTrader found: {}. Protect it", r.name), true);
         }
     }
     if protected.iter().any(|r| r.restart_needed) {

@@ -41,6 +41,10 @@ pub fn discover(terminals_root: &Path, running: &[PathBuf]) -> Vec<Terminal> {
         let Ok((origin, _)) = text::read(&data_dir.join("origin.txt")) else { continue };
         let install = PathBuf::from(origin.trim().trim_start_matches('\u{feff}'));
         let exe = install.join("terminal64.exe");
+        // A data folder outlives an uninstalled terminal.
+        if !exe.is_file() {
+            continue;
+        }
         found.push(Terminal {
             id: terminal_id(&data_dir),
             name: name_for(&install),
@@ -94,13 +98,20 @@ mod tests {
         let appdata = root.join("Terminal");
         let data = appdata.join("D0E8209F77C8CF37AD8BF550E51FF075");
         fs::create_dir_all(data.join("MQL5")).unwrap();
-        write(&data.join("origin.txt"), "C:\\Program Files\\IC Markets MetaTrader 5", Enc::Utf16Le).unwrap();
+        let install = root.join("IC Markets MetaTrader 5");
+        fs::create_dir_all(&install).unwrap();
+        fs::write(install.join("terminal64.exe"), b"").unwrap();
+        write(&data.join("origin.txt"), &install.to_string_lossy(), Enc::Utf16Le).unwrap();
+        // Uninstalled: the data folder is left, the install folder has no terminal64.exe.
+        let gone = appdata.join("81A933A9AFC5DE3C23B15CAB19C63850");
+        fs::create_dir_all(gone.join("MQL5")).unwrap();
+        write(&gone.join("origin.txt"), &root.join("FTMO MT5").to_string_lossy(), Enc::Utf16Le).unwrap();
         fs::create_dir_all(appdata.join("Common").join("Files")).unwrap();
         let portable = root.join("dg-mt5-portable");
         fs::create_dir_all(portable.join("MQL5")).unwrap();
         fs::write(portable.join("terminal64.exe"), b"").unwrap();
 
-        let found = discover(&appdata, &[portable.join("terminal64.exe"), PathBuf::from("C:\\Program Files\\IC Markets MetaTrader 5\\terminal64.exe")]);
+        let found = discover(&appdata, &[portable.join("terminal64.exe"), install.join("terminal64.exe")]);
         assert_eq!(found.len(), 2);
         assert_eq!(found[0].id, "dg-mt5-portable");
         assert!(found[0].portable);

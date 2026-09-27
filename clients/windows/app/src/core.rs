@@ -10,7 +10,7 @@ use dg_core::store::Store;
 use dg_core::{process, terminals};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
 
 /// The EA build this app ships, its signed manifest, and the release key it is checked with (SPEC §10.9).
@@ -30,6 +30,11 @@ fn running() -> Vec<PathBuf> {
 
 fn same_path(a: &Path, b: &Path) -> bool {
     a.to_string_lossy().eq_ignore_ascii_case(&b.to_string_lossy())
+}
+
+/// Whether `t` is among `running` (one process snapshot, shared by a whole pass).
+fn is_running(t: &Terminal, running: &[PathBuf]) -> bool {
+    t.exe.as_deref().is_some_and(|e| running.iter().any(|p| same_path(p, e)))
 }
 
 pub struct Paths {
@@ -59,6 +64,8 @@ pub struct Core {
     pub terminals_root: PathBuf,
     /// Terminals picked with Browse that discovery can't see on its own.
     browsed: Mutex<Vec<Terminal>>,
+    /// The checked EA build, checked once: it ships inside the app and doesn't change while it runs.
+    ea: OnceLock<Option<(&'static [u8], String)>>,
 }
 
 /// How one terminal is doing, in the status words of EXPERIENCE §8.
@@ -113,6 +120,7 @@ impl Core {
             web: web.trim_end_matches('/').to_string(),
             terminals_root: paths.terminals_root,
             browsed: Mutex::new(Vec::new()),
+            ea: OnceLock::new(),
         }
     }
 
@@ -122,9 +130,13 @@ impl Core {
 
     /// The EA build, checked against the signed release manifest. None when this build has none or it fails.
     fn ea(&self) -> Option<(&'static [u8], String)> {
-        let (ex5, manifest, sig) = EA?;
-        let build = release::verify_ea(manifest, sig, RELEASE_PUB?, ex5).ok()?;
-        Some((ex5, build.sha256))
+        self.ea
+            .get_or_init(|| {
+                let (ex5, manifest, sig) = EA?;
+                let build = release::verify_ea(manifest, sig, RELEASE_PUB?, ex5).ok()?;
+                Some((ex5, build.sha256))
+            })
+            .clone()
     }
 
     /// Every MT5 terminal on this computer: found ones, browsed ones and protected ones.
@@ -148,7 +160,6 @@ impl Core {
 
     pub fn view(&self) -> View {
         let running = running();
-        let is_running = |t: &Terminal| t.exe.as_deref().is_some_and(|e| running.iter().any(|p| same_path(p, e)));
         let all = self.terminals_with(&running);
         let ea_sha = self.ea().map(|(_, sha)| sha);
         let s = self.state.lock().unwrap().clone();
@@ -170,7 +181,7 @@ impl Core {
                     (Status::Off, "Signed out. Orders go through normally.".into())
                 } else if restart_needed {
                     (Status::SettingUp, "Restart MetaTrader to finish setup".into())
-                } else if !is_running(&t) {
+                } else if !is_running(&t, &running) {
                     (Status::NotRunning, format!("{} is closed", t.name))
                 } else if ea.algo_on == Some(false) {
                     (Status::NeedsAttention, "Algo Trading is off. Click Algo Trading once in MetaTrader.".into())
@@ -204,16 +215,9 @@ impl Core {
         let name = std::env::var("COMPUTERNAME").unwrap_or_else(|_| "Windows".into());
         let allow = Allow { app_url: self.web.clone(), name, timeout: Duration::from_secs(10 * 60) };
         let signed = signin::sign_in(&self.api, &allow, open)?;
-        let mut next = self.state.lock().unwrap().clone();
-        signin::apply(&self.api, &mut next, signed)?;
+        // Held through the protection-off calls, so the bridge can't link a terminal to the old person meanwhile.
         let mut s = self.state.lock().unwrap();
-        // Keep what the bridge changed meanwhile, except the sign-in and, for another person, the old links.
-        s.app_token = next.app_token;
-        s.email = next.email;
-        s.user = next.user;
-        if next.links.is_empty() {
-            s.links.clear();
-        }
+        signin::apply(&self.api, &mut s, signed)?;
         self.save(&s);
         Ok(())
     }
@@ -291,16 +295,21 @@ impl Core {
         }
     }
 
-    /// Every few seconds: finishes setup for waiting terminals the trader has closed, and brings each protected
-    /// terminal's EA up to the build this app carries (picked up at the next terminal start).
+    /// Every few seconds: finishes setup for waiting terminals the trader has closed, and brings each closed
+    /// protected terminal's EA up to the build this app carries. An open MT reloads an EA whose file changes, which
+    /// would end an open pause (invariant 3), so an open terminal waits until it is closed.
     pub fn maintain(&self) {
         let protected: Vec<(Terminal, bool)> = {
             let s = self.state.lock().unwrap();
             s.protected.values().map(|t| (t.clone(), s.pending.contains(&t.id))).collect()
         };
         let ea = self.ea();
+        let running = running();
         for (t, pending) in protected {
-            if pending && !process::is_running(&t) {
+            if is_running(&t, &running) {
+                continue;
+            }
+            if pending {
                 self.finish(&t);
             }
             if let Some((ex5, sha)) = &ea {
@@ -309,13 +318,6 @@ impl Core {
                 }
             }
         }
-    }
-
-    /// Terminals found since the trader last answered, for "New MetaTrader found" (EXPERIENCE §7.1).
-    pub fn new_terminals(&self) -> Vec<Terminal> {
-        let all = self.terminals();
-        let s = self.state.lock().unwrap();
-        all.into_iter().filter(|t| !s.is_protected(&t.id) && !s.dismissed.contains(&t.id)).collect()
     }
 
     /// The uninstaller (SPEC §9.5): protection-off for every connected terminal. Only once the server has it is the
@@ -333,12 +335,12 @@ impl Core {
                 continue;
             }
             let _ = setup::edit_template(t, false);
-            if process::is_running(t) {
-                // The open charts keep the panel until MetaTrader closes; it then shows the app isn't running.
-                continue;
-            }
-            let _ = setup::finish_while_closed(t, false);
+            // The EA file goes even while MT is open: the app won't be here to finish later, and without the file MT
+            // drops the EA from its charts at the next start. Open charts keep the panel until then.
             let _ = setup::remove_ea(t);
+            if !process::is_running(t) {
+                let _ = setup::finish_while_closed(t, false);
+            }
         }
         if all_done {
             let _ = std::fs::remove_file(&self.store.path);

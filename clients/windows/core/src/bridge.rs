@@ -193,8 +193,18 @@ impl Bridge {
         let (Some(token), Some(conn)) = (d["token"].as_str(), d["connectionId"].as_str()) else { return Ok(None) };
         let link = Link { token: token.into(), connection_id: conn.into() };
         let mut s = shared.lock().unwrap();
-        // Unticked or signed out while the call was in flight: keep nothing.
+        // Unticked, signed out or signed in as someone else while the call was in flight: keep nothing, and turn the
+        // new connection off again so it isn't left on for the old sign-in (SEC-01).
         if !s.is_protected(id) || s.app_token.as_deref() != Some(&app_token) {
+            let reason = if !s.is_protected(id) {
+                "removed"
+            } else if s.signed_in() {
+                "switched_login"
+            } else {
+                "signed_out"
+            };
+            drop(s);
+            let _ = self.api.protection_off(&link, reason);
             return Ok(None);
         }
         s.links.insert(id.into(), link.clone());

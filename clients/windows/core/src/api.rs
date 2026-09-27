@@ -51,7 +51,8 @@ impl Api {
     }
 
     /// Sends protection-off for one terminal's connection (SPEC §10.6). True once the server has it: a 200, or a
-    /// connection the server already removed or no longer knows (nothing is protected by it any more).
+    /// connection the server already removed (410). A 401 isn't: the token may only be stale while the connection
+    /// is still on.
     pub fn protection_off(&self, link: &Link, reason: &str) -> Result<bool, NetError> {
         let now_ms = crate::unix_now() * 1000;
         let body = json!({
@@ -62,7 +63,7 @@ impl Api {
             "events": [{ "type": "protection_off", "id": format!("off_{}", crate::random_hex(8)), "t": now_ms, "reason": reason }],
         });
         let r = self.post("/v1/sync", Some(&link.token), &body.to_string())?;
-        Ok(matches!(r.status, 200 | 401 | 410))
+        Ok(matches!(r.status, 200 | 410))
     }
 }
 

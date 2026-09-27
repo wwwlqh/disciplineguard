@@ -245,11 +245,17 @@ fn signing_in_as_another_person_turns_off_the_old_connections_first() {
     assert_eq!(signin::apply(&Api::new("http://127.0.0.1:9"), &mut offline, signed_b.clone()), Err(SignInError::SwitchNeedsInternet));
     assert_eq!(offline.app_token, before.app_token);
     assert_eq!(offline.links.len(), 1);
+    // A stale device token (401) doesn't prove the old connection is off.
+    let mut stale = before.clone();
+    stale.links.get_mut("TERMA").unwrap().token = "x".repeat(43);
+    assert_eq!(signin::apply(&Api::new(&t.api), &mut stale, signed_b.clone()), Err(SignInError::SwitchNeedsInternet));
 
     let mut s = t.state.lock().unwrap();
+    s.baseline = true;
     signin::apply(&Api::new(&t.api), &mut s, signed_b).unwrap();
     assert!(s.links.is_empty());
     assert!(s.is_protected("TERMA"));
+    assert!(!s.baseline, "the old person's 90-day consent doesn't carry over");
     drop(s);
     let conn = &t.web.me()["connections"][0];
     assert_eq!(conn["status"], "off");
