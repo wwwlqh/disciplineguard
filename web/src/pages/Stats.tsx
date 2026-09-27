@@ -76,7 +76,6 @@ export function Stats({ me }: PageProps) {
           </div>
           <div className="card">
             <h2>Coverage</h2>
-            <p className="small muted">Information about what DisciplineGuard could and couldn't see. Not a judgment.</p>
             <ul className="list">
               <li className="row between"><span>Trades placed outside DisciplineGuard</span><strong>{s.coverage.outside}</strong></li>
               <li className="row between"><span>Trades placed while DisciplineGuard was off</span><strong>{s.coverage.unprotected}</strong></li>
@@ -88,7 +87,7 @@ export function Stats({ me }: PageProps) {
           {s.baseline && (
             <div className="card">
               <h2>Your baseline (MT5)</h2>
-              <p className="muted">{s.baseline.entries} trades from {date(s.baseline.from)} to {date(s.baseline.to)} were loaded for the before-and-after comparison. It shows once you have 3 weeks after locking.</p>
+              <p className="muted">{s.baseline.entries} trades loaded ({date(s.baseline.from)} – {date(s.baseline.to)}). The comparison shows 3 weeks after you lock.</p>
             </div>
           )}
         </>

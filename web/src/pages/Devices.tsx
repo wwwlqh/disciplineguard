@@ -24,7 +24,7 @@ export function Devices({ me, reload }: PageProps) {
     if (!removing) return;
     const r = await api('DELETE', removing.kind === 'account' ? `/api/accounts/${removing.id}` : `/api/connections/${removing.id}`);
     setRemoving(null);
-    toast(r.appliesAt === 'now' ? 'Removed. Slot freed.' : `Scheduled for ${time(r.appliesAt)}. Until then it stays protected.`);
+    toast(r.appliesAt === 'now' ? 'Removed.' : `Removed at ${time(r.appliesAt)}.`);
     await reload();
   }
 
@@ -46,7 +46,7 @@ export function Devices({ me, reload }: PageProps) {
       )}
       {!adding && me.connections.length === 0 && (
         <div className="card">
-          <p>No devices yet. Connect MT5 to turn protection on.</p>
+          <p>No devices yet.</p>
           <button className="primary" onClick={() => setAdding(true)}>Add MT5</button>
         </div>
       )}
@@ -59,10 +59,10 @@ export function Devices({ me, reload }: PageProps) {
               <div className="row"><Dot kind={st.kind} /> <strong>{c.name}</strong></div>
               <span className="small muted">{st.label} · seen {ago(c.lastSeen)} {c.version ? `· v${c.version}` : ''}</span>
             </div>
-            {c.unknownBuild && <p className="banner amber small" style={{ marginTop: 10 }}>This EA build isn't one we released. Reinstall DisciplineGuard for Windows from this page.</p>}
+            {c.unknownBuild && <p className="banner amber small" style={{ marginTop: 10 }}>Unknown EA build. Reinstall DisciplineGuard for Windows.</p>}
             {c.role === 'secondary' && <p className="small muted">Panel only. Another chart is doing the counting.</p>}
             {c.removalAt ? (
-              <p className="small">Removal scheduled for {time(c.removalAt)}. It stays protected until then.</p>
+              <p className="small">Removed at {time(c.removalAt)}.</p>
             ) : (
               <button className="link small" onClick={() => setRemoving({ kind: 'device', id: c.id, label: c.name, ended: false })}>Remove device</button>
             )}
@@ -82,7 +82,7 @@ export function Devices({ me, reload }: PageProps) {
                   <td>
                     {STATE_LABEL[a.state]}
                     {a.state === 'not_seen' && a.lastSeen ? ` since ${date(a.lastSeen)}` : ''}
-                    {a.state === 'not_enforced' && <div className="small muted">This account already used a free trial with another login. Subscribe to protect it.</div>}
+                    {a.state === 'not_enforced' && <div className="small muted">Trial already used by another login. Subscribe to protect it.</div>}
                   </td>
                   <td className="small muted">{ago(a.lastSeen)}</td>
                   <td>
@@ -94,7 +94,7 @@ export function Devices({ me, reload }: PageProps) {
               ))}
             </tbody>
           </table>
-          {me.accounts.length >= 10 && <p className="small">You've reached 10 accounts. Remove an account to add another. Ended accounts are removed at once.</p>}
+          {me.accounts.length >= 10 && <p className="small">10 accounts is the limit. Remove one to add another.</p>}
         </div>
       )}
 
@@ -104,7 +104,7 @@ export function Devices({ me, reload }: PageProps) {
           <p>
             {removing.ended || me.user.setupMode
               ? 'This applies now.'
-              : 'Removing is a loosening. It takes effect at your next day reset, or 12 hours from now if that is later. Until then this stays protected.'}
+              : 'This waits until your next day reset (at least 12 hours). It stays protected until then.'}
           </p>
           <div className="row">
             <button className="danger" onClick={remove}>Remove</button>

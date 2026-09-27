@@ -1,12 +1,11 @@
-// Owner dashboard: one panel per Phase 1 exit criterion (PHASES.md).
+// Owner dashboard: how people use the product (SPEC §14).
 import { useEffect, useState } from 'react';
 import { api } from '../api.ts';
 
-function Panel({ title, target, children }: { title: string; target?: string; children: React.ReactNode }) {
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="card">
       <h2>{title}</h2>
-      {target && <p className="small muted">Target: {target}</p>}
       {children}
     </div>
   );
@@ -31,29 +30,29 @@ export function Owner() {
       </div>
       {!m ? <p className="muted">Loading…</p> : (
         <div className="grid two">
-          <Panel title="Funnel" target="30 activated (1A → 1B), 50 per platform (Phase 1 exit)">
+          <Panel title="Funnel">
             <p>Sign-ups {m.funnel.signups} · connected {m.funnel.connected} · <strong>activated {m.funnel.activated}</strong></p>
           </Panel>
-          <Panel title="Safety" target="0 confirmed breaches over ≥1,000 guarded exits per platform">
+          <Panel title="Safety">
             <p>Guarded exits <strong>{m.safety.guardedExits}</strong> · "should not have been paused" reports {m.safety.safetyReports}</p>
           </Panel>
-          <Panel title="Behavior" target={`held rate set after wave 1 · bypass ≤ ${m.behavior.bypassCeiling}% · displacement not rising`}>
+          <Panel title="Behavior">
             <p>Pauses {m.behavior.pauses} · held {m.behavior.held} ({v(m.behavior.heldRate)}%)</p>
             <p>Bypass rate {v(m.behavior.bypassRate)}% · displacement {v(m.behavior.displacement)}% · skip rate {v(m.behavior.skipRate)}% (diagnostic)</p>
             <p>Reactance (off within 24 h of a pause): {m.behavior.reactanceUsers} users</p>
           </Panel>
-          <Panel title="Retention" target="≥ 40% of activated users">
+          <Panel title="Retention">
             <p>{m.retention.retained} of {m.retention.eligible} eligible ({v(m.retention.rate)}%) · kept on, not working: {m.retention.keptOnNotWorking}</p>
           </Panel>
-          <Panel title="Payment" target="trial → paid ≥ 10% of trials ended, ≥ 20% of activated">
+          <Panel title="Payment">
             <p>Trials ended {m.payment.trialsEnded} · paid {m.payment.paidUsers} (early-bird {m.payment.paidEarlyBird}, list {m.payment.paidList})</p>
             <p>Trial → paid {v(m.payment.trialToPaid)}% · activated → paid {v(m.payment.activatedToPaid)}%</p>
             <p className="small muted">By country: {m.payment.byCountry.map((c: any) => `${c.country} ${c.n}`).join(' · ') || '—'}</p>
           </Panel>
-          <Panel title="Speed" target="≤ 1% of EA clicks flagged as possibly delayed">
+          <Panel title="Speed">
             <p>Panel entries {m.speed.panelEntries} · possibly delayed {m.speed.delayedClicks} ({v(m.speed.delayedShare)}%)</p>
           </Panel>
-          <Panel title="Support load" target="top 3 causes each have a fix or article">
+          <Panel title="Support load">
             <p>Reports per 100 active users: {v(m.support.per100)} (active in 7 days: {m.support.activeUsers7d})</p>
             <p className="small muted">{m.support.reports.map((r: any) => `${r.type} ${r.n}`).join(' · ') || 'No reports'}</p>
           </Panel>

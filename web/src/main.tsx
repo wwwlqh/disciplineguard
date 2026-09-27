@@ -13,7 +13,6 @@ import { Devices } from './pages/Devices.tsx';
 import { Stats } from './pages/Stats.tsx';
 import { AccountPage } from './pages/Account.tsx';
 import { Owner } from './pages/Owner.tsx';
-import { Legal } from './pages/Legal.tsx';
 import { Allow } from './pages/Allow.tsx';
 
 export interface PageProps {
@@ -57,18 +56,8 @@ function Shell({ me, reload, path }: PageProps & { path: string }) {
             </a>
           )}
         </nav>
-        <div className="spacer" />
-        <a className="small faint" href="/legal" onClick={onLink} style={{ padding: '0 10px' }}>
-          Legal and help
-        </a>
       </aside>
-      <main>
-        {page}
-        <p className="footer-legal">
-          DisciplineGuard is a self-control tool. It doesn't give investment, trading, financial or tax advice. Trading carries a high risk of losing money.
-          TradingView, MetaTrader and Telegram are trademarks of their owners; DisciplineGuard isn't affiliated with or endorsed by them.
-        </p>
-      </main>
+      <main>{page}</main>
       <nav className="bottom-tabs" aria-label="Main">
         {NAV.slice(0, 4).map(([href, label]) => (
           <a key={href} href={href} onClick={onLink} className={active(href)}>
@@ -109,7 +98,6 @@ function App() {
     return () => window.removeEventListener('dg:reload', h);
   }, [reload]);
 
-  if (path.startsWith('/legal')) return <Legal />;
   // After signing in, return to the page that asked (the Windows app's Allow page keeps its query).
   if (path === '/signin' || state === 'signed_out') return <SignIn onDone={() => { navigate(path === '/signin' ? '/today' : location.pathname + location.search, true); void reload(); }} />;
   if (state === 'loading' || !me) return <div className="center-page muted">{state === 'error' ? "Can't reach DisciplineGuard. Try again in a moment." : 'Loading…'}</div>;

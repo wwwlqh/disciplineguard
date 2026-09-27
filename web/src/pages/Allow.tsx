@@ -26,7 +26,7 @@ export function Allow({ me }: { me: Me }) {
     <div className="center-page">
       <div className="card stack">
         {!valid ? (
-          <p>This link is incomplete. Open DisciplineGuard on your computer and sign in from there.</p>
+          <p>This link is incomplete. Sign in from the DisciplineGuard app.</p>
         ) : state === 'done' ? (
           <p>Allowed. Go back to the DisciplineGuard app.</p>
         ) : state === 'cancelled' ? (
@@ -34,7 +34,7 @@ export function Allow({ me }: { me: Me }) {
         ) : (
           <>
             <h1>Allow DisciplineGuard on {name}?</h1>
-            <p className="muted">Signed in as {me.user.email}. The app will protect the MetaTrader you tick on that computer, using your rules.</p>
+            <p className="muted">Signed in as {me.user.email}.</p>
             {state === 'error' && <p role="alert">Something went wrong. Try again from the app.</p>}
             <div className="row">
               <button className="primary" onClick={allow}>Allow</button>

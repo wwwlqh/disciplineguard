@@ -82,7 +82,7 @@ export async function ownerMetrics(req: Request, env: Env): Promise<Response> {
     at: t,
     platform: platform ?? 'all',
     funnel: { signups: users.length, connected: users.filter((u) => u.first_on_at).length, activated: activated.length },
-    safety: { guardedExits, safetyReports, note: 'Target: 0 confirmed breaches over ≥1,000 guarded exits per platform' },
+    safety: { guardedExits, safetyReports },
     behavior: {
       pauses: pauses.length,
       held,
@@ -91,7 +91,6 @@ export async function ownerMetrics(req: Request, env: Env): Promise<Response> {
       bypassRate: pct(outsideViolations + unprotected + unclassified, pauses.length + outsideViolations + unprotected + unclassified),
       displacement: pct(outsideViolations, outsideViolations + rulePauses),
       reactanceUsers: reactUsers.size,
-      bypassCeiling: 25,
     },
     retention: { eligible: eligibleForRetention, retained, rate: pct(retained, eligibleForRetention), keptOnNotWorking },
     payment: {

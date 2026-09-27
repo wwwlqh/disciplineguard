@@ -221,7 +221,7 @@ string OffLine(const long now)
 
 void ComputeStatus(const long now)
   {
-   if(TerminalInfoInteger(TERMINAL_VPS)) { gStatus = ST_OFF; gStatusText = "DisciplineGuard can't run on MetaQuotes' built-in VPS. Keep it on your terminal or your own VPS."; gStatusCode = "vps"; return; }
+   if(TerminalInfoInteger(TERMINAL_VPS)) { gStatus = ST_OFF; gStatusText = "Off · Can't run on MetaQuotes' built-in VPS. Use your terminal or your own VPS."; gStatusCode = "vps"; return; }
    if(gOffReason != "") { gStatus = ST_OFF; gStatusText = OffLine(now); gStatusCode = "off"; return; }
    if(!Linked())
      {
@@ -241,12 +241,12 @@ void ComputeStatus(const long now)
       return;
      }
    if(!Enforcing(now)) { gStatus = ST_OFF; gStatusText = OffLine(now); gStatusCode = "off"; return; }
-   if(gAuthFail) { gStatus = ST_ATTENTION; gStatusText = "Needs attention · Sign in to the DisciplineGuard app again. Your saved rules still apply."; gStatusCode = "attention"; return; }
+   if(gAuthFail) { gStatus = ST_ATTENTION; gStatusText = "Needs attention · Sign in to the DisciplineGuard app again. Rules still apply."; gStatusCode = "attention"; return; }
    if(!AlgoOk()) { gStatus = ST_ATTENTION; gStatusText = "Needs attention · Algo Trading is off, so the panel can't place trades"; gStatusCode = "attention"; return; }
    if(!gBridge.appAlive && gLastContact > 0)
      {
       gStatus = ST_OFFLINE;
-      gStatusText = "On (offline) · DisciplineGuard app isn't running. Rules saved at " + DGFmtTime(gM, gLastContact, now) + " still apply.";
+      gStatusText = "On (offline) · App not running. Rules from " + DGFmtTime(gM, gLastContact, now) + " apply.";
       gStatusCode = "offline";
       return;
      }

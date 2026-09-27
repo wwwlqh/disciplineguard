@@ -83,7 +83,7 @@ export function SignIn({ onDone }: { onDone(): void }) {
         {!sent ? (
           <form onSubmit={(e) => { e.preventDefault(); void run(async () => { await api('POST', '/v1/auth/email', { email, nonce: nonce() }); setSent(true); }); }}>
             <h1>Sign in or create your account</h1>
-            <p className="muted">We'll email you a sign-in link and a 6-digit code.</p>
+            <p className="muted">We'll email you a link and a code.</p>
             <label className="field">
               Email
               <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -92,14 +92,11 @@ export function SignIn({ onDone }: { onDone(): void }) {
             <button className="primary" style={{ width: '100%', marginTop: 12 }} disabled={busy}>
               Continue
             </button>
-            <p className="small faint" style={{ marginTop: 12 }}>
-              By continuing, you confirm you're 18 or older and agree to the <a href="/legal#terms">Terms</a> and <a href="/legal#privacy">Privacy Policy</a>.
-            </p>
           </form>
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); void run(async () => { await api('POST', '/v1/auth/verify', { email, code }); onDone(); }); }}>
             <h1>Check your email</h1>
-            <p className="muted">We sent a link and a code to {email}. Open the link on any device, or enter the code here.</p>
+            <p className="muted">Sent to {email}. Open the link, or enter the code.</p>
             <label className="field">
               6-digit code
               <input inputMode="numeric" autoComplete="one-time-code" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} />

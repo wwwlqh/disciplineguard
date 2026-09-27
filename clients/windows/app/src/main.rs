@@ -149,22 +149,19 @@ fn tray_rows(core: &Core) -> (TrayRows, Option<Status>) {
     for r in &protected {
         add(&format!("t:{}", r.id), format!("{} · {}", r.name, r.reason), false);
     }
-    if v.signed_in && protected.is_empty() {
-        add("protect", "Tick your MetaTrader to protect it".into(), true);
-    }
     if !protected.is_empty() {
         for r in v.rows.iter().filter(|r| !r.protected && !r.dismissed) {
-            add("protect", format!("New MetaTrader found: {}. Protect it", r.name), true);
+            add("protect", format!("New MetaTrader found: {}", r.name), true);
         }
     }
     if protected.iter().any(|r| r.restart_needed) {
-        add("restart", "Finish setup: restart MetaTrader…".into(), true);
+        add("restart", "Restart MetaTrader to finish…".into(), true);
     }
     rows.push(None);
     for (id, text) in [
         ("dashboard", "Open dashboard"),
         ("practice", "Practice pause"),
-        ("protect", "Protect another MetaTrader"),
+        ("protect", "Protect MetaTrader"),
         ("help", "Help"),
         ("report", "Report a problem"),
     ] {

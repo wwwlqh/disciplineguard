@@ -27,12 +27,17 @@ async function show(name) {
 function signin(_v, error = '') {
   el.innerHTML = `
     <h1>Sign in to DisciplineGuard</h1>
-    <p class="muted">Your browser opens. Press <strong>Allow</strong> there. If the website isn't signed in yet, sign in first.</p>
+    <p class="muted">Press <strong>Allow</strong> in your browser.</p>
     ${error ? `<p class="warn">${esc(error)}</p>` : ''}
-    <div class="actions"><button class="primary" id="go">Continue in browser</button></div>`;
+    <div class="actions"><button class="primary" id="go">Continue in browser</button></div>
+    <footer>
+      <p>Closing a trade is never paused.</p>
+      <p>Trades that keep your rules go straight through. We never make an order wait for our server.</p>
+      <p>We never see your broker password, and we never open, change or close a trade unless you click to do it.</p>
+    </footer>`;
   document.getElementById('go').onclick = async (e) => {
     e.target.disabled = true;
-    e.target.textContent = 'Waiting for Allow in your browser…';
+    e.target.textContent = 'Waiting for Allow…';
     try {
       await invoke('sign_in');
       show('found');
@@ -54,14 +59,14 @@ function found(v, error = '') {
     <div class="row"><span><span class="name">${esc(r.name)}</span> · ${esc(r.reason)}<br><span class="folder">${esc(r.folder)}</span></span></div>`;
   el.innerHTML = `
     <h1>${open.length ? 'We found your MetaTrader' : prot.length ? 'Your MetaTrader' : 'No MetaTrader 5 found yet'}</h1>
-    ${!open.length && !prot.length ? '<p class="muted">Open MetaTrader 5 once, then come back here. Or pick its folder.</p>' : ''}
+    ${!open.length && !prot.length ? '<p class="muted">Open MetaTrader 5 once, or pick its folder.</p>' : ''}
     ${open.map(row).join('')}
     ${prot.length ? `<p class="muted">Protected</p>${prot.map(protRow).join('')}
-      <p class="muted small">To remove protection, remove the account on the website. It's a loosening, so it waits like any other. <button class="link" id="devices">Open Devices</button></p>` : ''}
+      <p class="muted small">To remove protection, use <button class="link" id="devices">Devices</button> on the website.</p>` : ''}
     <p class="muted">Don't see it? <button class="link" id="browse">Browse</button></p>
     ${open.length ? `<label class="consent"><input type="checkbox" id="baseline" ${v.baseline || !prot.length ? 'checked' : ''}>
-      <span>Include my last 90 days of trades. Used only for your own before/after comparison. Only you see it.</span></label>` : ''}
-    ${!v.canProtect ? '<p class="warn">This copy of DisciplineGuard can\'t set up MetaTrader. Download it again from the website.</p>' : ''}
+      <span>Include my last 90 days, for your before/after stats. Only you see it.</span></label>` : ''}
+    ${!v.canProtect ? '<p class="warn">This copy can\'t set up MetaTrader. Download it again.</p>' : ''}
     ${error ? `<p class="warn">${esc(error)}</p>` : ''}
     <div class="actions">
       ${open.length ? `<button class="primary" id="protect" ${v.canProtect ? '' : 'disabled'}>Protect</button>` : ''}
@@ -102,10 +107,10 @@ function result(v, stuck = []) {
       <div class="row"><span><span class="name">${esc(r.name)}</span><br>
         <span class="checks">Installed ${tick(r.installed, '…')} · Algo Trading on ${algo(r)} · Connected ${tick(r.connected, '…')}</span></span></div>`).join('')}
     ${waiting ? `<p>MetaTrader needs a quick restart to finish. Open trades aren't affected.</p>
-      ${stuck.length ? `<p class="warn">${esc(stuck.join(', '))} didn't close. Close any open MetaTrader dialog, then try again.</p>` : ''}
+      ${stuck.length ? `<p class="warn">${esc(stuck.join(', '))} didn't close. Close any MetaTrader dialog and try again.</p>` : ''}
       <div class="actions"><button class="primary" id="restart">Restart MetaTrader</button><button id="later">Next time I open it</button></div>`
       : allOn ? '<div class="actions"><button class="primary" id="next">Next</button></div>'
-      : '<p class="muted">Open MetaTrader and any chart. This updates on its own.</p><div class="actions"><button id="later">Close</button></div>'}`;
+      : '<p class="muted">Open MetaTrader and any chart.</p><div class="actions"><button id="later">Close</button></div>'}`;
   const on = (id, f) => document.getElementById(id) && (document.getElementById(id).onclick = f);
   on('restart', async (e) => {
     e.target.disabled = true;
@@ -131,8 +136,7 @@ function startPoll() {
 function done() {
   el.innerHTML = `
     <h1>Done</h1>
-    <p>Open any chart: the DisciplineGuard panel is there.</p>
-    <p class="muted">DisciplineGuard keeps running in the tray, next to the clock.</p>
+    <p>Open any chart: the panel is there. DisciplineGuard stays in the tray.</p>
     <div class="actions"><button class="primary" id="practice">Try a practice pause</button><button id="close">Close</button></div>`;
   document.getElementById('practice').onclick = () => invoke('open_web', { page: 'today?practice' });
   document.getElementById('close').onclick = () => invoke('hide');

@@ -17,8 +17,6 @@ import { validateSetting } from './validate.ts';
 import { ownerMetrics } from './owner.ts';
 import { checkoutUrl } from './billing.ts';
 
-export const RISK_NOTICE_VERSION = '2026-09-27';
-
 type Handler = (req: Request, env: Env, s: Session, ctx: Ctx, params: string[]) => Promise<Response>;
 
 const routes: [string, RegExp, Handler][] = [
@@ -101,7 +99,7 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
       email: u.email, firstName: u.first_name, setupMode: !!u.setup_mode, lockedAt: u.locked_at, lockedBy: u.locked_by,
       lockAt: u.setup_mode && u.first_on_at ? autoLockAt(uc.userResets, u.first_on_at) : null, firstOnAt: u.first_on_at,
       lastRealPauseAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts, analyticsConsent: u.analytics_consent, reasonConsent: u.reason_consent,
-      riskNoticeAt: u.risk_notice_at, riskNoticeVersion: u.risk_notice_version, onboarding: u.onboarding_json ? JSON.parse(u.onboarding_json) : null,
+      onboarding: u.onboarding_json ? JSON.parse(u.onboarding_json) : null,
       isBeta: !!u.is_beta, owner: isOwner(env, u), country: u.country, planKind: u.plan_kind, cancelAtPeriodEnd: !!u.cancel_at_period_end,
     },
     license: uc.license,
@@ -115,7 +113,6 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
     time: resolvedTime(uc),
     accounts: uc.accounts.map((a) => accountView(a, uc)),
     connections: await connectionsView(env, uc),
-    riskNoticeVersion: RISK_NOTICE_VERSION,
   });
 }
 
@@ -423,14 +420,13 @@ async function saveOnboarding(req: Request, env: Env, s: Session): Promise<Respo
 const CHOICES: Choice[] = ['too_many', 'win_back', 'size_up', 'hours', 'skip_sl', 'bad_days', 'give_back'];
 
 /**
- * POST /api/onboarding/apply: writes the starting rules, notes, plan, trading day, risk notice and consent.
+ * POST /api/onboarding/apply: writes the starting rules, notes, plan, trading day and analytics consent.
  * Only in setup mode, where every change applies at once.
  */
 async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Promise<Response> {
   const b = await body(req, 64 * 1024);
   const t = clock(env);
   if (!s.user.setup_mode) throw new HttpError(409, 'locked');
-  if (b.riskNotice !== true) throw new HttpError(400, 'risk_notice');
   const uc = await userCtx(env, s.user.id, t);
   const writes: [string, unknown][] = [];
   const tzv = validateSetting('tz', b.tz, () => undefined);
@@ -465,8 +461,8 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
     await saveSetting(env.DB, s.user.id, key, { active: value }, cur?.active, 'setup', 'now', t);
   }
   const consent = b.analyticsConsent === true ? 1 : b.analyticsConsent === false ? 0 : null;
-  await env.DB.prepare('UPDATE users SET risk_notice_version = ?, risk_notice_at = ?, analytics_consent = COALESCE(?, analytics_consent), onboarding_json = ? WHERE id = ?')
-    .bind(RISK_NOTICE_VERSION, t, consent, JSON.stringify({ done: true, choices, style: b.style ?? null, platforms: b.platforms ?? [], accountTypes: b.accountTypes ?? null }), s.user.id)
+  await env.DB.prepare('UPDATE users SET analytics_consent = COALESCE(?, analytics_consent), onboarding_json = ? WHERE id = ?')
+    .bind(consent, JSON.stringify({ done: true, choices, style: b.style ?? null, platforms: b.platforms ?? [], accountTypes: b.accountTypes ?? null }), s.user.id)
     .run();
   if (Array.isArray(b.tellMe)) {
     for (const p of b.tellMe.slice(0, 10)) {

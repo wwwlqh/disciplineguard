@@ -2,7 +2,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.ts';
 import { ago, time } from '../fmt.ts';
-import { onLink } from '../router.ts';
 import { Switch, useToast } from '../ui/kit.tsx';
 import type { PageProps } from '../main.tsx';
 
@@ -52,22 +51,22 @@ export function AccountPage({ me, reload }: PageProps) {
         <p>{planLine}</p>
         {lic.state !== 'active' && me.user.isBeta && (
           <div className="stack">
-            <p className="muted small">Beta early-bird: $79 a year, kept at every renewal while your plan never lapses. Ends if you switch to monthly or the plan lapses. Full refund within 14 days of your first payment.</p>
+            <p className="muted small">$79 a year, kept while your plan renews. Full refund within 14 days.</p>
             <button className="primary" onClick={checkout}>Get the early-bird plan</button>
           </div>
         )}
-        {lic.state === 'active' && <p className="small"><a href="mailto:support@disciplineguard.com?subject=Withdraw%20or%20refund">Withdraw or request a refund</a> · Manage billing in the receipt email's customer portal link.</p>}
+        {lic.state === 'active' && <p className="small"><a href="mailto:support@disciplineguard.com?subject=Refund">Request a refund</a> · Manage billing from your receipt email.</p>}
       </div>
 
       <div className="card">
         <h2>Privacy</h2>
         <ul className="list">
           <li className="row between">
-            <span>Share product usage (never trade details)</span>
+            <span>Share product usage <span className="small muted">(never trade details)</span></span>
             <Switch label="Share product usage" checked={me.user.analyticsConsent === 1} onChange={(v) => pref({ analyticsConsent: v })} />
           </li>
           <li className="row between">
-            <span>Hide amounts on screen <span className="small muted">(for screen sharing and streaming)</span></span>
+            <span>Hide amounts on screen <span className="small muted">(for streaming)</span></span>
             <Switch label="Hide amounts" checked={me.user.hideAmounts} onChange={(v) => pref({ hideAmounts: v })} />
           </li>
         </ul>
@@ -75,7 +74,7 @@ export function AccountPage({ me, reload }: PageProps) {
 
       <div className="card">
         <h2>Security</h2>
-        <p className="small muted">Signed in as {me.user.email}. Every change to your rules, notes, plan or devices is emailed to you.</p>
+        <p className="small muted">Signed in as {me.user.email}.</p>
         {sessions && (
           <ul className="list">
             {sessions.sessions.map((s) => (
@@ -90,7 +89,6 @@ export function AccountPage({ me, reload }: PageProps) {
           <button onClick={async () => { await api('POST', '/api/sessions/signout-all'); location.href = '/signin'; }}>Sign out all web sessions</button>
           <button onClick={async () => { await api('POST', '/v1/auth/signout'); location.href = '/signin'; }}>Sign out</button>
         </div>
-        <p className="small muted" style={{ marginTop: 8 }}>Signing out web sessions doesn't disconnect your devices.</p>
       </div>
 
       <div className="card" id="report">
@@ -99,8 +97,8 @@ export function AccountPage({ me, reload }: PageProps) {
           <select value={report.type} onChange={(e) => setReport({ ...report, type: e.target.value })} aria-label="Problem type">
             {REPORT_TYPES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
           </select>
-          <textarea placeholder="What happened? Beta users: say if you'd like a 10-minute setup call." value={report.text} onChange={(e) => setReport({ ...report, text: e.target.value })} />
-          <p className="small muted">We attach: your devices' type, version and status, and today's event types without values. Never your notes, plan or reasons.</p>
+          <textarea placeholder="What happened?" value={report.text} onChange={(e) => setReport({ ...report, text: e.target.value })} />
+          <p className="small muted">We attach your devices' version and status. Never your notes.</p>
           <button
             className="primary"
             disabled={!report.text.trim()}
@@ -117,8 +115,7 @@ export function AccountPage({ me, reload }: PageProps) {
 
       <div className="card">
         <h2>Data</h2>
-        <p className="small">To export or delete your data during the beta, email <a href="mailto:support@disciplineguard.com">support@disciplineguard.com</a>. We reply within the legal deadlines. Deletion waits like a loosening while protection is active.</p>
-        <p className="small"><a href="/legal#wellbeing" onClick={onLink}>Trading and wellbeing</a></p>
+        <p className="small">To export or delete your data, email <a href="mailto:support@disciplineguard.com">support@disciplineguard.com</a>.</p>
       </div>
     </div>
   );

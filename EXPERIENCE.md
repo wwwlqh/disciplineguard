@@ -384,7 +384,7 @@ The trader never has to handle the EA. The Windows app installs, attaches, conne
 The three trust lines sit under the sign-in screen only.
 
 **Tray**
-- Icon dot uses the status colors (§8). The menu: status per terminal · Open dashboard · Practice pause · Protect another MetaTrader · Help · Report a problem.
+- Icon dot uses the status colors (§8). The menu: status per terminal · Open dashboard · Practice pause · Protect MetaTrader · Help · Report a problem.
 - "New MetaTrader found: IC Markets MT5. [Protect]".
 - Protected terminals show no tick to untick. Under them: "To remove protection, remove the account on the website. It's a loosening, so it waits like any other. [Open Devices]" (same as removing an account, §5.7).
 - Closing the window keeps the app in the tray. Help opens Devices (its troubleshooting) until the help articles ship.
@@ -403,7 +403,7 @@ The three trust lines sit under the sign-in screen only.
 
 ### 7.3 Connecting
 
-Nothing to type on the chart. Until the Windows app connects this terminal, the panel shows one status line and "Your rules are set on the website. Orders go through normally until this terminal is connected." The line is one of:
+Nothing to type on the chart. Until the Windows app connects this terminal, the panel shows one status line and "Orders go through normally until connected." The line is one of:
 
 - "Open the DisciplineGuard app on this computer"
 - "Sign in to the DisciplineGuard app"
@@ -416,7 +416,7 @@ Nothing to type on the chart. Until the Windows app connects this terminal, the 
 
 The EA shows it only while an item fails. With the Windows app it usually passes at once, and the panel opens straight to trading. Each item has a one-line fix. The checks follow SPEC §9.2.
 
-- **DisciplineGuard app running**: "Open DisciplineGuard from the Start menu. Your saved rules still apply." (Windows app only.)
+- **DisciplineGuard app running**: "Open DisciplineGuard from the Start menu." (Windows app only.)
 - **Algo Trading**: names which switch is off. The Windows app normally turns it on.
 - **Connected**: "Tick this MetaTrader in the DisciplineGuard app" or "Sign in to the DisciplineGuard app".
 - **Rules loaded**.
@@ -434,7 +434,7 @@ When everything passes: "On. Try a practice pause."
 | Outside trade went past a rule | A quiet card: "A trade placed outside DisciplineGuard went past your 'Daily loss limit'. It counts toward today." |
 | Protection ended | "Off · trial ended · Orders go through normally · Plans: disciplineguard.com/plans" (text, since the EA can't open links). The panel keeps working as a plain panel with the calculator |
 | Not enforced | "Off · this account already used a free trial with another login" |
-| Built-in VPS migration | "DisciplineGuard can't run on MetaQuotes' built-in VPS. Keep it on your terminal or your own VPS." |
+| Built-in VPS migration | "Off · Can't run on MetaQuotes' built-in VPS. Use your terminal or your own VPS." |
 
 ### 7.6 Designing within MT limits
 
@@ -452,7 +452,7 @@ Each state has one indicator, one reason line and one action. The same words app
 | State | Indicator | Example reason line | Action |
 |---|---|---|---|
 | **On** | Accent dot | "Protecting MT5 · FTMO …123" · "Panel only. Another chart is doing the counting." | — |
-| **On (offline)** | Accent dot with an offline mark | "DisciplineGuard app isn't running. Rules saved at 10:42 still apply." · "Using rules saved at 10:42. Can't reach our server." After 24 h: "Offline since yesterday 10:42. Rules are still on." | Retry |
+| **On (offline)** | Accent dot with an offline mark | "App not running. Rules from 10:42 apply." · "Using rules saved at 10:42. Can't reach our server." After 24 h: "Offline since yesterday 10:42. Rules are still on." | Retry |
 | **Setting up** | Blue dot | "Restart MetaTrader to finish setup" · "Tick this MetaTrader in the DisciplineGuard app" | Show me how |
 | **Needs attention** | Amber dot | "Algo Trading is off, so the panel can't place trades" · "Open the Account Manager once today" · "DisciplineGuard can't read this page" · "Sign in again. Your saved rules still apply." | A specific fix |
 | **Off** | Grey dot with a slash | "TradingView changed. Orders go through normally while we update DisciplineGuard." · "Trial ended" · "Signed out" · "Can't confirm your plan" · "This account already used a free trial" | A specific action |

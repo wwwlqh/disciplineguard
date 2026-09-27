@@ -100,14 +100,14 @@ export function Today({ me, reload }: PageProps) {
       <div className="page-head">
         <div>
           <h1>Today</h1>
-          <div className="muted small">Your trading day resets {time(d.nextReset, d.now)}.</div>
+          <div className="muted small">Resets {time(d.nextReset, d.now)}</div>
         </div>
-        <button onClick={() => setPractice(true)}>Show a practice pause</button>
+        <button onClick={() => setPractice(true)}>Practice pause</button>
       </div>
 
       {d.setupMode && (
         <div className="banner">
-          <span>Setup mode: changes apply instantly until you lock your rules{d.lockAt ? ` (on their own at ${time(d.lockAt, d.now)})` : ''}.</span>
+          <span>Setup mode: changes apply instantly{d.lockAt ? ` until ${time(d.lockAt, d.now)}` : ''}.</span>
           <a className="btn primary" href="/rules?lock=1" onClick={onLink}>Lock my rules</a>
         </div>
       )}
@@ -115,18 +115,18 @@ export function Today({ me, reload }: PageProps) {
         <div className={`banner ${lic.trialEndsAt && lic.trialEndsAt - d.now < 3 * 86_400_000 ? 'amber' : 'neutral'}`}>
           <span>
             Trial · day {lic.trialDay} of 14
-            {lic.trialEndsAt && lic.trialEndsAt - d.now < 3 * 86_400_000 ? ` · Trial ends ${time(lic.trialEndsAt, d.now)}. Protection stops then.` : ''}
+            {lic.trialEndsAt && lic.trialEndsAt - d.now < 3 * 86_400_000 ? ` · ends ${time(lic.trialEndsAt, d.now)}` : ''}
           </span>
           <a className="btn" href="/account" onClick={onLink}>See plans</a>
         </div>
       )}
       {lic.state === 'ended' && (
         <div className="banner amber">
-          <span>Off: {me.user.planKind ? 'plan ended' : 'trial ended'}. Orders go through normally. Your rules are saved.</span>
+          <span>Off: {me.user.planKind ? 'plan ended' : 'trial ended'}. Your rules are saved.</span>
           <a className="btn primary" href="/account" onClick={onLink}>See plans</a>
         </div>
       )}
-      {lic.state === 'past_due' && <div className="banner amber">Payment failed. Update your card. Protection stays on until {time(lic.validUntil, d.now)}.</div>}
+      {lic.state === 'past_due' && <div className="banner amber">Payment failed. Update your card by {time(lic.validUntil, d.now)}.</div>}
       {r5Missing.map((a) => (
         <div key={a.id} className="banner amber">
           <span>Max size not set for {a.platform.toUpperCase()} …{a.last3}.</span>
@@ -134,13 +134,13 @@ export function Today({ me, reload }: PageProps) {
         </div>
       ))}
       {d.coverage.off.filter((o) => o.last3).map((o) => (
-        <div key={o.t} className="banner amber">Account …{o.last3} was connected to another DisciplineGuard login. If that wasn't you, check Devices.</div>
+        <div key={o.t} className="banner amber">Account …{o.last3} moved to another login. Not you? Check Devices.</div>
       ))}
 
       <div className="card">
         <h2>Devices</h2>
         {noDevice ? (
-          <p className="muted">Connect TradingView or MT to start. Your rules are ready. <a href="/devices" onClick={onLink}>Connect a device</a></p>
+          <p className="muted">No devices yet. <a href="/devices" onClick={onLink}>Connect MT5</a></p>
         ) : (
           <ul className="list">
             {d.connections.map((c) => {
@@ -167,8 +167,7 @@ export function Today({ me, reload }: PageProps) {
           <div key={a.id} className="card meter">
             <span className="small muted">Loss today · {a.nickname ?? `…${a.last3}`}</span>
             <span className="value num">{a.loss !== null && a.limit !== null ? `Loss ${money(-a.loss, a.currency ?? 'USD', true)} of ${money(a.limit, a.currency ?? 'USD')}` : 'Not read yet'}</span>
-            {a.loss === null || a.limit === null ? <span className="small muted">Shows once the EA reports today's starting balance.</span> : null}
-            {a.inLimit && a.limitUntil && <span className="small">Rest until {time(a.limitUntil, d.now)}</span>}
+                        {a.inLimit && a.limitUntil && <span className="small">Rest until {time(a.limitUntil, d.now)}</span>}
           </div>
         ))}
         {(d.meters.cooldownUntil || d.meters.breakUntil || d.meters.doneUntil) && (
@@ -208,7 +207,7 @@ export function Today({ me, reload }: PageProps) {
       <div className="card">
         <h2>Today's pauses</h2>
         {d.pauses.length === 0 ? (
-          <p className="muted">{noDevice ? 'Stats start after your first trading day.' : 'No pauses yet.'} <button className="link" onClick={() => setPractice(true)}>Show a practice pause</button></p>
+          <p className="muted">No pauses yet.</p>
         ) : (
           <ul className="list">
             {d.pauses.map((p) => (
@@ -229,7 +228,7 @@ export function Today({ me, reload }: PageProps) {
               <li key={`${g.accountId}${g.from}`}>DisciplineGuard was off on …{g.last3} from {time(g.from, d.now)} to {time(g.to, d.now)}{g.trades ? ` (${plural(g.trades, 'trade')})` : ''}.</li>
             ))}
             {d.outside.filter((o) => o.violations.length > 0).map((o) => (
-              <li key={o.t}>{time(o.t, d.now)} · A trade placed outside DisciplineGuard{o.label ? ` (${o.label})` : ''} went past {o.violations.map((v) => `"${RULE_NAMES[v as TitleId] ?? v}"`).join(', ')}. It counts toward today.</li>
+              <li key={o.t}>{time(o.t, d.now)} · Outside trade{o.label ? ` (${o.label})` : ''} went past {o.violations.map((v) => `"${RULE_NAMES[v as TitleId] ?? v}"`).join(', ')}. It counts.</li>
             ))}
             {d.coverage.unclassified > 0 && <li>Orders we couldn't check: {d.coverage.unclassified}.</li>}
           </ul>
@@ -242,13 +241,13 @@ export function Today({ me, reload }: PageProps) {
           <div><div className="stat num">{d.week.pauses}</div><div className="small muted">pauses</div></div>
           <div><div className="stat num">{d.week.skipped}</div><div className="small muted">skipped</div></div>
           <div><div className="stat num">{d.week.placed}</div><div className="small muted">placed anyway</div></div>
-          <div><div className="stat num">{d.week.daysKept} of {d.week.daysTraded}</div><div className="small muted">days you traded with your rules kept</div></div>
+          <div><div className="stat num">{d.week.daysKept} of {d.week.daysTraded}</div><div className="small muted">days kept</div></div>
         </div>
       </div>
 
       {d.calibration && (
         <div className="banner neutral">
-          <span>{RULE_NAMES[d.calibration.rule as TitleId] ?? d.calibration.rule} paused {d.calibration.count} trades this week, and most were placed anyway. If the limit is wrong, schedule a change. It starts at your next day reset.</span>
+          <span>{RULE_NAMES[d.calibration.rule as TitleId] ?? d.calibration.rule} paused {d.calibration.count} trades this week, mostly placed anyway. Limit wrong? Change it.</span>
           <a className="btn" href="/rules" onClick={onLink}>Review rules</a>
         </div>
       )}
@@ -256,7 +255,7 @@ export function Today({ me, reload }: PageProps) {
       {confirm && (
         <Sheet label="Confirm" onClose={() => setConfirm(null)}>
           <h2>{confirm === 'break' ? 'Take a 15-minute break?' : 'Done for today?'}</h2>
-          <p>Every new trade will be paused until {confirm === 'break' ? time(d.now + 15 * 60_000, d.now) : time(d.nextReset, d.now)}. This can't be shortened.</p>
+          <p>New trades pause until {confirm === 'break' ? time(d.now + 15 * 60_000, d.now) : time(d.nextReset, d.now)}. Can't be shortened.</p>
           <div className="row">
             <button className="primary" onClick={() => tighten(confirm)}>{confirm === 'break' ? 'Start the break' : "I'm done for today"}</button>
             <button onClick={() => setConfirm(null)}>Not now</button>

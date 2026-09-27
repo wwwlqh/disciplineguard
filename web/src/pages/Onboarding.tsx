@@ -1,7 +1,7 @@
 // Onboarding (EXPERIENCE §5.2): four screens, Back always available, resumable.
-// 1 About you · 2 What costs you (starting rules inline) · 3 Your note, trading day and the risk notice · 4 Connect MT5.
+// 1 About you · 2 What costs you (starting rules inline) · 3 Your note and trading day · 4 Connect MT5.
 import { useEffect, useMemo, useState } from 'react';
-import { buildTemplate, DEFAULT_POPUP, TRUST_LINES, type Choice, type Rules } from '@dg/core';
+import { buildTemplate, DEFAULT_POPUP, type Choice, type Rules } from '@dg/core';
 import { api, type Me } from '../api.ts';
 import { browserTz } from '../fmt.ts';
 import { navigate } from '../router.ts';
@@ -30,18 +30,17 @@ interface Draft {
   tz: string;
   reset: 'midnight' | 'forex_close' | 'futures_session' | 'firm' | 'custom';
   customAt: string;
-  risk: boolean;
   analytics: boolean | null;
   applied: boolean;
 }
 
 /** MT5 on Windows is protected today. The others collect "tell me when it's ready". */
 const OTHER_PLATFORMS: { id: string; label: string; note: string }[] = [
-  { id: 'tv', label: 'TradingView', note: "Coming in a beta update. We'll tell you when it's ready." },
-  { id: 'mt4', label: 'MT4', note: "We'll tell you when it's ready." },
+  { id: 'tv', label: 'TradingView', note: "Coming soon. We'll tell you." },
+  { id: 'mt4', label: 'MT4', note: "Coming later. We'll tell you." },
   { id: 'mt5_mac', label: 'MT5 on Mac', note: 'Not supported yet.' },
-  { id: 'mt_phone', label: 'MT on my phone', note: "Phone trades can't be paused. They still count, and show up when your computer's MT is running." },
-  { id: 'other', label: 'Something else', note: "We'll tell you when it's ready." },
+  { id: 'mt_phone', label: 'MT on my phone', note: "Can't be paused, but they still count." },
+  { id: 'other', label: 'Something else', note: "We'll tell you if we add it." },
 ];
 
 const COSTS: { id: Choice; label: string }[] = [
@@ -75,7 +74,7 @@ function initial(me: Me): Draft {
   return {
     step: 0, platforms: ['mt5'], accountType: 'own', firm: 'FTMO', firmDailyPct: 5, style: 'day', choices: [], session: 'london', usualSize: 0.5,
     rules: null, defaults: null, notes: [{ text: '', tag: 'any' }], plan: '', tz: browserTz(), reset: 'midnight', customAt: '00:00',
-    risk: false, analytics: null, applied: false,
+    analytics: null, applied: false,
   };
 }
 
@@ -128,7 +127,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
       const payloadRules: Record<string, unknown> = {};
       for (const id of RULE_ORDER) payloadRules[id] = (rules as any)[id];
       await api('POST', '/api/onboarding/apply', {
-        tz: d.tz, reset, riskNotice: d.risk, analyticsConsent: d.analytics, rules: payloadRules,
+        tz: d.tz, reset, analyticsConsent: d.analytics, rules: payloadRules,
         defaults: {
           r5: defaults.r5 ? { r5Max: defaults.r5.r5Max, r5Overrides: [] } : undefined,
           r6: defaults.r6, r8: defaults.r8, r7ignore: defaults.r7ignore,
@@ -147,7 +146,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
   const canNext = (() => {
     switch (d.step) {
       case 1: return d.choices.length > 0 && RULE_ORDER.every((id) => validRule(id, (rules as any)[id]));
-      case 2: return d.plan.trim().length > 0 && d.plan.length <= 120 && d.notes.some((n) => n.text.trim()) && d.notes.every((n) => n.text.length <= 200) && d.risk && d.analytics !== null;
+      case 2: return d.plan.trim().length > 0 && d.plan.length <= 120 && d.notes.some((n) => n.text.trim()) && d.notes.every((n) => n.text.length <= 200) && d.analytics !== null;
       default: return true;
     }
   })();
@@ -194,7 +193,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
                 Firm's daily loss limit (%)
                 <input type="number" min={0.5} max={20} step={0.5} value={d.firmDailyPct} onChange={(e) => set({ firmDailyPct: Number(e.target.value), rules: null, defaults: null })} />
               </label>
-              {FIRMS[d.firm] && <p className="small muted">{d.firm} measures it from {FIRMS[d.firm].basis}. Firm rules change. Check your firm's current rules.</p>}
+              {FIRMS[d.firm] && <p className="small muted">{d.firm} measures it from {FIRMS[d.firm].basis}.</p>}
             </div>
           )}
           <div className="grid two">
@@ -212,10 +211,10 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
             </label>
           </div>
           <div>
-            <p className="muted">DisciplineGuard protects MT5 on Windows. Also trade somewhere else?</p>
+            <p className="muted">Also trade somewhere else?</p>
             <div className="row">
               {OTHER_PLATFORMS.map((p) => (
-                <label key={p.id} className="check" title={p.note}>
+                <label key={p.id} className="check">
                   <input type="checkbox" checked={d.platforms.includes(p.id)} onChange={(e) => set({ platforms: e.target.checked ? [...d.platforms, p.id] : d.platforms.filter((x) => x !== p.id) })} /> {p.label}
                 </label>
               ))}
@@ -228,7 +227,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
       {d.step === 1 && (
         <section className="stack">
           <h1>What costs you the most?</h1>
-          <p className="muted">Pick up to two. We fill in starting rules from your answer.</p>
+          <p className="muted">Pick up to two.</p>
           <div className="stack">
             {COSTS.map((c) => (
               <label key={c.id} className="choice">
@@ -240,7 +239,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
                 />
                 <span>
                   <strong>{c.label}</strong>
-                  {c.id === 'give_back' && <div className="small muted">A rule for this is coming later. We'll use your answer to build it.</div>}
+                  {c.id === 'give_back' && <div className="small muted">Coming later.</div>}
                 </span>
               </label>
             ))}
@@ -255,8 +254,8 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
           {d.choices.length > 0 && (
             <div className="card">
               <strong>Your starting rules</strong>
-              <p className="small muted">{rulesOn.map((id) => RULE_INFO[id].name).join(' · ') || 'None yet'}. Starting values, not advice. Set rules you'd keep on a normal day.</p>
-              {isProp && defaults.r8 && <p className="small">We pause new trades at {defaults.r8.value}% down. Open trades can still lose more, and your firm's overall loss limit isn't tracked.</p>}
+              <p className="small muted">{rulesOn.map((id) => RULE_INFO[id].name).join(' · ') || 'None yet'}</p>
+              {isProp && defaults.r8 && <p className="small">New trades pause at {defaults.r8.value}% down. Your firm's overall limit isn't tracked.</p>}
               <details>
                 <summary className="small">Adjust</summary>
                 <div className="stack" style={{ marginTop: 10 }}>
@@ -312,7 +311,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
       {d.step === 2 && (
         <section className="stack">
           <h1>Your note</h1>
-          <p className="muted">The pause shows this in your own words. Write it the way a good friend would say it to you. Kind and specific works better than harsh.</p>
+          <p className="muted">The pause shows this. Kind and specific works best.</p>
           <label className="field">
             When a pause stops a trade, I will…
             <input maxLength={120} placeholder="stand up and get water" value={d.plan} onChange={(e) => set({ plan: e.target.value })} />
@@ -332,7 +331,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
             {d.notes.length < 3 && <button onClick={() => set({ notes: [...d.notes, { text: '', tag: 'any' }] })}>Add another note</button>}
             <button onClick={() => setPracticeOpen(true)} disabled={!d.notes.some((n) => n.text.trim())}>Preview the pause</button>
           </div>
-          <p className="small muted">Only you see your notes and plan. They're never sent to your partner or to analytics.</p>
+          <p className="small muted">Only you see these.</p>
 
           <details className="card">
             <summary>Your day resets at {d.reset === 'firm' && FIRMS[d.firm] ? `${d.firm}'s reset (midnight Prague time)` : RESETS[d.reset]} · {d.tz}</summary>
@@ -345,21 +344,12 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
                 </select>
               </label>
               {d.reset === 'custom' && <label className="field">Reset time <input type="time" value={d.customAt} onChange={(e) => set({ customAt: e.target.value })} /></label>}
-              <p className="small muted">Max trades per day and your daily loss limit start again at each reset.</p>
+              <p className="small muted">Daily limits start again at each reset.</p>
             </div>
           </details>
 
           <div className="card stack">
-            <strong>How protection works</strong>
-            <ul className="small" style={{ paddingLeft: 18, margin: 0 }}>
-              <li>Tightening a rule applies now. Loosening waits until your next day reset, or 12 hours if that is later.</li>
-              <li>Closing a trade is never paused.</li>
-              <li>You choose when the pause shows and how long it waits, in Rules → Popup settings.</li>
-            </ul>
-            <label className="check">
-              <input type="checkbox" checked={d.risk} onChange={(e) => set({ risk: e.target.checked })} />
-              <span>I've read the <a href="/legal#risk" target="_blank">risk notice</a>. A pause can delay or cancel my order, and DisciplineGuard can stop checking.</span>
-            </label>
+            <p className="small">Tightening applies now. Loosening waits until your next day reset (at least 12 hours).</p>
             <div className="row">
               <span className="small">Share product usage (never trade details)?</span>
               <button className={d.analytics === true ? 'primary' : ''} aria-pressed={d.analytics === true} onClick={() => set({ analytics: true })}>Yes</button>
@@ -375,7 +365,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
           <h1>{phone ? 'Finish on your computer' : 'Connect MT5'}</h1>
           {phone ? (
             <>
-              <p className="muted">MT5 runs on your computer, so connect it there. Open this address on your computer and sign in:</p>
+              <p className="muted">Open this on your computer:</p>
               <p className="code" style={{ fontSize: 18 }}>{location.host}/devices</p>
             </>
           ) : (
@@ -383,7 +373,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
           )}
           <div className="card stack">
             <p className="small">
-              <strong>Setup mode:</strong> until you lock your rules, every change applies instantly. They lock on their own at the first day reset at least 3 days after your first device turns on.
+              <strong>Setup mode:</strong> changes apply instantly until you lock your rules. They lock on their own about 3 days after your first device turns on.
             </p>
             <div className="row">
               <button onClick={() => setPracticeOpen(true)}>Try a practice pause</button>
@@ -403,9 +393,6 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
         )}
       </div>
 
-      {d.step === 0 && (
-        <ul className="small muted" style={{ marginTop: 28, paddingLeft: 18 }}>{TRUST_LINES.map((l) => <li key={l}>{l}</li>)}</ul>
-      )}
       {practiceOpen && <PracticePause me={draftMe} onClose={() => setPracticeOpen(false)} />}
     </div>
   );

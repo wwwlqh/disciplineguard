@@ -31,21 +31,20 @@ export function ConnectMt5({ me, onConnected }: { me: Me; onConnected?(): void }
       <ol className="steps">
         <li>
           <a className="btn primary" href={APP_FILE} download>Download DisciplineGuard for Windows</a>
-          <div className="small muted">It sets up MetaTrader for you. No files to copy, no settings to change.</div>
+          <div className="small muted">It sets up MetaTrader for you.</div>
         </li>
-        <li>Open it and click <strong>Allow</strong> in the browser tab it opens.</li>
+        <li>Open it and click <strong>Allow</strong>.</li>
         <li>Tick your MetaTrader and press <strong>Protect</strong>.</li>
       </ol>
       <p className={conn ? 'banner' : 'small muted'} role="status">
-        {conn ? <><strong>{conn.name}</strong> · On</> : 'Waiting for your computer… This updates on its own.'}
+        {conn ? <><strong>{conn.name}</strong> · On</> : 'Waiting for your computer…'}
       </p>
       <details className="small muted">
         <summary>Trouble?</summary>
         <ul>
-          <li>My MetaTrader isn't listed: press Browse in the app and pick its folder.</li>
-          <li>I trade on a VPS: install the app on the VPS too.</li>
-          <li>Antivirus blocked it: the app is signed by DisciplineGuard. Allow it, then run it again.</li>
-          <li>Beta users can book a 10-minute setup call from Account → Report a problem.</li>
+          <li>MetaTrader not listed: press Browse in the app.</li>
+          <li>On a VPS: install the app there too.</li>
+          <li>Antivirus blocked it: allow it, then run it again.</li>
         </ul>
       </details>
     </div>

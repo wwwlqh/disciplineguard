@@ -716,7 +716,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 | Check | How it is detected |
 |---|---|
-| DisciplineGuard app running | The app's heartbeat file is newer than 90 s. If not: "Open DisciplineGuard from the Start menu. Your saved rules still apply." |
+| DisciplineGuard app running | The app's heartbeat file is newer than 90 s. If not: "Open DisciplineGuard from the Start menu." |
 | Algo Trading allowed | `TERMINAL_TRADE_ALLOWED`, `MQL_TRADE_ALLOWED` and `ACCOUNT_TRADE_EXPERT` are all true. The fix text names the switch that is off. For `ACCOUNT_TRADE_EXPERT`: "Your broker doesn't allow EAs on this account" |
 | Connected | The app has a connection id for this terminal and the last sync wasn't refused. If not: "Tick this MetaTrader in the DisciplineGuard app" or "Sign in to the DisciplineGuard app" |
 | Rules loaded | First sync done |
@@ -807,7 +807,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 **Running**
 - Starts with Windows and lives in the tray. Its states follow EXPERIENCE.md §8.
-- When the app isn't running, the EA keeps enforcing its saved rules and shows **On (offline)**, "DisciplineGuard app isn't running". §10.5 applies unchanged.
+- When the app isn't running, the EA keeps enforcing its saved rules and shows **On (offline)**, "App not running". §10.5 applies unchanged.
 
 **Updates**
 - The app updates itself through a signed update manifest (checked every 6 hours) and carries the EA with a signed EA manifest. After an update the new EA build is copied into each protected terminal while that terminal is closed, because MT reloads an EA whose file changes and that would end an open pause. The trader does nothing.
@@ -1414,7 +1414,7 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 | OFF-05 | No contact 10 days, `valid_until` next week | Entry breaking R1 | Pause |
 | OFF-06 | MT: internet down after syncing, Windows app running | Entry breaking R1 | Pause. Status On (offline) |
 | OFF-07 | Extension signed out while offline | Entry breaking R1 | Pause. "Signing out when back online" |
-| OFF-08 | MT with the Windows app: app closed after syncing | Entry breaking R1 | Pause from the saved rules. Status On (offline), "DisciplineGuard app isn't running" |
+| OFF-08 | MT with the Windows app: app closed after syncing | Entry breaking R1 | Pause from the saved rules. Status On (offline), "App not running" |
 | SEC-01 | Windows app signed in as user A with protected terminals | The app signs in as user B | Protection-off `switched_login` sent for A's connections first. Without server contact: refused |
 | SEC-02 | MT account connected under A | Same account connected under B | A notified. A's coverage for it ends |
 | SEC-03 | Page config with a bad signature | Received | Rejected. Last accepted config stays |

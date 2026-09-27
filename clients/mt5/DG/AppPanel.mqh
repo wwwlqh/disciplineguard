@@ -67,7 +67,7 @@ bool RunChecks()
   {
    gCheckOk[0] = AlgoOk(); gCheckFix[0] = AlgoFix();
    gCheckOk[1] = gBridge.appAlive;
-   gCheckFix[1] = "Open DisciplineGuard from the Start menu. Your saved rules still apply.";
+   gCheckFix[1] = "Open DisciplineGuard from the Start menu.";
    gCheckOk[2] = Linked() && !gAuthFail;
    gCheckFix[2] = gAuthFail || gBridge.appState == "signed_out" ? "Sign in to the DisciplineGuard app." : "Tick this MetaTrader in the DisciplineGuard app.";
    gCheckOk[3] = gCacheOk; gCheckFix[3] = gOffline ? "Can't reach DisciplineGuard. Check your internet." : "Loads after connecting.";
@@ -206,7 +206,7 @@ int PanelContent(const bool draw, const bool build)
      {
       // Nothing to type here: the Windows app connects this terminal (SPEC §9.5). The status line above already
       // says what to do, so this only explains what that means for orders.
-      y = PText(draw, pad, y, inner, "Your rules are set on the website. Orders go through normally until this terminal is connected.", 11, false, DGPal.muted) + gap;
+      y = PText(draw, pad, y, inner, "Orders go through normally until connected.", 11, false, DGPal.muted) + gap;
       return y + DGPx(10);
      }
    if(mode == "setup")
@@ -485,14 +485,14 @@ void HideQuickTradeAll()
 //--- clicks -------------------------------------------------------------------------------
 string HelpText()
   {
-   return "Help: " + DG_SITE + "/help\n"
-          "The pause shows before new entries placed from this panel. Closing, moving SL/TP and cancelling are never paused. "
-          "Trades placed elsewhere (F9, one-click, phone) still count toward your rules.";
+   return "Help: " + DG_SITE + "/devices\n"
+          "New trades from this panel can be paused. Closing, SL/TP and cancelling never are. "
+          "Trades placed elsewhere (F9, one-click, phone) still count.";
   }
 
 string ReportText()
   {
-   return "Report a problem from the website: Account → Report a problem. Include this line: MT5 " + DG_VERSION + " · " + (gConn != "" ? gConn : "not connected") + " · " + gStatusCode + ".";
+   return "Report it on the website (Account). Include: MT5 " + DG_VERSION + " · " + (gConn != "" ? gConn : "not connected") + " · " + gStatusCode + ".";
   }
 
 void MenuClick(const int i)

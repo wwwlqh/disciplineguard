@@ -13,7 +13,7 @@ function useSave(reload: () => Promise<void>) {
   return async (key: string, value: unknown) => {
     const r = await saveSetting(key, value);
     if (r.direction === 'same') toast('No change.');
-    else if (r.appliesAt === 'now') toast('Applied. Your devices pick it up at their next sync, within 5 minutes.');
+    else if (r.appliesAt === 'now') toast('Applied. Devices update within 5 minutes.');
     else toast(`Scheduled for ${time(r.appliesAt)}. Cancel anytime.`);
     await reload();
   };
@@ -72,8 +72,7 @@ function RuleCard({ me, id, reload }: { me: Me; id: RuleId; reload(): Promise<vo
               {applyLabel(v)}
             </button>
             <button onClick={() => { setDraft(active); setEditing(false); }}>Cancel</button>
-            {v?.direction === 'looser' && !me.user.setupMode && <span className="small muted">Why wait? Your calm self set this rule. Waiting means a bad moment can't undo it.</span>}
-          </div>
+                      </div>
         </div>
       )}
     </div>
@@ -92,7 +91,7 @@ function PopupCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
   return (
     <div className="card">
       <h2>Popup settings</h2>
-      <p className="small muted">Your style, your popup. Trades that keep your rules go straight through unless you choose "every new trade".</p>
+      <p className="small muted">Trades that keep your rules go straight through, unless you pick "every new trade".</p>
       <div className="stack">
         <label className="field">When it shows
           <select value={p.show} onChange={(e) => setP({ ...p, show: e.target.value as PopupSettings['show'] })}>
@@ -277,7 +276,7 @@ function NotesCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
           <button onClick={() => setNotes([...notes, { id: String([1, 2, 3].find((x) => !notes.some((n) => n.id === String(x)))), text: '', tag: 'any' }])}>Add a note</button>
         )}
       </div>
-      <p className="small muted" style={{ marginTop: 10 }}>Only you see your notes and plan. They're never sent to your partner or to analytics.</p>
+      <p className="small muted" style={{ marginTop: 10 }}>Only you see these.</p>
     </div>
   );
 }
@@ -296,15 +295,13 @@ function LockSheet({ me, onClose, reload }: { me: Me; onClose(): void; reload():
       </ul>
       <p>Your plan: {me.plan || '—'}</p>
       {me.notes.map((n) => <p key={n.id} style={{ fontFamily: 'var(--serif)' }}>“{n.text}”</p>)}
-      <p className="banner neutral small">If you raise 5 trades to 8 today at 15:00, the change starts at your next day reset, or 12 hours later if that's later.</p>
       <label className="check" style={{ margin: '10px 0' }}>
         <input type="checkbox" checked={ok} onChange={(e) => setOk(e.target.checked)} />
-        <span>I understand loosening waits until my next day reset, or 12 hours if that's later.</span>
+        <span>I understand loosening waits until my next day reset (at least 12 hours).</span>
       </label>
       <label className="field">Type your first name
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </label>
-      <p className="small muted">Setup mode happens once.</p>
       <div className="row">
         <button className="primary" disabled={!ok || name.trim().length < 1} onClick={async () => { await api('POST', '/api/lock', { firstName: name, understood: true }); toast('Locked.'); onClose(); await reload(); }}>
           Lock my rules
@@ -366,11 +363,11 @@ export function RulesPage({ me, reload }: PageProps) {
       <NotesCard me={me} reload={reload} />
       <DayCard me={me} reload={reload} />
       <h2 id="accounts" style={{ marginTop: 24 }}>Accounts</h2>
-      {me.accounts.length === 0 && <p className="muted">No accounts yet. They show up here once a device is connected.</p>}
+      {me.accounts.length === 0 && <p className="muted">No accounts yet.</p>}
       {me.accounts.map((a) => <AccountSheet key={a.id} me={me} a={a} reload={reload} />)}
       <div className="card">
         <h2>Defaults for accounts</h2>
-        <p className="small muted">Used by any account that has no value of its own, including accounts you connect later.</p>
+        <p className="small muted">For any account without its own value.</p>
         <div className="stack">
           <LimitEditor me={me} k="default:r8" label="Daily loss limit" pctMax={20} allowPct reload={reload} />
           <SizeEditor me={me} k="default:r5" reload={reload} />

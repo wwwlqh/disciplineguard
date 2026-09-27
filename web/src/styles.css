@@ -96,7 +96,6 @@ p { margin: 0 0 10px; }
 .nav a { display: block; padding: 8px 10px; border-radius: 8px; color: var(--text); text-decoration: none; }
 .nav a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .nav a:hover:not(.active) { background: var(--surface-2); }
-.side .spacer { flex: 1; }
 main { padding: 28px 32px 80px; max-width: 980px; width: 100%; }
 .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
 .bottom-tabs { display: none; }
@@ -226,4 +225,3 @@ table.data th, table.data td { text-align: left; padding: 8px 6px; border-bottom
 table.data th { color: var(--muted); font-weight: 500; font-size: 12px; }
 .bars { display: flex; align-items: flex-end; gap: 3px; height: 90px; }
 .bars > i { flex: 1; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; opacity: 0.85; }
-.footer-legal { font-size: 12px; color: var(--faint); margin-top: 40px; }
