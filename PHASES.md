@@ -44,6 +44,7 @@ MT5 and TradingView first; other platforms wait for Phase 3.
 **Built**
 - Launch website: one page at `/` for signed-out visitors (how it works, comparison, platforms, pricing, a live demo pause).
 - Google sign-in. The founder: a Google Cloud OAuth client and its two secrets (server/wrangler.toml).
+- TradingView demo clip on the home page (`web/public/demo-tradingview.webm`, recorded on Paper Trading with `spikes/tv-runner/record.js`).
 - Status and changelog at `/status`: a live server check; the TradingView and MT5 lines and the changelog are edited by hand in web/src/pages/Status.tsx.
 - Session check-in on Today: tighten for today only (max trades, loss limit), in the signed rules so MT5 and TradingView enforce it until the next reset. No mood question.
 - Take a break for 1, 7 or 30 days (Account): 45 s and type to confirm on MT5 and TradingView. The TradingView pause now asks for type to confirm too.
@@ -51,7 +52,7 @@ MT5 and TradingView first; other platforms wait for Phase 3.
 **Left**
 - Accountability partner (SPEC §11.3–11.4). Its channel to the partner's phone is the founder's call. Optional MT push for the trader.
 - Public Chrome listing (the same store item) and an Edge listing.
-- Demo videos.
+- The MT5 demo clip (the founder, from a demo account: a Buy past the limit, the pause, Skip).
 - Reflection in the summary (left out for now: it's a self-rating). The partner is told about long breaks once partners exist.
 - Affiliate program for educators, and referral credit (give a month, get a month).
 

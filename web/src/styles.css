@@ -261,3 +261,6 @@ table.data th { color: var(--muted); font-weight: 500; font-size: 12px; }
 @media (max-width: 560px) { .site-nav nav a:not(.btn) { display: none; } }
 .site .grid > .card + .card { margin-top: 0; }
 .site .grid + p { margin-top: 10px; }
+.site section.demo { border-top: 0; padding-top: 0; }
+.demo video { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow); display: block; background: var(--surface-2); aspect-ratio: 16 / 9; }
+.demo p { margin-top: 8px; }

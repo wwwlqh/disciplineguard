@@ -50,6 +50,11 @@ export function Site() {
         {after && <p className="demo-after" role="status">{after}</p>}
       </section>
 
+      <section className="demo">
+        <video src="/demo-tradingview.webm" autoPlay muted loop playsInline aria-label="A Buy on TradingView past the day's trade limit gets a pause and is skipped" />
+        <p className="muted small">TradingView: trade 3 on a day capped at 1. Paused, skipped, nothing placed.</p>
+      </section>
+
       <section className="trust">
         {TRUST_LINES.map((t) => <p key={t}>{t}</p>)}
       </section>
