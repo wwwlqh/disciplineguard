@@ -12,7 +12,8 @@ find "$TMP" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
 for p in packages/core/src packages/core/test clients/mt5/DG clients/mt5/DisciplineGuard.mq5 clients/mt5/tests/DG_CoreTests.mq5 \
          clients/windows/Cargo.toml clients/windows/Cargo.lock clients/windows/core clients/windows/app/src clients/windows/app/ui \
          clients/windows/app/icons clients/windows/app/capabilities clients/windows/app/nsis clients/windows/app/Cargo.toml \
-         clients/windows/app/build.rs clients/windows/app/tauri.conf.json clients/windows/README.md \n         clients/extension/src clients/extension/static clients/extension/build.ts clients/extension/package.json clients/extension/README.md; do
+         clients/windows/app/build.rs clients/windows/app/tauri.conf.json clients/windows/README.md \
+         clients/extension/src clients/extension/static clients/extension/build.ts clients/extension/package.json clients/extension/README.md; do
   git -C "$ROOT" ls-files -z -- "$p" | while IFS= read -r -d '' f; do
     mkdir -p "$TMP/$(dirname "$f")"
     cp "$ROOT/$f" "$TMP/$f"
