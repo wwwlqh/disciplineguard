@@ -21,9 +21,9 @@ CREATE TABLE users (
   provider_subscription_id TEXT,
   cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
   is_beta INTEGER NOT NULL DEFAULT 1,
-  magic INTEGER NOT NULL,                -- per-user magic number (PHASE0 §2)
+  magic INTEGER NOT NULL,                -- per-user magic number (SPEC §9.2)
   analytics_consent INTEGER,             -- NULL = not answered
-  analytics_id TEXT NOT NULL,            -- random, never the user id (SPEC §13.2)
+  analytics_id TEXT NOT NULL,            -- random, never the user id (SPEC §13.1)
   reason_consent INTEGER,
   hide_amounts INTEGER NOT NULL DEFAULT 0,
   country TEXT,

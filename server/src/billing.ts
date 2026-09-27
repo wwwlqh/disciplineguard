@@ -1,5 +1,5 @@
 // Hosted checkout and the payment provider webhook (SPEC §12, PHASES "Early-bird checkout").
-// Provider: Lemon Squeezy (PHASE0 §4). Plan state is set only by signed webhooks.
+// Provider: Lemon Squeezy (SPEC §12). Plan state is set only by signed webhooks.
 import { userCtx, type UserRow } from './context.ts';
 import { audit, sendEmail, type Ctx } from './common.ts';
 import { hmac, safeEqual } from './crypto.ts';

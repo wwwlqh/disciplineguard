@@ -1,9 +1,7 @@
 # DisciplineGuard: Experience and UI Spec v2
 
-> Companion to SPEC.md, which defines behavior. This document defines what customers see, read and feel on every surface.
-> v2 merges seven independent reviews: customer experience, technical feasibility, trader psychology, business, legal and privacy, security, and persona walkthroughs.
-> Phase tags such as **[P2]** refer to PHASES.md. Untagged items ship with the feature they belong to, in Phase 1 unless PHASES.md says otherwise.
-> Structure only: screens are described as content and behavior, not as mockups or code.
+> What customers see and read on every surface. Behavior is in SPEC.md. Phase tags such as **[P2]** refer to PHASES.md.
+> **Fewest words wins.** One line per idea, never the same line twice on one screen.
 
 ---
 
@@ -57,7 +55,7 @@ Users never see the internal terms.
 - **Clinical words**: addiction, disorder, compulsive, therapy, treatment. The product is a self-control tool, not a health product.
 - **Advice words**: "Suggested", "recommended size". Say "Starting value" and "Lot size estimate. Check it before you trade."
 
-These rules apply to product copy about the trader or their trades. Search-page titles and the trader's own answer options (such as "Failed my challenge") are exempt.
+These rules apply to product copy about the trader or their trades.
 
 ### 2.4 Numbers and time
 
@@ -92,7 +90,6 @@ These rules apply to product copy about the trader or their trades. Search-page 
 | Telegram bot | P1 trader, P2 partner | Alerts and summaries |
 | Partner invite page (web) | P2 | Explain before Telegram |
 | Email | P1 | Sign-in, setup link, trial, renewal, security, deletion |
-| Uninstall page | P1 | One question, reinstall link |
 | Internal: page-config editor and health monitor | P1 | Fix TradingView changes |
 | Internal: support console (read-only, never shows notes) | P1 | Help users without seeing private content |
 
@@ -104,25 +101,20 @@ These rules apply to product copy about the trader or their trades. Search-page 
 |---|---|---|
 | Home | P0 waitlist, P1 beta, P2 launch | "Lockout tools act after your limit. DisciplineGuard pauses you at the click." The three trust lines. A picture of a pause. In P1: "Join the beta" with the invite waves explained |
 | How it works | P1 | Rules → pause with your note → skip or place anyway. Tighten now, loosen later. Closing is never paused |
-| Pricing | P1 | Monthly and yearly, nothing preselected. Tax treatment. Trial terms (14 days from your first connection). Renewal terms. 14-day refund. Early-bird for beta users |
+| Pricing | P1 | Monthly and yearly. 14-day trial from your first connection. 14-day refund. Early-bird for beta users |
 | Platforms | P1 | What works where, in plain words: TradingView in Chrome and Edge only (not Safari, not the Desktop app, not the phone); MT5 on Windows; MT5 on Mac (status from spike Q9); MT4 (P2); what happens to phone trades; which TradingView paths are paused and which aren't yet; what DisciplineGuard can't see |
 | What we see | P1 | "Our code is public" with a link to the client source on GitHub (the EA, the Windows app and the rules engine; the extension once built). Two columns. "We see": counts, daily P/L totals, symbol/side/size of paused orders, broker or server name, last 3 digits of accounts. "We never see": passwords, full account numbers, other websites. Notes, plans and reasons never go to analytics or partners |
-| Is it allowed by my firm? | P1 article, P2 page | Per firm: the firm's written answer and its date. "Firm rules change. Check your firm's current rules. DisciplineGuard isn't affiliated with any firm and doesn't guarantee you pass." |
-| Trading and wellbeing | P1 | §12 |
-| Help center | P1 | One article per status reason and per setup step, with screenshots (Windows and Mac) and short videos |
+| Help center | P1 | One short article per status reason and per setup step, with a screenshot |
 | Search pages | P1 | "How to stop revenge trading", and one page per major firm's daily-loss rule |
 | Comparison | P2 | Acts before the order (DisciplineGuard) vs. after the limit (lockout tools) vs. after the trade (journals) |
 | Demo videos | P2 | One short clip per platform |
 | Status and changelog | P2 | TradingView compatibility, server status, fixes |
-| Legal | P1 | Company name and address, contact, EU and UK representatives if needed, Terms, Privacy Policy, Risk notice, Cookie notice, Refund and withdrawal policy, list of processors, trademark line. Accessibility statement from P2 |
 
-**The three trust lines** appear on Home, in onboarding, on the extension welcome tab, in the coach card and in the EA checklist:
+**The three trust lines** appear once per surface where trust is decided: Home, the Windows app sign-in screen and the extension welcome tab.
 
 1. "Closing a trade is never paused."
 2. "Trades that keep your rules go straight through. We never make an order wait for our server."
 3. "We never see your broker password, and we never open, change or close a trade unless you click to do it."
-
-**Footer**: "DisciplineGuard is a self-control tool. It doesn't give investment, trading, financial or tax advice. Trading carries a high risk of losing money. TradingView, MetaTrader and Telegram are trademarks of their owners; DisciplineGuard isn't affiliated with or endorsed by them."
 
 ---
 
@@ -138,7 +130,6 @@ These rules apply to product copy about the trader or their trades. Search-page 
 **Sign-up**
 
 - Email → an email with a sign-in link **and a 6-digit code**. The screen that asked offers "Enter code instead", so a link opened on the phone never strands the laptop.
-- The line under the button: "By continuing, you confirm you're 18 or older and agree to the Terms and Privacy Policy."
 - **[P2]** Continue with Google.
 
 **Onboarding: four screens**
@@ -155,7 +146,7 @@ Back is always available until the rules are saved, and progress is saved so it 
    - the plan ("When a pause stops a trade, I will…") and one note, with "Add another note" (up to three) and "Preview the pause";
    - "Your day resets at <reset> · <timezone>", folded, with timezone and reset (midnight · forex close · futures session · match my prop firm · custom) inside;
    - "How protection works": tightening applies now, loosening waits until the next reset or 12 hours; closing is never paused; you choose when the pause shows and how long it waits;
-   - the **risk notice** checkbox (required; version and time stored) and **analytics consent** as equal Yes/No buttons;
+   - **analytics consent** as equal Yes/No buttons;
    - [Save my rules].
 4. **Connect MT5**: the three steps of §5.7 with the live "Waiting for your computer…" state. On a phone: "Finish on your computer" with the address to open. Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
 
@@ -264,7 +255,7 @@ Top to bottom:
   Around the steps:
   - A live "Waiting for your computer…" state that flips to "MT5 · FTMO-Server3 · …123 · On" when the EA first reports in.
   - Troubleshooting: "My MetaTrader isn't listed" (Browse to it) · antivirus · "I use a VPS" (install the app there too) · MT4 history setting.
-  - A 30-second video. In the beta: "Book a 10-minute setup call".
+  - A 30-second video.
 - **New account notice**: "MT5 · FTMO-Server3 · …123 connected from DESKTOP-4F2 just now. [Not mine]".
 - **Account states**: Active · Not seen since <date> · **Ended** · Not enforced ("This account already used a free trial with another login. Subscribe to protect it.").
 - **Same account on two platforms**: "Is this the same account as MT5 …456? Connect it in one place only."
@@ -305,8 +296,7 @@ Top to bottom:
 
 - **Plan**:
   - status ("Trial · day 4 of 14", or the renewal date);
-  - change plan, cancel;
-  - "Withdraw or request a refund";
+  - change plan, cancel, request a refund;
   - the billing portal.
 - **Privacy**:
   - "Share product usage (never trade details)";
@@ -316,7 +306,7 @@ Top to bottom:
   - web sessions with "Sign out all";
   - change email (confirmed by both addresses);
   - recent security events.
-- **Wellbeing**: link to §12. **[P2]** Take a break for 1, 7 or 30 days.
+- **[P2]** Take a break for 1, 7 or 30 days (§12).
 - **Data**: export (emailed link, needs a fresh sign-in), delete (§13.5).
 - Sign out.
 
@@ -391,7 +381,7 @@ The trader never has to handle the EA. The Windows app installs, attaches, conne
 3. **[Protect]**. Per row: "Installed ✓ · Algo Trading on ✓ · Connected ✓". If MT is open: "MetaTrader needs a quick restart to finish. Open trades aren't affected. [Restart MetaTrader] [Next time I open it]". If Algo Trading stays off: "Algo Trading on: off, click Algo Trading once in MetaTrader".
 4. "Done. Open any chart: the DisciplineGuard panel is there. [Try a practice pause]" (opens the practice pause on Today).
 
-The three trust lines sit at the bottom of every first-run screen.
+The three trust lines sit under the sign-in screen only.
 
 **Tray**
 - Icon dot uses the status colors (§8). The menu: status per terminal · Open dashboard · Practice pause · Protect another MetaTrader · Help · Report a problem.
@@ -433,7 +423,6 @@ The EA shows it only while an item fails. With the Windows app it usually passes
 - **Account detected**: shows broker, server and last 3 digits.
 - **Quick-trade buttons**: a "Hide on all charts" button.
 - **MT4 history**: "Set Account History to All history".
-- **Firm line** from the Q5 answers: "FTMO: third-party trade panels allowed (FTMO support, 12 Sep 2026)", or "Not confirmed yet".
 
 When everything passes: "On. Try a practice pause."
 
@@ -673,31 +662,10 @@ A [Stop] button is always available.
 
 ---
 
-## 12. Trading and wellbeing
+## 12. Take a break for 1, 7 or 30 days [P2]
 
-**[P1] Help page "Trading and wellbeing"**
-
-- Linked from the footer and from Account, never from the pause.
-- It lists free, confidential services by country, such as the UK National Gambling Helpline (GamCare), 1-800-GAMBLER in the US, Gambling Help Online in Australia, and Gamblers Anonymous.
-- Before listing a service, confirm that it accepts trading-related problems.
-- No clinical labels.
-
-**[P2] Harm-marker note**
-
-- Shown to the trader only, at most once every 30 days, on Today only. Never in Telegram, email or the summary.
-- Never in the pause, never to the partner, and in analytics only as aggregate counts.
-- Triggers:
-  - an MT deposit within 24 h after reaching the daily loss limit;
-  - placing anyway on R8 on 3 or more days in 14;
-  - trades between 00:00 and 05:00 outside R4 on several days;
-  - 3 or more new prop accounts in 30 days.
-- Copy: "Some stretches are harder than others. If trading is costing you sleep, money you need, or time with people, talking to someone helps. It's free and confidential. [See support] [Not now]"
-
-**[P2] Take a break for 1, 7 or 30 days**
-
-- Every new trade is paused with a 45 s wait and type to confirm.
-- It can't be shortened.
-- The partner is told.
+- From Account. Every new trade is paused with a 45 s wait and type to confirm.
+- It can't be shortened. The partner is told.
 
 ---
 
@@ -723,8 +691,7 @@ A [Stop] button is always available.
 
 **Next to Pay**
 
-- The renewal terms, with an unticked "I agree to automatic renewal" box.
-- "Full refund within 14 days of your first payment."
+- One line: "Renews every year at $99. Cancel anytime. Full refund within 14 days."
 - No countdown timers, fake scarcity or guilt copy.
 
 **After paying mid-session**: "Protection is back on. Today so far: 6 trades, −$180. These count, so your next trade will be paused. Your devices update at their next sync, within 5 minutes."
@@ -736,30 +703,9 @@ A [Stop] button is always available.
 
 ### 13.4 Cancellation
 
-**Where**: Account → Plan → Cancel. At most two screens.
-
-**Screen 1, one optional question**: "What's the main reason?"
-
-- Passed my challenge
-- Failed my challenge
-- Between challenges or taking a break
-- Too expensive
-- Setup problems
-- Too many pauses
-- Didn't help
-- Stopped trading
-- Other (with text)
-
-**Screen 2, one tailored offer at most, never a guilt trip**:
-
-- Setup problems → "Book a setup call".
-- Too many pauses → "Review your rules" (the scheduled-change flow).
-- Too expensive → yearly.
-- Between challenges → a pause subscription, if the Phase 1 gate adds it.
+Account → Plan → Cancel, then one confirm. No questions, no offers.
 
 **Confirmation**: "Cancelled. Protection stays on until 30 Oct. Your rules are saved for 90 days after that."
-
-An unticked opt-in: "Tell me about major improvements." Without it, no email is sent after cancellation.
 
 ### 13.5 Deletion
 
@@ -768,7 +714,7 @@ An unticked opt-in: "Tell me about major improvements." Without it, no email is 
 - **When** deletion happens:
   - "Deleted now", when protection isn't active;
   - or "Deleted at Tue 02:00. DisciplineGuard is a commitment tool, so deletion waits like a loosening. Your plan is cancelled now, and you won't be charged again."
-- **What is deleted and what is kept**, and for how long (SPEC §13.5). Billing records stay with the payment provider. Messages already sent stay in Telegram.
+- **What is deleted and what is kept**, and for how long (SPEC §13.4). Billing records stay with the payment provider. Messages already sent stay in Telegram.
 - **A leaving checklist**: remove the EA, uninstall the extension, leave the bot. No protection-off alerts are sent once deletion is requested.
 - Export first, then type DELETE to confirm.
 
@@ -829,28 +775,16 @@ WCAG 2.2 AA for the website, the web app and the extension, with documented exce
 - **The countdown and the 2-minute timeout** are time limits that are part of the product's purpose.
 - **The MT panel**: chart objects can't meet every criterion.
 
-From Phase 2, publish an accessibility statement listing these exceptions and a contact address. Never claim "fully accessible" or "WCAG compliant" without an audit.
-
 ---
 
-## 15. Support and feedback
+## 15. Support
 
-- **Help center**: one article per status reason and setup step, plus "Is it allowed by my firm?" and "Trading and wellbeing".
+- **Help center**: one short article per status reason and setup step.
 - **Report a problem**, from the web app, the pill, the toolbar popup and the EA menu:
   - Types: "This order should not have been paused" · "This order should have been paused but wasn't" · Setup · Billing · Other.
-  - Automatically attached: client type and version, config version, self-test results, status history for the last 24 h, recent event types without values, browser and OS or MT build, hedging or netting, web-access status, last error codes.
-  - A preview shows exactly what will be sent. The order details of the last pause are included only with an opt-in checkbox. Notes, plans and reasons are never attached.
-- **Support policy**, stated in the help center: support can't unlock rules, apply scheduled changes early, or reopen setup mode (SPEC §1.5).
-- **Beta programme**:
-  - Wave 1 gets founder setup calls, which double as interviews.
-  - A private Discord or Telegram group with setup-help, bugs and wins channels. Rules: no trade calls, signals or offers to manage accounts, and no P/L screenshots required.
-  - A changelog post per release.
-- **Feedback loops**:
-  - Day 3: "Is DisciplineGuard pausing the right trades? Yes · Too often · Not enough · Not sure".
-  - **Product-fit survey**, once, after a day without a pause, for users with 3 or more real pauses: "How would you feel if you could no longer use DisciplineGuard?" and "Has a pause stopped a trade you're glad you didn't take?"
-  - Weekly: "This week, how in control of your trading did you feel? 1–5".
-  - Interviews with the users who skip most and those who place anyway most.
-- **Uninstall page**: "What happened?" (setup · blocked something I needed · too many pauses · switched platform · stopped trading · other) plus an optional email, and a reinstall link.
+  - Automatically attached: client type and version, config version, self-test results, status history for the last 24 h, recent event types without values, browser and OS or MT build, hedging or netting, last error codes.
+  - A preview shows exactly what will be sent. Notes, plans and reasons are never attached.
+- **Support policy**: support can't unlock rules, apply scheduled changes early, or reopen setup mode (SPEC §1.5).
 
 ---
 
@@ -864,6 +798,4 @@ From Phase 2, publish an accessibility statement listing these exceptions and a 
 | Self-serve setup | Reached On with no support contact |
 | Practice pause rate | Users who ran one before their first real pause |
 | Added delay | Extra delay on trades with no pause (SPEC §14) |
-| Product fit, control self-report | SPEC §14 |
 | Support rate | Problem reports per 100 active users, by type |
-| Uninstall and cancel reasons | Distribution of answers |

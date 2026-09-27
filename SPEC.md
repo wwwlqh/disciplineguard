@@ -1,12 +1,9 @@
 # DisciplineGuard: Behavior Specification v2
 
-> Status: draft for Phase 0 sign-off ("frozen rule spec + shared test cases").
-> v2 merges seven independent reviews: customer experience, technical feasibility, trader psychology, business and phases, legal and privacy, security, and persona walkthroughs.
 > Document set:
 > - **SPEC.md** (this file): what the product does. The contract every client and the server follow.
-> - **EXPERIENCE.md**: what customers see, read and feel.
-> - **PHASES.md**: what ships in which phase, and the gates between phases. No time estimates.
-> - **BLUEPRINT.md**: the original business blueprint. Where it differs, these three documents win (section 16).
+> - **EXPERIENCE.md**: what customers see and read.
+> - **PHASES.md**: what gets built, in order.
 >
 > Keywords: **MUST** = required. **SHOULD** = expected, may slip with a written reason. **MAY** = optional.
 > Phase tags such as **[P1A]** refer to PHASES.md. Untagged behavior applies from the phase that ships the feature.
@@ -43,7 +40,7 @@ This spec uses precise internal terms. Users see the words in EXPERIENCE.md §2.
 
    When the trader turned on type to confirm (§7.2) and it applies, it comes first. A single key press never places, and nothing continues automatically.
 6. **Symbols, prices, sizes, P/L amounts, notes, plans, reason tags and free-text onboarding answers never reach analytics, partners or coaches.**
-   - Onboarding choices reach analytics only as `template_id` and `account_type` (§13.4).
+   - Onboarding choices reach analytics only as `template_id` and `account_type` (§13.3).
    - P/L amounts reach a partner only when the trader turns on "Share amounts with partner".
 7. **A client that has synced at least once keeps enforcing its saved rules** when the network fails, when its web access is blocked, or when the server rejects it. Enforcement ends only in the cases listed in §10.5.
 
@@ -58,7 +55,6 @@ Known paths that are neither slow nor visible, accepted and stated on the Platfo
 - Trading in TradingView Desktop, TradingView mobile, an incognito window, another browser profile or a browser without the extension. These are partly caught later (§10.6), when TradingView's history is readable.
 - A patched EA, a modified extension or a modified Windows app. The client source is public (PHASES.md), so this path is known, not hidden.
 - Closing the DisciplineGuard Windows app. This is not a bypass: the EA keeps enforcing its saved rules and shows **On (offline)** (§9.5). It is visible on Today as an offline period.
-- Editing the local rule cache while the server is blocked, if the Phase 0 decision on signed caches (§10.5) is "no".
 - A partner who is the trader's own second Telegram account.
 
 ### 1.5 Support and admin policy
@@ -86,7 +82,7 @@ Known paths that are neither slow nor visible, accepted and stated on the Platfo
 | **Unclassified order** | A guarded-path order the client cannot classify as entry or exit (§4.5). |
 | **Trading day** | The period between two day resets (§3). |
 | **Violation** | A rule that an entry would break, as returned by `evaluate()` (§8). |
-| **Pause** | The modal shown before an entry with at least one violation. Called "popup" in BLUEPRINT.md. |
+| **Pause** | The modal shown before an entry with at least one violation. |
 | **Skip** | The trader skips the trade (button, Esc, or timeout). The entry is not sent. |
 | **Place anyway** | The trader places the entry after the countdown. Counts as an override. |
 | **Placed-anyway count** | Place-anyway decisions plus outside violations in the current trading day. Drives the growing wait and type to confirm, when the trader turned them on (§7.2). |
@@ -418,7 +414,7 @@ These are always stricter and apply immediately. They can never be shortened or 
 | Take a break | After a skip, on Today, pill, EA menu | Every entry is paused for 15 minutes. Title: "You're on a break until 10:29." |
 | Done for today | After a skip, on Today, pill, EA menu | Every entry is paused until the next user day reset |
 | **[P2]** Tighten for today | Session check-in (EXPERIENCE.md §9.9) | A temporary lower R1 or R8 value until the next reset. It is never looser than the locked rules |
-| **[P2]** Take a break for 1, 7 or 30 days | Account → Wellbeing | Every entry is paused with a 45 s wait and type to confirm (§7.2), and the partner is told |
+| **[P2]** Take a break for 1, 7 or 30 days | Account | Every entry is paused with a 45 s wait and type to confirm (§7.2), and the partner is told |
 
 Place anyway still works during a break or "done for today". Invariant 5 and "friction, not a lock" hold.
 
@@ -507,7 +503,7 @@ The server stores these fields:
 - outcome: decision (`skip`, `place`, `timeout`), seconds shown, wait length, whether type to confirm was required;
 - context: `placed_anyway_count`, `reattempt`, time from unlock to click;
 - the order: symbol, side, size;
-- the reason tag, only with consent (§13.3).
+- the reason tag, only with consent (§13.2).
 
 Symbol, side, size and reason never go to analytics (invariant 6).
 
@@ -701,7 +697,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 - A result line, a status line and a menu.
 - It remembers the last setup. It is collapsible to a bar, can be anchored to any corner, and has a "Panel scale" input.
 
-**Orders**: panel orders use the magic number and the comment prefix of this user. **[Q5 decision]** If prop firms treat a shared magic number as a group signal, it is per user.
+**Orders**: panel orders carry the user's own magic number (random, 700,000,000–799,999,999) and no comment, so users' trades never share a group signal.
 
 **Events**: `OnTradeTransaction` plus a 1 s timer check of history.
 
@@ -737,7 +733,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 **Connection changes**
 
 - A new MT login in a protected terminal shows "New account on this terminal: <server> …456. Protect it? [Protect]". Connecting it is immediate.
-- When the Windows app signs in as another DisciplineGuard user, it first sends protection-off with reason `switched_login` for the old user's connections and waits for the server to acknowledge it. Without server contact, the switch is refused.
+- When the Windows app signs in as another DisciplineGuard user, it first sends protection-off with reason `switched_login` for the old user's connections and waits for the server to acknowledge it. Without server contact, the switch is refused. The old user's 90-day upload consent is cleared.
 - A new connection id from the app (a reinstall or another login) replaces the EA's saved cache, so one user's rules never apply under another.
 
 **Heartbeat**: part of every sync call. The EA syncs every 60 s while active and every 300 s while idle (§10.3).
@@ -781,7 +777,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 - The EA must run in the desktop terminal or on a VPS terminal the user controls.
 - If the EA is migrated to MetaQuotes' built-in VPS, the chart UI does not run there. The EA detects the migration where possible and the guide warns about it.
-- **Mac**: the status of MetaQuotes' official MT5 for Mac is decided by the Q9 spike and published on the Platforms page. Mac is not supported: the Windows app doesn't run there.
+- **Mac** is not supported: the Windows app doesn't run there.
 
 ### 9.5 Windows app (DisciplineGuard for Windows)
 
@@ -793,7 +789,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 3. Sees every MT5 terminal on the computer, all ticked, and presses **Protect**.
 
 **What the app does on Protect**, per terminal:
-- Finds terminals from `%APPDATA%\MetaQuotes\Terminal\<id>\origin.txt` and from running `terminal64.exe` processes, including portable installs.
+- Finds terminals from `%APPDATA%\MetaQuotes\Terminal\<id>\origin.txt` (only when that install still has `terminal64.exe`) and from running `terminal64.exe` processes, including portable installs.
 - Copies the EA into `MQL5\Experts\DisciplineGuard\` after checking its SHA-256 against the signed release manifest.
 - Attaches the EA and turns on Algo Trading through MT's own files:
   - the chart template `MQL5\Profiles\Templates\default.tpl` carries the EA, so every new chart has the panel (MT only reads it, so this works while MT is open). A fresh MT has no `default.tpl`; the app then writes a bare one that draws new charts the way MT's built-in default does, and deletes it again when protection is removed;
@@ -814,12 +810,12 @@ A trader installs at most one thing per kind of platform, never one per platform
 - When the app isn't running, the EA keeps enforcing its saved rules and shows **On (offline)**, "DisciplineGuard app isn't running". §10.5 applies unchanged.
 
 **Updates**
-- The app updates itself through a signed update manifest (checked every 6 hours) and carries the EA with a signed EA manifest. After an update the new EA build is copied into each protected terminal and picked up at the next terminal start. The trader does nothing.
+- The app updates itself through a signed update manifest (checked every 6 hours) and carries the EA with a signed EA manifest. After an update the new EA build is copied into each protected terminal while that terminal is closed, because MT reloads an EA whose file changes and that would end an open pause. The trader does nothing.
 - Releases are published with the client source (`wwwlqh/disciplineguard-clients`); `disciplineguard.com/downloads/` points to the latest one.
 - An MT5 installed later shows a tray notice: "New MetaTrader found: IC Markets MT5. Protect it? [Protect]".
 
 **Protection-off signals**
-- Removing protection from a terminal is a loosening and waits like any removal (§10.6, EXPERIENCE.md §5.7): the app links to Devices, and keeps serving the terminal until the server reports it removed. Uninstalling the app is a protection-off signal (`uninstalled`). The uninstaller sends protection-off and removes the EA from templates only after the server acknowledges it. Without server contact it leaves the EA in place and says so.
+- Removing protection from a terminal is a loosening and waits like any removal (§10.6, EXPERIENCE.md §5.7): the app links to Devices, and keeps serving the terminal until the server reports it removed. Uninstalling the app is a protection-off signal (`uninstalled`). The uninstaller sends protection-off and removes the EA only after the server acknowledges it (a 200 or 410; a 401 means a stale token, not an acknowledgement). The EA file goes even while MT is open, so MT drops it at the next start. Without server contact it leaves the EA in place and says so.
 - Removing the EA from a chart by hand queues protection-off, which the app sends; a stale `ea.txt` also shows it.
 
 **Later platforms.** The same app installs the MT4 EA, and later cTrader cBots and NinjaTrader add-ons, each as its own adapter (§9.0).
@@ -897,7 +893,7 @@ A trader installs at most one thing per kind of platform, never one per platform
   - (d) the cached `valid_until + 7 days` has passed with no server contact. The client then shows **Off: "Can't confirm your plan."**;
   - (e) the server reports that account deletion has run. This is a distinct `account_deleted` response, not a plain 401; the server keeps a tombstone of the token hashes for this;
   - (f) for one trading account only: its scheduled removal has taken effect, or it is Not enforced (§12.5).
-- **[P0 decision] Signed cache.** The rules, settings and license block of each sync response is Ed25519-signed. The extension verifies it with WebCrypto, and the EA with a small bundled verifier (spike Q10). A cache that fails verification is ignored and replaced by a fresh sync. If the EA verifier is judged too costly, "edit local files while blocking the server" is added to §1.4.
+- **Signed cache.** The rules, settings and license block of each sync response is Ed25519-signed. The extension verifies it with WebCrypto, and the EA with a small bundled verifier (spike Q10). A cache that fails verification is ignored and replaced by a fresh sync. If the EA verifier is judged too costly, "edit local files while blocking the server" is added to §1.4.
 
 ### 10.6 Coverage and protection-off decisions
 
@@ -1027,7 +1023,6 @@ A trader installs at most one thing per kind of platform, never one per platform
 | **[P2]** Take a break for 1, 7 or 30 days | In-app | Real time |
 | Support change to the account (§1.5) | Email | Real time |
 | End-of-session summary | On | Off |
-| **[P2]** Harm-marker note (EXPERIENCE.md §12) | In-app only | **Never** |
 
 - **Partner messages** never contain amounts, symbols, sizes, notes, plans or reasons, unless the trader turns on "Share amounts" (amounts only).
 - Real-time partner messages carry no counts. The digest summarizes the session, including good news ("Rules kept 4 of 5 trading days").
@@ -1065,7 +1060,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 - 14 days, starting when the user's **first connection reaches On**, and ending at the first **user day reset** after those 14 days.
 - If no connection reaches On within 21 days of sign-up, the trial runs from sign-up and ends at the first reset after day 21.
-- No card needed during the private beta. **[P1 gate decision]** Card or no card for public launch.
+- No card needed.
 
 ### 12.2 Plan states
 
@@ -1098,16 +1093,12 @@ A trader installs at most one thing per kind of platform, never one per platform
   - $79 per year, yearly only;
   - kept at every renewal while the plan renews without a gap; it ends if the plan lapses or the user switches to monthly;
   - for beta users who buy before Phase 2 opens.
-- **Checkout**:
-  - shows the renewal terms next to Pay: "Renews automatically every <month|year> at <price> <including tax|plus tax> until you cancel. Cancel anytime in Account → Plan; you keep access until the end of the period you paid for.";
-  - has an unticked "I agree to automatic renewal" box;
-  - preselects no plan. Yearly is listed first as best value.
+- **Checkout**: one line next to Pay: "Renews every <month|year> at <price>. Cancel anytime." Yearly is listed first.
 
 ### 12.4 Refunds and cancellation
 
-- **Refund**: a full refund on request within 14 days of any first payment for a plan, wherever the user lives. After that, cancelling stops the next renewal. Account → Plan has "Withdraw or request a refund", repeated in the receipt email.
-- **Cancel**: applies immediately (§6.2). Protection runs to the end of the paid period. There is one optional question (EXPERIENCE.md §13).
-- **[P1 gate decision]** Pause subscription or a Challenge Pass for Phase 2, based on the share of cancellations that give a challenge reason.
+- **Refund**: a full refund on request within 14 days of a first payment. After that, cancelling stops the next renewal.
+- **Cancel**: applies immediately (§6.2). Protection runs to the end of the paid period. No questions asked.
 
 ### 12.5 Trial abuse and account cap
 
@@ -1123,9 +1114,8 @@ A trader installs at most one thing per kind of platform, never one per platform
   - the plan is cancelled at the payment provider at once, and the user is never charged again;
   - protection-off alerts are suppressed from the moment deletion is requested;
   - data is used only to keep rules running and send the alerts already set up until the deletion runs, never for analytics.
-- The delete sheet lists what is deleted, what is kept, why and for how long (§13.5), with a leaving checklist.
 - A deletion request sent by email follows the same schedule.
-- Deletion calls the deletion interfaces of the analytics, error and email providers. The bot sends a final message and forgets the chat.
+- Deletion also deletes the user at the analytics provider. The bot sends a final message and forgets the chat.
 
 ### 12.7 Transactional emails
 
@@ -1144,26 +1134,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 ## 13. Privacy and analytics
 
-### 13.1 Data map (lawful basis, for the privacy policy)
-
-| Data or processing | Basis |
-|---|---|
-| Email, sign-in, rules, notes, plan, settings, connections, trade counts, P/L totals, day-start balances, pause log, trader alerts, transactional email | Contract |
-| Delayed loosening and scheduled removal or deletion | Contract (the commitment feature the user chose, disclosed at sign-up and in setup mode) |
-| Account-number HMACs for trial checks and the cap | Legitimate interests (abuse prevention), with a written balancing test |
-| Heartbeats, coverage, health and protection-off events | Contract, plus legitimate interests (reliability) |
-| Reason tags | Explicit consent (§13.3) |
-| Messages to the partner | Contract. Amounts only with the trader's consent |
-| The partner's own Telegram data | The partner's consent (Accept) |
-| Product analytics, UTM attribution | Consent in the EU, EEA and UK. Legitimate interests with opt-out elsewhere |
-| Surveys and problem reports | Legitimate interests, or the user's request |
-| Risk-notice acceptance | Legitimate interests (defending legal claims) |
-| Waitlist | Consent |
-| Billing | The payment provider, as an independent controller |
-
-A data protection impact assessment (DPIA) is completed before the first beta user (PHASES.md).
-
-### 13.2 Analytics
+### 13.1 Analytics
 
 - Events are either **service events** (needed to run the product) or **analytics events**.
 - Analytics events are forwarded to PostHog only if the user's setting **"Share product usage (never trade details)"** is on:
@@ -1178,20 +1149,20 @@ A data protection impact assessment (DPIA) is completed before the first beta us
 - **Website**: PostHog loads only after cookie consent, with EU hosting, "discard client IP data" on, autocapture off, session replay off, and remote script loading off. UTM and referrer are read from the landing URL and sent with the sign-up form, not stored on the device before consent.
 - **Country** comes only from sign-up: the hosting provider's country header or the billing country.
 
-### 13.3 Reason tags
+### 13.2 Reason tags
 
 - Saved only after explicit consent, asked at first use: "Save the reasons you pick? Only you see them, in your stats."
 - The trader can delete all reason history at any time. This applies immediately and is not protected.
 - Reasons never reach analytics, partners or coaches (invariant 6).
 - Onboarding answers are stored only as the resulting template ids.
 
-### 13.4 Analytics whitelist
+### 13.3 Analytics whitelist
 
-`platform, client_version, rule_id, decision, seconds_shown, wait_length, typed_step, reattempt, held, overrides_bucket (0, 1, 2–3, 4+), overshoot_bucket, change_direction, change_setting, template_id, onboarding_step, setup_check_failed, hold_basis (table_live/model/unknown), broker_or_firm_name, account_type (demo/real/prop), balance_range (<5k, 5–25k, 25–100k, 100k+), account_currency, country, utm_source, utm_medium, utm_campaign, referrer_domain, browser, os, protection_state, sync_error_code, pmf_answer, cancel_reason, uninstall_reason`
+`platform, client_version, rule_id, decision, seconds_shown, wait_length, typed_step, reattempt, held, overrides_bucket (0, 1, 2–3, 4+), overshoot_bucket, change_direction, change_setting, template_id, onboarding_step, setup_check_failed, hold_basis (table_live/model/unknown), broker_or_firm_name, account_type (demo/real/prop), balance_range (<5k, 5–25k, 25–100k, 100k+), account_currency, country, utm_source, utm_medium, utm_campaign, referrer_domain, browser, os, protection_state, sync_error_code`
 
 `broker_or_firm_name`, `account_type`, `balance_range` and `account_currency` are sent only when the analytics setting is on. Chrome's Limited Use policy applies: extension data is used for marketing only as aggregated, anonymized totals.
 
-### 13.5 Retention
+### 13.4 Retention
 
 | Data | Kept |
 |---|---|
@@ -1200,13 +1171,13 @@ A data protection impact assessment (DPIA) is completed before the first beta us
 | Coverage and health events | 30 days (aggregates kept) |
 | Protection-off and alert logs | 90 days |
 | Account HMACs + last 3 characters (trial checks) | 12 months after deletion |
-| Support reports and surveys | 12 months |
+| Support reports | 12 months |
 | Partner Telegram data | 7 days after leaving, decline, block or removal |
 | Unaccepted partner invites | Expire after 7 days |
 | PostHog | 24 months. The person is deleted when the account is deleted |
 | Backups | Deleted data leaves backups within 30 days |
 
-### 13.6 Export
+### 13.5 Export
 
 A ZIP containing:
 
@@ -1230,22 +1201,22 @@ Billing records are in the payment provider's portal.
 
 ## 14. Metrics
 
-| Metric | Definition | Use |
-|---|---|---|
-| Activation | Connection reached On and rules locked | Funnel |
-| Retention | Retained users ÷ activated users (§2) | Phase 1 gate |
-| Held rate | Held pauses ÷ pauses | Phase 1 gate (target set after wave 1) |
-| Rule-breaking trades per trading day | Placed anyway + outside violations, per user, against the user's baseline (below) | Phase 1 gate |
-| Limit overshoot | Share of trading days ending with a loss beyond the R8 limit, and the overshoot as % of the limit (bucketed, computed on the server) | Phase 1 gate |
-| Bypass rate | (Outside violations + entries placed while protection was off + orders we couldn't check) ÷ (pauses + those) | Phase 1 gate (ceiling set at the Phase 0 gate) |
-| Displacement | Outside violations ÷ all violations. Must not rise over a user's first 4 weeks | Phase 1 gate |
-| Reactance | Protection off or uninstall within 24 h after a pause. Users who place anyway on more than 90% of pauses are "kept on, not working" and don't count as retained | Phase 1 gate |
-| Re-attempt rate | Re-attempts ÷ skips | Diagnostic |
-| Skip rate | Skips (not timeouts) ÷ pauses. Median per user, among users with 5 or more pauses | Diagnostic only |
-| Added delay | Extra delay on entries that get no pause. Extension: measured at the click. EA: clicks handled within 50 ms after a network call returned are logged as possibly delayed, with that call's duration | Phase 1 gate |
-| Self-serve setup | Activated users who reached On with no support contact | Phase 1 and 2 gates |
-| Product fit | "Very disappointed" share, among users who went 24 h without a pause | Phase 1 gate |
-| Control self-report | Weekly "How in control of your trading did you feel? 1–5" | Trend |
+Computed on the server and shown on the owner dashboard, per platform.
+
+| Metric | Definition |
+|---|---|
+| Activation | Connection reached On and rules locked |
+| Retention | Retained users ÷ activated users (§2) |
+| Held rate | Held pauses ÷ pauses |
+| Rule-breaking trades per trading day | Placed anyway + outside violations, per user, against the user's baseline (below) |
+| Limit overshoot | Share of trading days ending with a loss beyond the R8 limit, and the overshoot as % of the limit (bucketed) |
+| Bypass rate | (Outside violations + entries placed while protection was off + orders we couldn't check) ÷ (pauses + those) |
+| Displacement | Outside violations ÷ all violations |
+| Reactance | Protection off or uninstall within 24 h after a pause. Users who place anyway on more than 90% of pauses are "kept on, not working" |
+| Re-attempt rate | Re-attempts ÷ skips |
+| Skip rate | Skips (not timeouts) ÷ pauses. Median per user, among users with 5 or more pauses |
+| Added delay | Extra delay on entries that get no pause. Extension: measured at the click. EA: clicks handled within 50 ms after a network call returned are logged as possibly delayed |
+| Self-serve setup | Activated users who reached On with no support contact |
 
 **Baseline (MT5)**
 
@@ -1253,14 +1224,6 @@ Billing records are in the payment provider's portal.
 - The server runs `evaluate()` over them to count "would have been paused" trades per trading day, leaving out the 14 days before sign-up.
 - This is compared with weeks 3–6 after lock. The data is used only for this comparison and the user's own stats. Nothing reaches analytics.
 - For TradingView, week 1 is compared with weeks 3–6, labelled as weaker evidence.
-
-**Pause content experiments [P1B]**
-
-- Each pause MAY get one content variant, and the outcome is the held rate. Candidates:
-  - the plan line vs. the time line;
-  - the note vs. a self-appraisal question;
-  - P/L shown vs. hidden.
-- Variants only change content or add friction, never make a pause weaker than the user's settings, and are disclosed in the beta terms.
 
 ---
 
@@ -1480,50 +1443,12 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 
 ---
 
-## 16. Changes from BLUEPRINT.md
-
-| Area | Blueprint | This spec |
-|---|---|---|
-| Popup | "Popup", Cancel/Continue | "Pause", Skip this trade / Place anyway, a plan line, way-out and fix lines |
-| Trading day | Undefined | Day reset = time + timezone, presets, per-account R8 reset |
-| Loosening delay | Next day or 24 h, chosen once | One rule: `max(next reset, +12 h)`. Longer optional delays in Phase 3 |
-| New users | Rules protected from the start | Setup mode once per user, ended by "Lock my rules" or automatically |
-| Rules | 8 rules | R1–R10: R6 split from R5, R10 added, R7 and R8 options, R8 rest after the limit |
-| Countdown | 5–15 s | Popup settings chosen by the trader: when it shows, wait 0–60 s, optional wait after a loss, growing wait and type to confirm |
-| After a skip | Nothing | Plan, "Take a break", "Done for today" |
-| Order latency | Not specified | No order ever waits on the network |
-| Protection off | Not covered | Coverage intervals, visible on Today and in summaries, partner alerts in Phase 2 |
-| Offline | Cached rules, never off | Cached rules in every failure state until `valid_until` + 7 days |
-| Security | Not covered | Section 10.9 |
-| Alerts | None | Telegram and MT push, partner in Phase 2 |
-| Trial | 14 days from sign-up | 14 days from the first connection reaching On, ending at a day reset |
-| Refunds | Not covered | 14-day full refund, renewal reminders |
-| Deletion | Not covered | Immediate when not protected, otherwise scheduled; the plan stops at once |
-| Analytics | PostHog from every client | Consent setting, server forwarding, whitelist, no user ids |
-| Privacy | "No IP stored" | Data map, retention, export, DPIA (section 13) |
-| Hosting | Workers + D1 or Supabase | Workers Paid + D1 + Queues |
-| Price anchor | "Less than one challenge reset" | Dropped. It normalizes buying resets |
-| Founders lifetime deal | Later option | Dropped. TradingView maintenance never ends |
-| Launch and build order | BLUEPRINT §11, §16 | Replaced by PHASES.md |
-| MT setup | Trader allows the web address and copies the EA; installer at launch | The Windows app does all of it from Phase 1A: sign in, Allow, Protect. There is no manual setup |
-| MT network | The EA calls the server | The EA makes no web requests. It talks to the Windows app through files |
-| New platforms | cTrader, TopstepX, Robinhood web as "later options" | Adapters inside the extension or the Windows app (§9.0). Prediction markets and crypto exchanges on the web are Phase 3 bets |
-
----
-
-## 17. Open questions (Phase 0 spikes and checks)
+## 16. Open questions
 
 | # | Question | If the answer is no |
 |---|---|---|
 | Q1a | Can a `document_start` capture listener hold the TradingView order-panel submit, Enter in its fields, the one-click floating buttons and the Reverse button, on paper trading and 2+ target brokers? Also: touch input, confirmation dialogs, where one-click SL/brackets come from | TradingView leaves the plan until a new spike passes |
-| Q1b | Dropped. The extension never replays clicks (§7.5) | — |
 | Q2 | Can the extension read positions, fills history, P/L and the account id from the Account Manager, including when it is collapsed or on another tab, for the brokers the founder trades with? Which allow hedging? | More orders become unclassified. R7 and R8 stay Beta on TradingView, and the listing says so |
 | Q3 | Does MT5 `DEAL_REASON` label desktop, mobile and web trades on real brokers and prop firm servers? | All non-panel trades are labelled "outside" (counting is unaffected) |
 | Q4 | Does `SendNotification` work on the MT builds that prop firms ship? | Document the limits per firm |
-| Q5 | Do the prop firms the founder trades with allow a panel EA that sends only the trader's own clicks, in evaluation and funded stages? Is Algo Trading allowed? Does a shared magic number or comment trigger group or copy-trading rules? | Publish the answers. Per-user magic numbers if needed |
-| Q6 | Does the chosen payment provider accept a trading-behavior tool? Who is the seller to consumers, and who provides the EU withdrawal function? Do Nigerian and Indian cards and PayPal work for recurring and one-off payments? Is affiliate tracking supported? | Use the fallback provider named in Phase 0 |
-| Q7 | Dropped. The EA makes no web requests (§9.5) | — |
-| Q8 | Dropped. The EA makes no web requests (§9.5) | — |
-| Q9 | Deferred. Mac isn't supported, because the Windows app doesn't run there | — |
-| Q10 | Can the EA verify an Ed25519 signature at acceptable cost? | Add "edit local files while blocking the server" to §1.4 |
 | Q11 | Can the Windows app, with no clicks inside MT: (a) put the EA on a chart and in `default.tpl`; (b) turn on Algo Trading through a start-up configuration; (c) keep both after a terminal restart; (d) exchange bridge files in the Common folder within 1 s with no effect on click handling? On a broker build and a prop-firm build. **2026-09-27, MetaQuotes build 6230, demo account:** (a) yes: `expertmode=5` loads the EA on the profile chart, and a new chart gets it from `default.tpl`; (b) yes; (c) yes over two normal restarts, but MT turns Algo Trading off whenever the account changes. Open: (d), and a prop-firm build | For each part that fails, the app shows only that one step, with a screenshot ("Click Algo Trading once"), instead of the whole manual flow |
