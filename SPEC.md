@@ -56,7 +56,7 @@ DisciplineGuard adds friction. It is not a lock. The design goal is that every w
 Known paths that are neither slow nor visible, accepted and stated on the Platforms page:
 
 - Trading in TradingView Desktop, TradingView mobile, an incognito window, another browser profile or a browser without the extension. These are partly caught later (§10.6), when TradingView's history is readable.
-- A patched EA, a modified extension or a modified Windows app. The client source is public from Phase 2 (PHASES.md), so this path is known, not hidden.
+- A patched EA, a modified extension or a modified Windows app. The client source is public (PHASES.md), so this path is known, not hidden.
 - Closing the DisciplineGuard Windows app. This is not a bypass: the EA keeps enforcing its saved rules and shows **On (offline)** (§9.5). It is visible on Today as an offline period.
 - Editing the local rule cache while the server is blocked, if the Phase 0 decision on signed caches (§10.5) is "no".
 - A partner who is the trader's own second Telegram account.

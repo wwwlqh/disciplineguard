@@ -109,7 +109,7 @@ Defaults chosen so work can continue. Each one is yours to change.
 | Home positioning line | **New line in §3** | Competitor check |
 | MT5 setup | **Windows app: sign in, Allow, Protect.** No file copying, no web address, no pairing code, and no manual setup | Your call, 27 Sep: traders shouldn't have to add a script to MT5 |
 | Network I/O in the EA | **None. Through the Windows app (file bridge, `clients/mt5/DG/Bridge.mqh`)** | Removes the Q8 risk and the allow-list step |
-| Client source on GitHub | **Public from Phase 2**: extension, EA, Windows app, rules engine. Server stays private | Trust: anyone can check it never touches trades or sends trade details |
+| Client source on GitHub | **Public now** (27 Sep): [wwwlqh/disciplineguard-clients](https://github.com/wwwlqh/disciplineguard-clients) with the EA, the Windows app bridge and the rules engine, synced by `scripts/publish-public.sh` at the end of each phase. Server, web app and docs stay private in `wwwlqh/disciplineguard` | Trust: anyone can check it never touches trades or sends trade details |
 
 ## 6. Exit criteria
 

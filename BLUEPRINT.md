@@ -447,7 +447,7 @@ landing visit → sign-up → rules set → extension or EA installed → first 
 - Chrome Web Store: runs on TradingView only; the remote config is data, not code.
 - Prop firms: the EA only lets the trader place their own orders. Check FTMO and FundedNext rules and publish a "prop-firm friendly" note.
 - Check the name "DisciplineGuard" for trademark conflicts.
-- Client code (extension, EA, Windows app, rules engine) public on GitHub from public launch, so anyone can check it never touches trades on its own.
+- Client code (EA, Windows app, rules engine; the extension once built) public on GitHub now, so anyone can check it never touches trades on its own.
 
 ---
 

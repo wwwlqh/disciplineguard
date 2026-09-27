@@ -13,6 +13,11 @@
 - A failed exit criterion means the phase continues with fixes. Criteria are lowered only by an explicit, written gate decision.
 - Exit criteria are read only once the minimum sample sizes are reached. Each platform passes on its own.
 - **Safety invariants** (SPEC §1.3, items 1–3): any confirmed breach stops feature work until it is fixed.
+- **At the end of every phase**, before the next one starts:
+  1. **Review** the phase's changes for bugs and security (`/code-review`, `/security-review`), and check the boundaries: the safety and privacy invariants (SPEC §1.3), each firm's EA rules (PHASE0.md §2), TradingView's terms (PHASE0.md §3), Chrome Web Store policy, and that nothing claims to give advice or guarantee a pass. Fix what is found.
+  2. **Clean up**: no dead code, unused files or docs that describe something the code no longer does.
+  3. **Green**: every test and typecheck passes (`npm test`, `npm run typecheck`) and the EA compiles with 0 errors.
+  4. **Publish** the client source: `scripts/publish-public.sh` (public repo `wwwlqh/disciplineguard-clients`).
 
 ## Phase map
 
@@ -37,7 +42,7 @@
 | MT4 EA | | | gate (P0) | ● if demand | | |
 | Accountability partner, MT push | | | | ● | | |
 | Public Chrome listing (same item), Edge listing | | | | ● | | |
-| Client source public on GitHub (extension, EA, Windows app, rules engine) | | | | ● | | |
+| Client source public on GitHub (EA, Windows app, rules engine; extension when built), synced each phase | | ● | ● | ● | ● | ● |
 | Launch website, comparison page, demo videos, status page | | | | ● | | |
 | Affiliate program for educators, referral credit | | | | ● | | |
 | Session check-in, reflection, harm-marker note, take a break 1/7/30 days | | | | ● | | |
@@ -251,7 +256,7 @@ If the waitlist can't supply these numbers, invite referrals from beta users and
 
 - **MT4 EA**: only if MT4 "tell me" requests reach the level set at the Phase 1 gate. Otherwise it becomes a Phase 3 bet.
 - **Accountability partner** (SPEC §11.3–11.4, EXPERIENCE.md §11.2), and **MT push** with one-EA routing.
-- **Public source**: the extension, the EA, the Windows app and `packages/core` in a public GitHub repository, as a trust signal (not a marketing channel). The server, billing and admin stay private. The "What we see" page links to it.
+- **Public source** is live from Phase 1A (`wwwlqh/disciplineguard-clients`, synced at the end of each phase). Phase 2 adds the extension to it, and the "What we see" page links to it.
 - **Store listings**:
   - The unlisted Chrome item made public: the same item, so installs and reviews carry over.
   - An Edge Add-ons listing.
