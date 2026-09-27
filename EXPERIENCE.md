@@ -104,7 +104,7 @@ These rules apply to product copy about the trader or their trades.
 | Pricing | P1 | Monthly and yearly. 14-day trial from your first connection. 14-day refund. Early-bird for beta users |
 | Platforms | P1 | What works where, in plain words: TradingView in Chrome and Edge only (not Safari, not the Desktop app, not the phone); MT5 on Windows; MT5 on Mac (status from spike Q9); MT4 (P2); what happens to phone trades; which TradingView paths are paused and which aren't yet; what DisciplineGuard can't see |
 | What we see | P1 | "Our code is public" with a link to the client source on GitHub (the EA, the Windows app and the rules engine; the extension once built). Two columns. "We see": counts, daily P/L totals, symbol/side/size of paused orders, broker or server name, last 3 digits of accounts. "We never see": passwords, full account numbers, other websites. Notes, plans and reasons never go to analytics or partners |
-| Help center | P1 | One short article per status reason and per setup step, with a screenshot |
+| Help center | P1 | `/help`: one short article per status reason and per setup step. The EA's Help names the article for its current status |
 | Search pages | P1 | "How to stop revenge trading", and one page per major firm's daily-loss rule |
 | Comparison | P2 | Acts before the order (DisciplineGuard) vs. after the limit (lockout tools) vs. after the trade (journals) |
 | Demo videos | P2 | One short clip per platform |
@@ -365,7 +365,7 @@ The three trust lines sit under the sign-in screen only.
 - Icon dot uses the status colors (§8). The menu: status per terminal · Open dashboard · Practice pause · Protect MetaTrader · Help · Report a problem.
 - "New MetaTrader found: IC Markets MT5. [Protect]".
 - Protected terminals show no tick to untick. Under them: "To remove protection, remove the account on the website. It's a loosening, so it waits like any other. [Open Devices]" (same as removing an account, §5.7).
-- Closing the window keeps the app in the tray. Help opens Devices (its troubleshooting) until the help articles ship.
+- Closing the window keeps the app in the tray. Help opens the help center.
 
 **Never**: the app never closes MetaTrader without the Restart click, never shows ads or upsells in the tray, and never asks for a broker password.
 

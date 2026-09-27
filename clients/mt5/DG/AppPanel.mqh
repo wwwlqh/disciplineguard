@@ -483,9 +483,34 @@ void HideQuickTradeAll()
   }
 
 //--- clicks -------------------------------------------------------------------------------
+/// The help article for the current status (web/src/pages/Help.tsx).
+string HelpSlug()
+  {
+   if(gStatusCode == "vps") return "vps";
+   if(gStatusCode == "setting_up")
+     {
+      if(!gBridge.appAlive) return "open-app";
+      if(gBridge.appState == "signed_out") return "sign-in-app";
+      if(gBridge.appState == "not_protected") return "tick-terminal";
+      return "connecting";
+     }
+   if(gStatusCode == "attention") return gAuthFail ? "sign-in-app" : "algo-trading";
+   if(gStatusCode == "offline") return "offline";
+   if(gStatusCode == "off")
+     {
+      if(gOffReason != "") return "signed-out";
+      if(gCacheOk && !PBool("license.enforcing")) return "plan-ended";
+      if(PlanExpired(NowMs())) return "cant-confirm-plan";
+      if(gAcctState == "not_enforced") return "trial-used";
+      if(gAcctState == "cap" || gAcctState == "new") return "new-account";
+      return "signed-out";
+     }
+   return gPrimary ? "outside-trades" : "panel-only";
+  }
+
 string HelpText()
   {
-   return "Help: " + DG_SITE + "/devices\n"
+   return "Help: " + DG_SITE + "/help/" + HelpSlug() + "\n"
           "New trades from this panel can be paused. Closing, SL/TP and cancelling never are. "
           "Trades placed elsewhere (F9, one-click, phone) still count.";
   }

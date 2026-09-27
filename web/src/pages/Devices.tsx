@@ -5,6 +5,7 @@ import { ago, date, time } from '../fmt.ts';
 import { ConnectMt5 } from '../ui/Connect.tsx';
 import { Dot, Sheet, useToast } from '../ui/kit.tsx';
 import { deviceStatus } from './Today.tsx';
+import { onLink } from '../router.ts';
 import type { PageProps } from '../main.tsx';
 
 const STATE_LABEL: Record<string, string> = {
@@ -60,6 +61,7 @@ export function Devices({ me, reload }: PageProps) {
               <span className="small muted">{st.label} · seen {ago(c.lastSeen)} {c.version ? `· v${c.version}` : ''}</span>
             </div>
             {c.unknownBuild && <p className="banner amber small" style={{ marginTop: 10 }}>Unknown EA build. Reinstall DisciplineGuard for Windows.</p>}
+            {(st.kind === 'setting_up' || st.kind === 'attention' || st.kind === 'off') && <a className="small" href="/help" onClick={onLink}>Show me how</a>}
             {c.role === 'secondary' && <p className="small muted">Panel only. Another chart is doing the counting.</p>}
             {c.removalAt ? (
               <p className="small">Removed at {time(c.removalAt)}.</p>

@@ -20,9 +20,9 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 - MT5 EA: panel, the full pause system (SPEC §7), status line, setup checklist.
 - Windows app: sign in with Allow, find and Protect terminals, the file bridge, auto-update of the app and the EA (SPEC §9.5).
 - Early-bird checkout: $79 a year, offered when the trial ends.
+- Help center: one short article per status line and setup step; the EA, the tray and Devices link to it.
 
 **Left**
-- Setup help: one short article per status line and setup step (EXPERIENCE §8).
 - First release: code signing and the release workflow (the founder adds the secrets, clients/windows/README.md).
 
 ## Phase 1B: TradingView and self-serve

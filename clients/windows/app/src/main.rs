@@ -203,8 +203,7 @@ fn on_menu(app: &AppHandle, id: &str) {
     let page = match id {
         "dashboard" => "today",
         "practice" => "today?practice",
-        // Devices carries the setup help until the help articles ship.
-        "help" => "devices",
+        "help" => "help",
         "report" => "account#report",
         "signin" => return show(app, "signin"),
         "protect" => return show(app, "found"),
