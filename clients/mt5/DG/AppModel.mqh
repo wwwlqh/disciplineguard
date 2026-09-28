@@ -212,6 +212,7 @@ string OffLine(const long now)
      }
    if(PlanExpired(now)) return "Off · Can't confirm your plan · Orders go through normally";
    if(gAcctState == "cap") return "Off · The free plan covers 1 account · Orders go through normally";
+   if(gAcctState == "taken") return "Off · This account is on another DisciplineGuard login · Orders go through normally";
    if(gAcctState == "new") return "Off · New account, not protected yet · Orders go through normally";
    if(gAcctId != "" && gCacheOk && !PValid("accounts." + gAcctId)) return "Off · This account was removed · Orders go through normally";
    return "Off · Orders go through normally";

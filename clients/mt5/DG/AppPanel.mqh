@@ -73,7 +73,7 @@ bool RunChecks()
    gCheckOk[3] = gCacheOk; gCheckFix[3] = gOffline ? "Can't reach DisciplineGuard. Check your internet." : "Loads after connecting.";
    gCheckOk[4] = gAcctState == "active";
    string acct = AccountInfoString(ACCOUNT_COMPANY) + " · " + AccountInfoString(ACCOUNT_SERVER) + " · …" + gLast3;
-   gCheckFix[4] = gAcctState == "new" ? acct + ". Protect it?" : (gAcctState == "cap" ? acct + ". The free plan covers 1 account." : acct);
+   gCheckFix[4] = gAcctState == "new" ? acct + ". Protect it?" : (gAcctState == "cap" ? acct + ". The free plan covers 1 account." : (gAcctState == "taken" ? acct + ". Protected under another login." : acct));
    gCheckOk[5] = !ChartGetInteger(0, CHART_SHOW_ONE_CLICK);
    gCheckFix[5] = "They place trades without a pause.";
    bool all = true;
@@ -501,6 +501,7 @@ string HelpSlug()
       if(gOffReason != "") return "signed-out";
       if(gCacheOk && !PBool("license.enforcing")) return "plan-ended";
       if(PlanExpired(NowMs())) return "cant-confirm-plan";
+      if(gAcctState == "taken") return "account-taken";
       if(gAcctState == "cap" || gAcctState == "new") return "new-account";
       return "signed-out";
      }

@@ -373,16 +373,24 @@ describe('accounts, coverage and plans', () => {
     expect(r.data.accounts.find((a: any) => a.key === '999@S').state).toBe('cap');
   });
 
-  it('SEC-02: the same account under another login tells the first and moves to the second', async () => {
+  it('SEC-02: an account live under one login stays there; another login can claim it only once it has Ended', async () => {
     const w = new World();
     const a = await w.signIn('a@b.co');
-    await a.connect('555', 'Srv');
+    const ea = await a.connect('555', 'Srv');
+    await ea.sync();
     const b = await w.signIn('b@b.co');
     const eb = await b.connect('555', 'Srv');
-    expect(w.outbox().some((m) => m.to_email === 'a@b.co' && m.subject.includes('another login'))).toBe(true);
-    expect((await a.get('/api/me')).data.accounts).toHaveLength(0);
-    const r = await eb.sync();
+    // Live under a: b is refused and a keeps protection, with no email.
+    let r = await eb.sync([], {}, [{ ...eb.account, protect: true }]);
+    expect(r.data.accounts[0].state).toBe('taken');
+    expect((await a.get('/api/me')).data.accounts).toHaveLength(1);
+    expect(w.outbox().some((m) => m.to_email === 'a@b.co' && m.subject.includes('another login'))).toBe(false);
+    // No heartbeat under a for 3 full trading days: Ended there, so it moves to b and a is told.
+    w.t += 5 * DAY;
+    r = await eb.sync([], {}, [{ ...eb.account, protect: true }]);
     expect(r.data.accounts[0].state).toBe('active');
+    expect((await a.get('/api/me')).data.accounts).toHaveLength(0);
+    expect(w.outbox().some((m) => m.to_email === 'a@b.co' && m.subject.includes('another login'))).toBe(true);
   });
 
   it('COV-01: an entry reported from a coverage gap is marked unprotected and shown on Today', async () => {

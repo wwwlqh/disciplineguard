@@ -23,8 +23,8 @@ export interface Cache {
   status: Status;
   /** "broker:login" → the server's account id, for accounts DisciplineGuard protects. */
   accounts: Record<string, { id: string; enforced: boolean; last3: string }>;
-  /** "broker:login" of accounts refused for the plan's account limit (the free plan covers 1). */
-  capped?: string[];
+  /** "broker:login" → why the server refused it: the plan's account limit, or live under another login. */
+  refused?: Record<string, 'account_cap' | 'account_taken'>;
   signed?: {
     rules: Rules;
     popup: PopupSettings;

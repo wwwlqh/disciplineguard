@@ -91,9 +91,9 @@ export async function registerTerminal(req: Request, env: Env, ctx: Ctx): Promis
       netting: !!b.netting, currency: typeof b.currency === 'string' ? b.currency.slice(0, 8) : undefined, demo: !!b.demo,
     }, ctx));
   } catch (e) {
-    // Over the cap: an MT terminal still links, so the EA's own sync shows "The free plan covers 1 account" (SPEC §12.5).
-    // The extension handles the 409 itself.
-    if (!(e instanceof HttpError && e.code === 'account_cap') || kind === 'tv') throw e;
+    // Over the cap, or live under another login: an MT terminal still links, so the EA's own sync names the reason
+    // (SPEC §10.6, §12.5). The extension handles the 409 itself.
+    if (!(e instanceof HttpError && (e.code === 'account_cap' || e.code === 'account_taken')) || kind === 'tv') throw e;
   }
   const deviceToken = token(32);
   const existing = await env.DB.prepare('SELECT id FROM connections WHERE desktop_id = ? AND install_id = ? AND removed_at IS NULL').bind(d.id, terminalId).first<{ id: string }>();

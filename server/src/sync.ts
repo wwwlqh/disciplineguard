@@ -98,8 +98,8 @@ export async function sync(req: Request, env: Env, ctx: Ctx): Promise<Response> 
         acct = (await registerAccount(env, uc.user.id, planPaid, { ...ra, login }, ctx)).account;
         await audit(env, uc.user.id, 'device', 'account_protected', { account: acct.id, connection: conn.id });
       } catch (e) {
-        if (e instanceof HttpError && e.code === 'account_cap') {
-          accountOut.push({ key: ra.key, state: 'cap', last3: login.slice(-3) });
+        if (e instanceof HttpError && (e.code === 'account_cap' || e.code === 'account_taken')) {
+          accountOut.push({ key: ra.key, state: e.code === 'account_cap' ? 'cap' : 'taken', last3: login.slice(-3) });
           continue;
         }
         throw e;

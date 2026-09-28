@@ -132,6 +132,14 @@ const STATUS: Article[] = [
     ],
   },
   {
+    slug: 'account-taken',
+    title: 'This account is on another login',
+    body: [
+      'This trading account is already protected under another DisciplineGuard login, so it stays there. Orders on it go through normally here.',
+      'Sign in with that login instead, or remove the account on its Devices page. If you can\'t get into that login, sign out of it in the app: after 3 trading days without it, the account can move to this login.',
+    ],
+  },
+  {
     slug: 'plan-ended',
     title: 'Plan ended',
     body: [

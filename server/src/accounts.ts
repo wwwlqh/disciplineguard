@@ -48,7 +48,7 @@ export type Registered = { account: AccountRow; created: boolean };
 
 /**
  * Finds or creates the account for this user. New accounts are checked against the caps,
- * and the same account under another login is moved (SPEC §10.6).
+ * and the same account under another login is refused while live there, and moved once Ended (SPEC §10.6).
  */
 export async function registerAccount(env: Env, userId: string, planPaid: boolean, a: ReportedAccount, ctx?: Ctx): Promise<Registered> {
   const t = clock(env);
@@ -62,10 +62,13 @@ export async function registerAccount(env: Env, userId: string, planPaid: boolea
   if (mine.length >= ACCOUNT_CAP) throw new HttpError(409, 'account_cap');
   if (!planPaid && !isPaper(a) && mine.filter((m) => !isPaper(m)).length >= FREE_ACCOUNTS) throw new HttpError(409, 'account_cap');
 
-  // Same account connected under another login: that login is told and its coverage ends now.
+  // Same account under another login. Account numbers aren't secret, so while it is still live there it stays
+  // there: another login can't switch off someone's protection by claiming their account. Once it has Ended
+  // under the other login (or been removed there), it moves, and that login is told (SPEC §10.6).
   const { results: others } = await env.DB.prepare(
-    'SELECT ta.*, u.email FROM trading_accounts ta JOIN users u ON u.id = ta.user_id WHERE ta.platform = ? AND ta.server_hash = ? AND ta.account_hash = ? AND ta.user_id != ? AND ta.removed_at IS NULL',
+    'SELECT ta.*, u.email FROM trading_accounts ta JOIN users u ON u.id = ta.user_id WHERE ta.platform = ? AND ta.server_hash = ? AND ta.account_hash = ? AND ta.user_id != ? AND ta.removed_at IS NULL AND u.deleted_at IS NULL',
   ).bind(a.platform, serverHash, accountHash, userId).all<AccountRow & { email: string }>();
+  if (others.some((o) => !isEnded(o, t))) throw new HttpError(409, 'account_taken');
   for (const o of others) {
     await env.DB.batch([
       env.DB.prepare('UPDATE trading_accounts SET removed_at = ? WHERE id = ?').bind(t, o.id),

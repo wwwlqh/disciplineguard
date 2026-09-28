@@ -338,7 +338,11 @@ function pillView(): PillView | undefined {
   if (!c || c.status === 'signed_out') return { tone: 'off', text: 'Off · Signed out', lines: ['Orders go through normally.', 'Sign in from the DisciplineGuard toolbar button.'], actions: false };
   const account = readAccount();
   const acct = account && c.accounts[accountKey(account)];
-  if (account && !acct && c.capped?.includes(accountKey(account))) {
+  const refused = account && !acct ? c.refused?.[accountKey(account)] : undefined;
+  if (refused === 'account_taken') {
+    return { tone: 'off', text: 'Off · On another login', lines: ['This account is protected under another DisciplineGuard login. Sign in with that one, or remove the account there.', 'Orders go through normally.'], actions: false };
+  }
+  if (refused === 'account_cap') {
     return { tone: 'off', text: 'Off · Account limit', lines: ['The free plan covers 1 trading account. Paper Trading doesn’t count.', 'Remove the other account on disciplineguard.leowqiheng.workers.dev/devices. Orders go through normally.'], actions: false };
   }
   if (!account || !acct || !c.signed) {

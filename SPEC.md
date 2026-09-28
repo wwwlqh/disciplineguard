@@ -899,10 +899,10 @@ A trader installs at most one thing per kind of platform, never one per platform
   - Today and the end-of-session summary list every protection-off period and every connection not seen during the user's trading hours;
   - from Phase 2, the partner is alerted when protection stays off for 30 minutes, or when entries are placed while it is off (§11.2).
 - **Removing the EA or uninstalling** sends protection-off at once (best effort). The partner alert waits 10 minutes for that user's accounts to be covered again, to avoid false alarms after a reinstall.
-- **Account moved to another login**: when a trading account's HMAC is connected under user B while it is connected, or pending removal, under user A:
-  - user A gets email, an alert and a Today notice: "Account …123 was connected to another DisciplineGuard login";
-  - user A's partner is told (Phase 2);
-  - user A's coverage for that account ends at that moment.
+- **Same account under another login**: account numbers aren't secret, so claiming one proves nothing. When a trading account's HMAC is connected under user B while it is connected, or pending removal, under user A:
+  - while it is live under A (not Ended, §10.7), B is refused: state `taken`. A keeps protection and is not told. B's EA says "Off · This account is on another DisciplineGuard login", the TradingView pill "Off · On another login", with the help article `account-taken`;
+  - once it has Ended under A (no heartbeat or entries for 3 full trading days), it moves to B. A gets email, an alert and a Today notice: "Account …123 was connected to another DisciplineGuard login", and A's coverage for it ends then.
+  - A trader moving their own account to a new login removes it on the old login's Devices page (a removal waits like a loosening), or signs out there and waits until it has Ended.
 
 ### 10.7 Trading account states
 
@@ -1378,7 +1378,7 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 | OFF-07 | Extension signed out while offline | Entry breaking R1 | Pause. "Signing out when back online" |
 | OFF-08 | MT with the Windows app: app closed after syncing | Entry breaking R1 | Pause from the saved rules. Status On (offline), "App not running" |
 | SEC-01 | Windows app signed in as user A with protected terminals | The app signs in as user B | Protection-off `switched_login` sent for A's connections first. Without server contact: refused |
-| SEC-02 | MT account connected under A | Same account connected under B | A notified. A's coverage for it ends |
+| SEC-02 | MT account live under A | Same account connected under B | Refused (`taken`); A keeps it. Once Ended under A, it moves: A notified, A's coverage ends |
 | SEC-03 | Page config with a bad signature | Received | Rejected. Last accepted config stays |
 | SEC-04 | Page config selector matches a Close button | Loaded | That control is not guarded. The path fails its self-test |
 | SEC-05 | Self-test fails on 1 install only | — | That install: Needs attention, counted as protection off |

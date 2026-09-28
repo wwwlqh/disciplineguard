@@ -185,9 +185,10 @@ async function register(account: TvAccount): Promise<void> {
     });
     if (r.status === 401) s.appToken = undefined;
     const cache = await getCache();
-    const capped = (cache.capped ?? []).filter((x) => x !== k);
-    if (r.status === 409 && r.data?.error === 'account_cap') capped.push(k);
-    await setCache({ ...cache, capped });
+    const refused = { ...cache.refused };
+    delete refused[k];
+    if (r.status === 409 && (r.data?.error === 'account_cap' || r.data?.error === 'account_taken')) refused[k] = r.data.error;
+    await setCache({ ...cache, refused });
     if (r.status !== 200) return;
     s.links[k] = { token: r.data.token, connectionId: r.data.connectionId, terminalId, account };
   });
