@@ -92,8 +92,9 @@ jobs:
         run: |
           $conf = @{ plugins = @{ updater = @{ pubkey = $env:UPDATER_PUBKEY } } }
           if ($env:SIGN_ENDPOINT) { $conf.bundle = @{ windows = @{ signCommand = "trusted-signing-cli -e $env:SIGN_ENDPOINT -a $env:SIGN_ACCOUNT -c $env:SIGN_PROFILE -d DisciplineGuard %1" } } }
-          $conf | ConvertTo-Json -Depth 5 | Set-Content release.conf.json
-          npx --yes @tauri-apps/cli@2 build --config release.conf.json
+          $confPath = Join-Path $PWD "release.conf.json"
+          $conf | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8NoBOM $confPath
+          npx --yes @tauri-apps/cli@2 build --config $confPath
       - name: Build the TradingView extension
         shell: pwsh
         run: |
