@@ -14,3 +14,9 @@ clients/windows/app/gen/
 clients/windows/app/release.conf.json
 clients/extension/test-dist/
 clients/extension/live-dist/
+
+# Downloaded credentials never go in this public repo.
+client_secret_*.json
+*.key
+.env
+secrets.env
