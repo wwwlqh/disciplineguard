@@ -1,4 +1,4 @@
-// Trading accounts: identity, cap, trial marks, moves between logins (SPEC §2, §10.6, §10.7, §12.5).
+// Trading accounts: identity, caps, moves between logins (SPEC §2, §10.6, §10.7, §12.5).
 import { accountMoved } from './alerts.ts';
 import { audit, sendEmail, type Ctx } from './common.ts';
 import type { AccountRow } from './context.ts';
@@ -7,6 +7,8 @@ import { now as clock, type Env } from './env.ts';
 import { HttpError } from './http.ts';
 
 export const ACCOUNT_CAP = 10;
+/** Accounts on the free plan. TradingView Paper Trading is not counted (SPEC §12.5). */
+export const FREE_ACCOUNTS = 1;
 export const ENDED_AFTER_DAYS = 3;
 
 export interface ReportedAccount {
@@ -31,6 +33,10 @@ export async function accountHashes(env: Env, a: { platform: string; server: str
   };
 }
 
+/** TradingView Paper Trading: practice money, free on every plan. MT demo accounts count, since prop firm challenges run on them. */
+export const isPaper = (a: { platform: string; server?: string | null; server_name?: string | null }) =>
+  a.platform === 'tv' && /paper/i.test(a.server ?? a.server_name ?? '');
+
 /** Ended: trading disabled by the broker, or no heartbeat and no entries for 3 full trading days (SPEC §10.7). */
 export function isEnded(a: AccountRow, now: number): boolean {
   if (!a.trade_allowed) return true;
@@ -41,7 +47,7 @@ export function isEnded(a: AccountRow, now: number): boolean {
 export type Registered = { account: AccountRow; created: boolean };
 
 /**
- * Finds or creates the account for this user. New accounts are checked against the cap and trial marks,
+ * Finds or creates the account for this user. New accounts are checked against the caps,
  * and the same account under another login is moved (SPEC §10.6).
  */
 export async function registerAccount(env: Env, userId: string, planPaid: boolean, a: ReportedAccount, ctx?: Ctx): Promise<Registered> {
@@ -54,6 +60,7 @@ export async function registerAccount(env: Env, userId: string, planPaid: boolea
 
   const { results: mine } = await env.DB.prepare('SELECT * FROM trading_accounts WHERE user_id = ? AND removed_at IS NULL').bind(userId).all<AccountRow>();
   if (mine.length >= ACCOUNT_CAP) throw new HttpError(409, 'account_cap');
+  if (!planPaid && !isPaper(a) && mine.filter((m) => !isPaper(m)).length >= FREE_ACCOUNTS) throw new HttpError(409, 'account_cap');
 
   // Same account connected under another login: that login is told and its coverage ends now.
   const { results: others } = await env.DB.prepare(
@@ -76,28 +83,13 @@ export async function registerAccount(env: Env, userId: string, planPaid: boolea
     await accountMoved(env, o.user_id, o.last3);
   }
 
-  // One trial per trading account. TradingView Paper Trading is never matched (SPEC §12.5).
-  let notEnforced = 0;
-  const paper = a.platform === 'tv' && /paper/i.test(a.server);
-  if (!paper) {
-    const mark = await env.DB.prepare('SELECT user_id FROM trial_marks WHERE platform = ? AND server_hash = ? AND account_hash = ?')
-      .bind(a.platform, serverHash, accountHash)
-      .first<{ user_id: string }>();
-    if (mark && mark.user_id !== userId && !planPaid) notEnforced = 1;
-    if (!mark && !planPaid) {
-      await env.DB.prepare('INSERT OR IGNORE INTO trial_marks (platform, server_hash, account_hash, user_id, created_at) VALUES (?, ?, ?, ?, ?)')
-        .bind(a.platform, serverHash, accountHash, userId, t)
-        .run();
-    }
-  }
-
   const id = randomId('a_');
   await env.DB.prepare(
-    `INSERT INTO trading_accounts (id, user_id, platform, server_hash, account_hash, last3, server_name, broker, currency, netting, is_demo, trade_allowed, not_enforced, created_at, last_seen)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO trading_accounts (id, user_id, platform, server_hash, account_hash, last3, server_name, broker, currency, netting, is_demo, trade_allowed, created_at, last_seen)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).bind(
     id, userId, a.platform, serverHash, accountHash, last3, a.server.slice(0, 80), (a.broker ?? '').slice(0, 80) || null,
-    (a.currency ?? '').slice(0, 8) || null, a.netting ? 1 : 0, a.demo ? 1 : 0, a.tradeAllowed === false ? 0 : 1, notEnforced, t, t,
+    (a.currency ?? '').slice(0, 8) || null, a.netting ? 1 : 0, a.demo ? 1 : 0, a.tradeAllowed === false ? 0 : 1, t, t,
   ).run();
   await audit(env, userId, 'server', 'account_connected', { account: id, platform: a.platform, last3 });
   const account = (await env.DB.prepare('SELECT * FROM trading_accounts WHERE id = ?').bind(id).first<AccountRow>())!;

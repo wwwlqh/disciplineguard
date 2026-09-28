@@ -45,8 +45,8 @@ export function Owner() {
             <p>{m.retention.retained} of {m.retention.eligible} eligible ({v(m.retention.rate)}%) · kept on, not working: {m.retention.keptOnNotWorking}</p>
           </Panel>
           <Panel title="Payment">
-            <p>Trials ended {m.payment.trialsEnded} · paid {m.payment.paidUsers} (early-bird {m.payment.paidEarlyBird}, list {m.payment.paidList})</p>
-            <p>Trial → paid {v(m.payment.trialToPaid)}% · activated → paid {v(m.payment.activatedToPaid)}%</p>
+            <p>Paid {m.payment.paidUsers} (early-bird {m.payment.paidEarlyBird}, list {m.payment.paidList})</p>
+            <p>Activated → paid {v(m.payment.activatedToPaid)}%</p>
             <p className="small muted">By country: {m.payment.byCountry.map((c: any) => `${c.country} ${c.n}`).join(' · ') || '—'}</p>
           </Panel>
           <Panel title="Speed">

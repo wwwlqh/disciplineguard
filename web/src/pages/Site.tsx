@@ -1,5 +1,5 @@
 // The public website (EXPERIENCE §4): one page at `/` for signed-out visitors. Signed in, `/` is Today.
-// Home, how it works, the comparison, platforms and pricing, with a live demo pause.
+// Home, how it works, the comparison, platforms and pricing (free, 1 account), with a live demo pause.
 import { useState } from 'react';
 import { RULE_NAMES, TRUST_LINES, type Order, type PausePlan } from '@dg/core';
 import { coreFmt } from '../fmt.ts';
@@ -24,7 +24,7 @@ export function Site() {
   const [after, setAfter] = useState('');
   const start = (
     <a href="/signin" onClick={onLink} className="btn primary">
-      Start 14-day free trial
+      Start free
     </a>
   );
   return (
@@ -101,17 +101,11 @@ export function Site() {
 
       <section id="pricing">
         <h2>Pricing</h2>
-        <div className="grid two">
-          <div className="card price">
-            <h3>Yearly</h3>
-            <p><span className="stat">$99</span> <span className="muted">a year</span></p>
-          </div>
-          <div className="card price">
-            <h3>Monthly</h3>
-            <p><span className="stat">$14.99</span> <span className="muted">a month</span></p>
-          </div>
+        <div className="card price">
+          <h3>Free</h3>
+          <p><span className="stat">$0</span> <span className="muted">1 trading account, every rule</span></p>
         </div>
-        <p className="muted">14 days free from your first connection. No card needed. Full refund within 14 days of paying.</p>
+        <p className="muted">No card needed. TradingView Paper Trading doesn't count toward the account. Plans for more accounts are coming.</p>
         {start}
       </section>
 

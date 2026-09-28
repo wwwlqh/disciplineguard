@@ -112,7 +112,7 @@ describe('sync (SPEC §10.3)', () => {
     expect(await verify(SIGNING_PUB, payload, sig)).toBe(true);
     const p = JSON.parse(payload);
     expect(p.rules.R1).toEqual({ on: true, max: 5 });
-    expect(p.license.state).toBe('trial');
+    expect(p.license.state).toBe('free');
     expect(p.time.userResets.some((x: number) => x > w.t)).toBe(true);
     expect(p.notes[0].text).toBe('Stand up and breathe.');
     expect(p.magic).toBeGreaterThanOrEqual(700_000_000);
@@ -191,7 +191,7 @@ describe('sync (SPEC §10.3)', () => {
     expect(r2.data.snapshot.breakUntil).toBe(w.t + 15 * MIN);
   });
 
-  it('first On starts the trial and schedules the auto-lock (SET-03, SUB-01)', async () => {
+  it('first On schedules the auto-lock (SET-03)', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
     await web.onboard();
@@ -200,8 +200,6 @@ describe('sync (SPEC §10.3)', () => {
     const me = (await web.get('/api/me')).data;
     expect(me.user.firstOnAt).toBe(w.t);
     expect(me.user.lockAt).toBe(Date.UTC(2026, 9, 9)); // Monday 10:00 + 72 h → Friday 00:00
-    // SUB-01: trial ends at the first reset after 14 days, and protection stays on until then.
-    expect(me.license.trialEndsAt).toBe(Date.UTC(2026, 9, 20));
     const job = w.db.db.prepare("SELECT run_at FROM jobs WHERE kind = 'lock_notice'").get() as any;
     expect(job.run_at).toBe(Date.UTC(2026, 9, 8));
   });
@@ -223,6 +221,7 @@ describe('sync (SPEC §10.3)', () => {
     const web = await w.signIn('a@b.co');
     await web.onboard();
     const ea = await web.connect();
+    w.db.db.prepare("UPDATE users SET plan_state = 'active', paid_until = ?").run(w.t + 365 * DAY);
     const other = { key: '999@X', platform: 'mt5', server: 'X', login: '999' };
     const r = await ea.sync([], {}, [ea.account, other]);
     expect(r.data.accounts.find((a: any) => a.key === '999@X').state).toBe('new');
@@ -341,18 +340,27 @@ describe('accounts, coverage and plans', () => {
     expect((await web.get('/api/me')).data.accounts).toHaveLength(0);
   });
 
-  it('SUB-04: the 11th account is refused with the cap', async () => {
+  it('SUB-04: free covers 1 account (TradingView Paper Trading not counted); a paid plan covers 10', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
     const ea = await web.connect('100');
-    const accts = [ea.account];
-    for (let i = 1; i < 10; i++) accts.push({ key: `${100 + i}@S`, platform: 'mt5', server: 'S', login: String(100 + i), protect: true });
+    const second = { key: '101@S', platform: 'mt5', server: 'S', login: '101', protect: true };
+    const paper = { key: 'p1@Paper', platform: 'tv', server: 'Paper Trading', login: 'p1', protect: true };
+    let r = await ea.sync([], {}, [ea.account, second, paper]);
+    expect(r.data.accounts.find((a: any) => a.key === '101@S').state).toBe('cap');
+    expect(r.data.accounts.find((a: any) => a.key === 'p1@Paper').state).toBe('active');
+    expect((await web.get('/api/me')).data.license).toMatchObject({ state: 'free', enforcing: true });
+    w.db.db.prepare("UPDATE users SET plan_state = 'active', paid_until = ?").run(w.t + 365 * DAY);
+    r = await ea.sync([], {}, [ea.account, second]);
+    expect(r.data.accounts.find((a: any) => a.key === '101@S').state).toBe('active');
+    const accts = [ea.account, second, paper];
+    for (let i = 2; i < 9; i++) accts.push({ key: `${100 + i}@S`, platform: 'mt5', server: 'S', login: String(100 + i), protect: true });
     await ea.sync([], {}, accts);
-    const r = await ea.sync([], {}, [...accts, { key: '999@S', platform: 'mt5', server: 'S', login: '999', protect: true }]);
+    r = await ea.sync([], {}, [...accts, { key: '999@S', platform: 'mt5', server: 'S', login: '999', protect: true }]);
     expect(r.data.accounts.find((a: any) => a.key === '999@S').state).toBe('cap');
   });
 
-  it('SEC-02 / SUB-03: the same account under another login tells the first; a reused trial account is not enforced', async () => {
+  it('SEC-02: the same account under another login tells the first and moves to the second', async () => {
     const w = new World();
     const a = await w.signIn('a@b.co');
     await a.connect('555', 'Srv');
@@ -361,7 +369,7 @@ describe('accounts, coverage and plans', () => {
     expect(w.outbox().some((m) => m.to_email === 'a@b.co' && m.subject.includes('another login'))).toBe(true);
     expect((await a.get('/api/me')).data.accounts).toHaveLength(0);
     const r = await eb.sync();
-    expect(r.data.accounts[0].state).toBe('not_enforced');
+    expect(r.data.accounts[0].state).toBe('active');
   });
 
   it('COV-01: an entry reported from a coverage gap is marked unprotected and shown on Today', async () => {
@@ -381,7 +389,7 @@ describe('accounts, coverage and plans', () => {
     expect(today.week.keptToday).toBe(false);
   });
 
-  it('SUB-06: a refund keeps protection until max(next reset, +12 h)', async () => {
+  it('SUB-06: after a refund the trader is back on the free plan, still protected', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
     await web.connect();
@@ -398,18 +406,16 @@ describe('accounts, coverage and plans', () => {
     w.t = Date.UTC(2026, 9, 5, 20, 0);
     await send('subscription_payment_refunded', { status: 'active', updated_at: 'b' });
     me = (await web.get('/api/me')).data;
-    expect(me.license.validUntil).toBe(Date.UTC(2026, 9, 6, 8, 0));
+    expect(me.license).toMatchObject({ state: 'free', enforcing: true });
   });
 
-  it('SUB-02: never connected, the trial ends at the first reset after day 21', async () => {
+  it('SUB-02: free never ends: valid_until rolls 30 days ahead', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
-    w.t += 21 * DAY + HOUR;
-    expect((await web.get('/api/me')).data.license.state).toBe('trial');
-    w.t = Date.UTC(2026, 9, 27, 0, 30);
-    const me = (await web.get('/api/me')).data;
-    expect(me.license.state).toBe('ended');
-    expect(me.license.validUntil).toBe(Date.UTC(2026, 9, 27));
+    w.t += 25 * DAY;
+    const lic = (await web.get('/api/me')).data.license;
+    expect(lic).toMatchObject({ state: 'free', enforcing: true });
+    expect(lic.validUntil).toBeGreaterThanOrEqual(w.t + 30 * DAY);
   });
 
   it('owner metrics are only for owners', async () => {

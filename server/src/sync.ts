@@ -135,7 +135,7 @@ export async function sync(req: Request, env: Env, ctx: Ctx): Promise<Response> 
   if (role === 'primary' && uc.license.enforcing) {
     for (const [accountId, pts] of coveragePoints) {
       const a = [...keyToAccount.values()].find((x) => x.id === accountId);
-      if (a && !a.not_enforced) await addCoverage(env, accountId, conn.id, pts.filter((p) => p > t - 7 * DAY));
+      if (a) await addCoverage(env, accountId, conn.id, pts.filter((p) => p > t - 7 * DAY));
     }
   }
 
@@ -168,7 +168,7 @@ export async function sync(req: Request, env: Env, ctx: Ctx): Promise<Response> 
   for (const [key, a] of keyToAccount) {
     const row = await env.DB.prepare('SELECT history_cursor FROM trading_accounts WHERE id = ?').bind(a.id).first<{ history_cursor: string | null }>();
     cursors[key] = row?.history_cursor ?? null;
-    accountOut.push({ key, id: a.id, state: a.not_enforced ? 'not_enforced' : 'active', last3: a.last3 });
+    accountOut.push({ key, id: a.id, state: 'active', last3: a.last3 });
   }
   return json({
     status: 'ok',
@@ -377,7 +377,7 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
 export async function signedBlock(env: Env, uc: UserCtx, connectionId: string): Promise<{ payload: string; sig: string; hash: string }> {
   const accounts: Record<string, unknown> = {};
   for (const a of uc.accounts) {
-    accounts[a.id] = { platform: a.platform, last3: a.last3, nickname: a.nickname, enforced: !a.not_enforced, currency: a.currency };
+    accounts[a.id] = { platform: a.platform, last3: a.last3, nickname: a.nickname, enforced: true, currency: a.currency };
   }
   const ver = Math.max(0, ...Object.values(uc.asm.lockedValues));
   const lockAt = uc.user.setup_mode && uc.user.first_on_at ? autoLockAt(uc.userResets, uc.user.first_on_at) : null;
@@ -396,7 +396,7 @@ export async function signedBlock(env: Env, uc: UserCtx, connectionId: string): 
     plan: uc.asm.plan,
     time: resolvedTime(uc),
     accounts,
-    license: { state: uc.license.state, validUntil: uc.license.validUntil, enforcing: uc.license.enforcing, trialEndsAt: uc.license.trialEndsAt ?? null },
+    license: { state: uc.license.state, validUntil: uc.license.validUntil, enforcing: uc.license.enforcing },
     pending: uc.asm.pending,
   });
   return { payload, sig: await sign(env.SIGNING_KEY, payload), hash: await sha256(payload) };

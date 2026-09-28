@@ -127,10 +127,9 @@ export function AccountPage({ me, reload }: PageProps) {
   }
 
   const planLine =
-    lic.state === 'trial' ? (lic.trialDay ? `Trial · day ${lic.trialDay} of 14 · ends ${time(lic.trialEndsAt ?? lic.validUntil)}` : 'Trial · starts when your first device turns on')
-      : lic.state === 'active' ? `${me.user.planKind === 'earlybird_yearly' ? 'Early-bird yearly' : me.user.planKind === 'monthly' ? 'Monthly' : 'Yearly'} · ${me.user.cancelAtPeriodEnd ? 'ends' : 'renews'} ${time(lic.validUntil)}`
-        : lic.state === 'past_due' ? `Payment failed · protection until ${time(lic.validUntil)}`
-          : 'Plan ended · rules saved for 90 days';
+    lic.state === 'active' ? `${me.user.planKind === 'earlybird_yearly' ? 'Early-bird yearly' : me.user.planKind === 'monthly' ? 'Monthly' : 'Yearly'} · ${me.user.cancelAtPeriodEnd ? 'ends' : 'renews'} ${time(lic.validUntil)}`
+      : lic.state === 'past_due' ? `Payment failed · protection until ${time(lic.validUntil)}`
+        : "Free · 1 trading account · TradingView Paper Trading doesn't count";
 
   return (
     <div className="stack">
@@ -147,9 +146,7 @@ export function AccountPage({ me, reload }: PageProps) {
             {me.user.refundable && <button className="link small" onClick={() => setSheet('refund')}>Request a full refund</button>}
             {!me.user.cancelAtPeriodEnd && <button className="link small" onClick={() => setSheet('cancel')}>Cancel plan</button>}
           </div>
-        ) : (
-          <a className="btn primary" href="/plans" onClick={onLink}>See plans</a>
-        )}
+        ) : null}
       </div>
       {sheet && (
         <Sheet label="Plan" onClose={() => setSheet(null)}>
@@ -271,7 +268,7 @@ export function AccountPage({ me, reload }: PageProps) {
               ? 'Deleted now.'
               : `Deleted at ${time(deleting.at)}. DisciplineGuard is a commitment tool, so deletion waits like a loosening. Your plan is cancelled now, and you won't be charged again.`}
           </p>
-          <p className="small muted">Deleted: your rules, notes, trades, pauses and devices. Kept: receipts at the payment provider, and a record that your email and trading accounts used a trial (12 months).</p>
+          <p className="small muted">Deleted: your rules, notes, trades, pauses and devices. Kept: receipts at the payment provider.</p>
           <p className="small">Before you go: export your data, then uninstall DisciplineGuard for Windows.</p>
           <label className="field">
             Type DELETE to confirm

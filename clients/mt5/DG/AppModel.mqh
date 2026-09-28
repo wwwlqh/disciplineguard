@@ -194,7 +194,7 @@ bool Enforcing(const long now)
    if(!gCacheOk || !Linked() || gOffReason != "") return false;
    if(!PBool("license.enforcing")) return false;
    if(PlanExpired(now)) return false;
-   if(gAcctId == "" || gAcctState == "new" || gAcctState == "cap" || gAcctState == "not_enforced") return false;
+   if(gAcctId == "" || gAcctState == "new" || gAcctState == "cap") return false;
    if(!PValid("accounts." + gAcctId)) return false;           // removed on the website
    return PBool("accounts." + gAcctId + ".enforced", true);
   }
@@ -208,12 +208,10 @@ string OffLine(const long now)
    if(gCacheOk && !PBool("license.enforcing"))
      {
       string st = PStr("license.state");
-      if(st == "ended") return "Off · " + (PValid("license.trialEndsAt") ? "trial" : "plan") + " ended · Orders go through normally · Plans: " + DG_SITE + "/plans";
       return "Off · Orders go through normally · Plans: " + DG_SITE + "/plans";
      }
    if(PlanExpired(now)) return "Off · Can't confirm your plan · Orders go through normally";
-   if(gAcctState == "not_enforced") return "Off · this account already used a free trial with another login";
-   if(gAcctState == "cap") return "Off · Account limit reached · Orders go through normally";
+   if(gAcctState == "cap") return "Off · The free plan covers 1 account · Orders go through normally";
    if(gAcctState == "new") return "Off · New account, not protected yet · Orders go through normally";
    if(gAcctId != "" && gCacheOk && !PValid("accounts." + gAcctId)) return "Off · This account was removed · Orders go through normally";
    return "Off · Orders go through normally";

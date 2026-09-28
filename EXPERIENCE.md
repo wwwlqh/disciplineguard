@@ -82,14 +82,14 @@ These rules apply to product copy about the trader or their trades.
 | Extension: status pill and mini panel | P1 | Ambient status while trading |
 | Extension: toolbar popup | P1 | Status, today, practice pause, help |
 | Extension: pause and its states | P1 | The core moment |
-| Extension: banners and notices | P1 | Off, Needs attention, trial ending, unguarded trade |
+| Extension: banners and notices | P1 | Off, Needs attention, account limit, unguarded trade |
 | Windows app: sign-in, Protect, tray | P1 | Set up MT with no files, settings or codes. Keep the EA updated |
 | MT EA: panel, result line, details | P1 (MT5). MT4 in P2 if demand, or P1B if the P0 gate moves it | Trade and see today's status |
 | MT EA: setup checklist | P1 | Shown only while something needs fixing |
 | MT EA: pause | P1 | The core moment |
 | Windows notifications | P1 | Alerts and summaries, from the Windows app. No bot to link |
 | Partner invite page (web) | P2 | Explain before Telegram |
-| Email | P1 | Sign-in, setup link, trial, renewal, security, deletion |
+| Email | P1 | Sign-in, setup link, renewal, security, deletion |
 | Internal: page-config editor and health monitor | P1 | Fix TradingView changes |
 | Internal: support console (read-only, never shows notes) | P1 | Help users without seeing private content |
 
@@ -101,7 +101,7 @@ These rules apply to product copy about the trader or their trades.
 |---|---|---|
 | Home | P0 waitlist, P1 beta, P2 launch | "Lockout tools act after your limit. DisciplineGuard pauses you at the click." The three trust lines. A picture of a pause. In P1: "Join the beta" with the invite waves explained |
 | How it works | P1 | Rules → pause with your note → skip or place anyway. Tighten now, loosen later. Closing is never paused |
-| Pricing | P1 | Monthly and yearly. 14-day trial from your first connection. 14-day refund. Early-bird for beta users |
+| Pricing | P1 | Free: 1 trading account, every rule, no card. TradingView Paper Trading not counted. Paid plans for more accounts later |
 | Platforms | P1 | What works where, in plain words: TradingView in Chrome and Edge only (not Safari, not the Desktop app, not the phone); MT5 on Windows; MT5 on Mac (status from spike Q9); MT4 (P2); what happens to phone trades; which TradingView paths are paused and which aren't yet; what DisciplineGuard can't see |
 | What we see | P1 | "Our code is public" with a link to the client source on GitHub (the EA, the Windows app and the rules engine; the extension once built). Two columns. "We see": counts, daily P/L totals, symbol/side/size of paused orders, broker or server name, last 3 digits of accounts. "We never see": passwords, full account numbers, other websites. Notes, plans and reasons never go to analytics or partners |
 | Help center | P1 | `/help`: one short article per status reason and per setup step. The EA's Help names the article for its current status |
@@ -161,7 +161,6 @@ Top to bottom:
 1. **Devices strip**: one row per device and account with its status (§8): "Chrome · TradingView · OANDA …821 · On · seen 20 s ago".
 2. **Banners** as relevant:
    - setup mode, with its lock time and "Lock my rules";
-   - trial ("Trial · day 4 of 14");
    - "Max size not set for Tradovate …789";
    - account connected to another login.
 3. **Today's meters**:
@@ -236,7 +235,7 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
   - Troubleshooting: "My MetaTrader isn't listed" (Browse to it) · antivirus · "I use a VPS" (install the app there too) · MT4 history setting.
   - A 30-second video.
 - **New account notice**: "MT5 · FTMO-Server3 · …123 connected from DESKTOP-4F2 just now. [Not mine]".
-- **Account states**: Active · Not seen since <date> · **Ended** · Not enforced ("This account already used a free trial with another login. Subscribe to protect it.").
+- **Account states**: Active · Not seen since <date> · **Ended**.
 - **Same account on two platforms**: "Is this the same account as MT5 …456? Connect it in one place only."
 - **Remove**:
   - An Ended account: immediate. "Removed. Slot freed."
@@ -275,7 +274,7 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
 
 - **Alerts** (§5.9).
 - **Plan**:
-  - status ("Trial · day 4 of 14", or the renewal date);
+  - status ("Free · 1 trading account · TradingView Paper Trading doesn't count", or the renewal date);
   - change plan, cancel, request a refund;
   - the billing portal.
 - **Privacy**:
@@ -323,7 +322,7 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
   - today's meters, pending changes, detected accounts, next reset;
   - Take a break, Done for today;
   - practice pause, help, report a problem.
-- In the last 3 days of the trial the pill says "Trial ends Thu 00:00". An hour before protection ends: "Protection ends at 00:00 tonight."
+- On a paid plan, an hour before protection ends: "Protection ends at 00:00 tonight."
 
 ### 6.4 Toolbar popup
 
@@ -342,8 +341,7 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
 | Account Manager unreadable | Needs attention: "Open the Account Manager once today so we can check your orders." |
 | Trade placed through an unguarded path | "That trade came from the DOM, which can't be paused yet. It still counts." |
 | New broker account | "New account: OANDA …821. Max position size? [0.5] units [Set] · Not now". A first value applies now |
-| Not enforced | Off: "This account already used a free trial with another login. Orders go through normally. [See plans]" |
-| Trial or plan ended | A one-time card at the first visit after the end: "Your trial ended at 00:00. Trades are no longer paused. Your rules are saved until 25 Dec. [See plans]" |
+| Account limit | Off: "Off · Account limit. The free plan covers 1 trading account. Paper Trading doesn't count. Remove the other account on disciplineguard.com/devices. Orders go through normally." |
 | Signing out while offline | "Signing out when back online. Protection stays on until then." |
 
 ---
@@ -412,8 +410,7 @@ When everything passes: "On. Try a practice pause."
 |---|---|
 | Secondary instance | "On (panel only). Another chart is doing the counting." |
 | Outside trade went past a rule | A quiet card: "A trade placed outside DisciplineGuard went past your 'Daily loss limit'. It counts toward today." |
-| Protection ended | "Off · trial ended · Orders go through normally · Plans: disciplineguard.com/plans" (text, since the EA can't open links). The panel keeps working as a plain panel with the calculator |
-| Not enforced | "Off · this account already used a free trial with another login" |
+| Account limit | "Off · The free plan covers 1 account · Orders go through normally" |
 | Built-in VPS migration | "Off · Can't run on MetaQuotes' built-in VPS. Use your terminal or your own VPS." |
 
 ### 7.6 Designing within MT limits
@@ -435,7 +432,7 @@ Each state has one indicator, one reason line and one action. The same words app
 | **On (offline)** | Accent dot with an offline mark | "App not running. Rules from 10:42 apply." · "Using rules saved at 10:42. Can't reach our server." After 24 h: "Offline since yesterday 10:42. Rules are still on." | Retry |
 | **Setting up** | Blue dot | "Restart MetaTrader to finish setup" · "Tick this MetaTrader in the DisciplineGuard app" | Show me how |
 | **Needs attention** | Amber dot | "Algo Trading is off, so the panel can't place trades" · "Open the Account Manager once today" · "DisciplineGuard can't read this page" · "Sign in again. Your saved rules still apply." | A specific fix |
-| **Off** | Grey dot with a slash | "TradingView changed. Orders go through normally while we update DisciplineGuard." · "Trial ended" · "Signed out" · "Can't confirm your plan" · "This account already used a free trial" | A specific action |
+| **Off** | Grey dot with a slash | "TradingView changed. Orders go through normally while we update DisciplineGuard." · "Account limit" · "Signed out" · "Can't confirm your plan" | A specific action |
 | **Not running** | Grey dot | "MT5 on FTMO …123 is closed" (normal at the end of the day) | — |
 
 Rules:
@@ -474,7 +471,7 @@ Rules:
     - **MT only**, when the fix is the only thing left: "Place at <fix> lots" (the largest size that keeps the position within the limit) or "Add stop loss".
 14. **Footer**, small: "Closing, moving SL/TP and cancelling orders are never paused. To close a position, skip first."
 
-Never inside the pause: upsells, trial banners, surveys or ratings requests.
+Never inside the pause: upsells, plan banners, surveys or ratings requests.
 
 ### 9.2 Headlines and way-out lines
 
@@ -649,19 +646,17 @@ A [Stop] button is always available.
 
 ---
 
-## 13. Trial, paywall, cancellation and deletion
+## 13. Free plan, paid plans, cancellation and deletion
 
-### 13.1 Trial
+### 13.1 Free plan
 
-- "Trial · day 4 of 14" on Today. The trial starts when the first device is On.
-- In the last 3 days: "Trial ends Thu 00:00" on the pill, the EA status line, Today and in an email.
-- One moment everywhere: the trial ends at the first day reset after 14 days, and protection stops then. Emails, banners and the pill all state that time.
-- 60 minutes before: "Protection ends at 00:00 tonight."
-- After it ends: a one-time card on each platform (§6.5, §7.5).
+- Free for everyone, no end date: 1 trading account, every rule. TradingView Paper Trading doesn't count.
+- Account: "Free · 1 trading account · TradingView Paper Trading doesn't count". No banners, countdowns or upsells.
+- A second account gets the account-limit line on its platform (§6.5, §7.5) and the help article.
 
-### 13.2 Paywall and plans
+### 13.2 Paid plans (not linked from the product yet)
 
-**Recap**, from the trader's own counts only: "In your trial: 11 pauses. You skipped 4 trades. You kept your rules on 8 of the 10 days you traded. Your most frequent pause: cooldown after a loss."
+**Recap**, from the trader's own counts only: "So far: 11 pauses. You skipped 4 trades. You kept your rules on 8 of the 10 days you traded. Your most frequent pause: cooldown after a loss."
 
 **Plans**
 

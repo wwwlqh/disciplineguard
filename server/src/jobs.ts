@@ -1,10 +1,9 @@
-// Cron every 5 minutes: due jobs, trial emails and retention purges (SPEC §10.2, §13.3).
+// Cron every 5 minutes: due jobs and retention purges (SPEC §10.2, §13.3).
 import { DAY, HOUR } from '@dg/core';
 import { offCheck, rollup, sendSummary, type AlertKind } from './alerts.ts';
 import { renewalReminder } from './billing.ts';
 import { runDeletion } from './data.ts';
-import { audit, scheduleJob, sendEmail, type Ctx } from './common.ts';
-import { userCtx } from './context.ts';
+import { audit, sendEmail, type Ctx } from './common.ts';
 import { now as clock, type Env } from './env.ts';
 
 function fmtUtc(t: number): string {
@@ -37,39 +36,11 @@ async function runJob(env: Env, job: { id: number; kind: string; payload: string
       return renewalReminder(env, p, ctx);
     case 'delete_account':
       return runDeletion(env, p, ctx);
-    case 'trial_3days':
-    case 'trial_ended': {
-      const uc = await userCtx(env, p.userId, t);
-      if (uc.license.state !== 'trial' && job.kind === 'trial_3days') return;
-      if (uc.user.plan_state === 'active') return;
-      const end = uc.license.trialEndsAt ?? uc.license.validUntil;
-      const subject = job.kind === 'trial_3days' ? 'DisciplineGuard: your trial ends in 3 days' : 'DisciplineGuard: your trial ended';
-      const text =
-        job.kind === 'trial_3days'
-          ? `Your trial ends at ${fmtUtc(end)}. Protection stops then. Plans: ${env.APP_URL}/account\n\nDisciplineGuard`
-          : `Your trial ended at ${fmtUtc(end)}. Trades are no longer paused. Your rules are saved for 90 days. Plans: ${env.APP_URL}/account\n\nDisciplineGuard`;
-      await sendEmail(env, uc.user.email, subject, text, ctx);
-      return;
-    }
-  }
-}
-
-/** Schedules the trial emails once the trial end is known (the first connection reached On). */
-export async function scheduleTrialEmails(env: Env): Promise<void> {
-  const t = clock(env);
-  const { results } = await env.DB.prepare("SELECT id FROM users WHERE plan_state = 'trial' AND first_on_at IS NOT NULL AND deleted_at IS NULL AND first_on_at > ?").bind(t - 20 * DAY).all<{ id: string }>();
-  for (const u of results) {
-    const uc = await userCtx(env, u.id, t);
-    const end = uc.license.trialEndsAt;
-    if (!end) continue;
-    await scheduleJob(env, 'trial_3days', `trial_3days:${u.id}`, end - 3 * DAY, { userId: u.id });
-    await scheduleJob(env, 'trial_ended', `trial_ended:${u.id}`, end, { userId: u.id });
   }
 }
 
 export async function runScheduled(env: Env, ctx: Ctx): Promise<{ ran: number }> {
   const t = clock(env);
-  await scheduleTrialEmails(env);
   const { results } = await env.DB.prepare('SELECT id, kind, payload FROM jobs WHERE done_at IS NULL AND run_at <= ? ORDER BY run_at LIMIT 50').bind(t).all<any>();
   for (const job of results) {
     try {

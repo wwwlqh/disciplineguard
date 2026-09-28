@@ -78,8 +78,7 @@ function planPaid(uc: UserCtx): boolean {
 function accountView(a: AccountRow, uc: UserCtx) {
   const r5 = uc.asm.rules.accounts[a.id]?.r5Max;
   let state = 'active';
-  if (a.not_enforced) state = 'not_enforced';
-  else if (isEnded(a, uc.now)) state = 'ended';
+  if (isEnded(a, uc.now)) state = 'ended';
   else if (!a.last_seen || uc.now - a.last_seen > DAY) state = 'not_seen';
   return {
     id: a.id, platform: a.platform, last3: a.last3, nickname: a.nickname, server: a.server_name, broker: a.broker, firm: a.firm,
@@ -302,7 +301,6 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
 
   const gaps = [];
   for (const a of uc.accounts) {
-    if (a.not_enforced) continue;
     const firstSeen = Math.max(day.start, a.created_at);
     for (const g of await coverageGaps(env, a.id, firstSeen, t)) {
       const trades = outside.filter((o) => o.account_id === a.id && o.t >= g.from && o.t < g.to).length;

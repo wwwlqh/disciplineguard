@@ -24,11 +24,9 @@ export async function api<T = any>(method: string, path: string, body?: unknown)
 }
 
 export interface License {
-  state: 'trial' | 'active' | 'past_due' | 'ended' | 'deleted';
+  state: 'free' | 'active' | 'past_due' | 'deleted';
   validUntil: number;
   enforcing: boolean;
-  trialEndsAt?: number;
-  trialDay?: number;
 }
 
 export interface Account {
@@ -42,7 +40,7 @@ export interface Account {
   currency: string | null;
   netting: boolean;
   demo: boolean;
-  state: 'active' | 'not_seen' | 'ended' | 'not_enforced';
+  state: 'active' | 'not_seen' | 'ended';
   lastSeen: number | null;
   r5Set: boolean;
   removalAt: number | null;

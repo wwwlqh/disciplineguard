@@ -186,7 +186,7 @@ export async function lemonWebhook(req: Request, env: Env, ctx: Ctx): Promise<Re
       }
     } else if (status === 'expired') {
       await env.DB.prepare("UPDATE users SET plan_state = 'ended', paid_until = ? WHERE id = ?").bind(Number.isFinite(ends) ? ends : t, userId).run();
-      await sendEmail(env, uc.user.email, 'DisciplineGuard: plan ended', `Your plan ended. Trades are no longer paused. Your rules are saved for 90 days. Plans: ${env.APP_URL}/plans\n\nDisciplineGuard`, ctx);
+      await sendEmail(env, uc.user.email, 'DisciplineGuard: plan ended', `Your plan ended. You're on the free plan now: protection stays on for 1 account. Plans: ${env.APP_URL}/plans\n\nDisciplineGuard`, ctx);
     }
   }
   if (name === 'subscription_payment_refunded' || name === 'order_refunded') {

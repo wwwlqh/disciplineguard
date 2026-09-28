@@ -19,7 +19,7 @@ long     gLimitSentDay = DG_NONE;
 string   gOutsideCard = "";          // "A trade placed outside DisciplineGuard went past …"
 ulong    gOutsideCardTick = 0;
 
-bool Tracking() { return gPrimary && Linked() && gCursorLoaded && gAcctId != "" && (gAcctState == "active" || gAcctState == "not_enforced"); }
+bool Tracking() { return gPrimary && Linked() && gCursorLoaded && gAcctId != "" && gAcctState == "active"; }
 
 bool Seen(const ulong d) { for(int i = 0; i < ArraySize(gSeen); i++) if(gSeen[i] == d) return true; return false; }
 

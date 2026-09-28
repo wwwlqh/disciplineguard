@@ -743,7 +743,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 | Reason | Behavior |
 |---|---|
 | `REASON_CHARTCHANGE`, `REASON_PARAMETERS`, `REASON_RECOMPILE` | Keep state. No protection-off. An open pause ends as a skip with reason `reinit`. The next init draws the panel first; the first sync runs from the timer |
-| `REASON_ACCOUNT` | Register the new trading account (cap and trial checks) |
+| `REASON_ACCOUNT` | Register the new trading account (cap check) |
 | `REASON_REMOVE`, `REASON_CHARTCLOSE`, `REASON_TEMPLATE` | Queue a protection-off event and hand it to the bridge; the Windows app sends it after the chart is gone |
 | `REASON_CLOSE` | Nothing (closing the terminal is normal; the status is Not running) |
 
@@ -827,7 +827,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 - Job kinds:
   - setup-mode auto-lock and its notice;
   - scheduled deletion, account removal and connection removal;
-  - trial and renewal emails;
+  - renewal emails;
   - plan state changes;
   - end-of-session summaries (keyed by user and trading day);
   - partner digests;
@@ -911,7 +911,6 @@ A trader installs at most one thing per kind of platform, never one per platform
 | Active | Seen by a connection in the current or previous trading day |
 | Not seen | Not seen for a full trading day, but not Ended |
 | **Ended** | Trading disabled by the broker (`ACCOUNT_TRADE_ALLOWED` false), or no heartbeat and no entries for 3 full trading days. Removing an Ended account is immediate and frees its slot |
-| Not enforced | Connected, but it already had a trial under another user and this user is not on a paid plan (§12.5) |
 
 ### 10.8 Data model (structure)
 
@@ -1038,30 +1037,27 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 ## 12. Plans and billing
 
-### 12.1 Trial
+### 12.1 Free plan
 
-- 14 days, starting when the user's **first connection reaches On**, and ending at the first **user day reset** after those 14 days.
-- If no connection reaches On within 21 days of sign-up, the trial runs from sign-up and ends at the first reset after day 21.
-- No card needed.
+- **Free for everyone, with no end date**: every rule, on 1 trading account (§12.5). No trial and no card.
+- Paid plans (for more accounts) come later, priced by the number of accounts. Until then `/plans` is not linked from the product; the billing code below stays for existing and future paid users.
 
 ### 12.2 Plan states
 
 | State | Enforcement | Banner |
 |---|---|---|
-| Trial | On | Last 3 days, on the pill, the EA status line and Today: "Trial ends Thu 00:00" |
+| Free | On | None |
 | Active | On | None |
 | Past due (payment failed) | On until the first user day reset at least 3 days after the failure | "Payment failed. Update your card." |
-| Ended (trial or paid period over) | Off from the first user day reset at or after the end. A trial ends at a reset (§12.1), so protection stops at the trial end itself | "Off: trial ended" or "Off: plan ended" |
 
+- When a paid period ends (expired, refunded, charged back or cancelled by the provider), the user is back on Free. Protection stays on; accounts already connected stay connected, and new ones are checked against the free cap.
 - **`valid_until`** is the instant protection ends if nothing changes:
-  - the trial end;
+  - on Free, the first user day reset at least 30 days ahead, rolling forward with each sync;
   - the end of the paid period, moved to the next user day reset;
   - when past due, the reset at which enforcement ends.
 
-  Every sync carries it.
-- **A trial or plan ending never turns protection off in the middle of a trading day** (between two user day resets). The one exception is a refund, chargeback or cancellation by the payment provider (below).
-- The claim "never mid-session" is not made, because sessions can cross the reset. Instead, a notice shows 60 minutes before: "Protection ends at <time>."
-- **Refund, chargeback or cancellation by the payment provider**: protection stays on until `max(next user day reset, event + 12 h)`, like a loosening. From Phase 2 the partner is told.
+  Every sync carries it. Clients keep enforcing until `valid_until` + 7 days without a sync (§10.5).
+- The only state with protection off is a deleted account.
 - **Paying after the end, or mid-session**:
   - protection resumes at once with the last active rules;
   - today's entries count;
@@ -1083,11 +1079,14 @@ A trader installs at most one thing per kind of platform, never one per platform
 - **Refund**: a full refund on request within 14 days of a first payment (Account → Plan → Request a full refund; the founder refunds it at the provider). After that, cancelling stops the next renewal.
 - **Cancel**: applies immediately (§6.2). Protection runs to the end of the paid period. No questions asked.
 
-### 12.5 Trial abuse and account cap
+### 12.5 Account caps
 
-- **One trial per email.** For trial checks, emails are lowercased, `+tags` are stripped, and dots are removed for `gmail.com` and `googlemail.com`.
-- **One trial per MT or TradingView account.** A trading account already used in another user's trial can be connected, but it is **Not enforced** until this user is on a paid plan. It says so on every surface. TradingView Paper Trading accounts are never matched.
-- **Cap**: 10 connected trading accounts, Ended ones included. Removing an Ended account is immediate and frees its slot (§10.7). The cap message: "You've reached 10 accounts. Remove an account to add this one. Ended accounts are removed at once."
+- **Free**: 1 connected trading account across MT and TradingView. TradingView Paper Trading accounts are not counted. MT demo accounts are counted, since prop firm challenges run on them.
+- **Paid**: 10 connected trading accounts.
+- Both count Ended accounts and accounts waiting for removal. Removing an Ended account is immediate and frees its slot (§10.7).
+- An account over the cap is not connected, and orders on it go through normally. The EA says "Off · The free plan covers 1 account", the TradingView pill says "Off · Account limit", and the help article says to remove the other account on Devices.
+- Existing accounts over the cap when this took effect (28 Sep 2026) stay connected.
+- The same trading account under another login moves to the new login (§10.6), so it can't be protected twice for free.
 
 ### 12.6 Account deletion
 
@@ -1104,7 +1103,6 @@ A trader installs at most one thing per kind of platform, never one per platform
 - Sign-in link and code.
 - Setup link for a computer (phone hand-off).
 - "Your rules lock at <time>" (setup mode ending).
-- Trial ends in 3 days, and trial ended, both with the exact time protection ends.
 - Payment failed.
 - Receipts (from the provider).
 - Yearly renewal reminder 30 days before renewal.
@@ -1137,7 +1135,6 @@ A trader installs at most one thing per kind of platform, never one per platform
 | Raw events | 90 days, then daily aggregates |
 | Coverage and health events | 30 days (aggregates kept) |
 | Protection-off and alert logs | 90 days |
-| Account HMACs + last 3 characters (trial checks) | 12 months after deletion |
 | Support reports | 12 months |
 | Partner Telegram data | 7 days after leaving, decline, block or removal |
 | Unaccepted partner invites | Expire after 7 days |
@@ -1392,13 +1389,12 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 | COV-02 | Desktop EA stopped, VPS EA running on A | Outside entry | Not protection-off |
 | COV-03 | Extension uninstalled | No heartbeat within 10 min | Protection-off confirmed. Partner alerted (P2) |
 | COV-04 | Extension uninstalled and reinstalled within 5 min | — | No partner alert |
-| SUB-01 | First connection On Wednesday 15:00 | 14 days later | Protection stays on until Thursday 00:00 (the first reset after 14 days). Notice at 23:00 |
-| SUB-02 | Signed up, never connected | Day 21 | Trial ends at the next reset |
-| SUB-03 | MT account used in another user's trial | Connected during this user's trial | Not enforced. Says so on every surface |
-| SUB-04 | 10 accounts, none Ended | Connect an 11th | Refused with the cap message |
+| SUB-01 | Free user, first connection On | Any day later | Protection stays on; `valid_until` is at least 30 days ahead |
+| SUB-02 | Signed up, never connected | Day 25 | Still Free and enforcing |
+| SUB-03 | Free, 1 MT account connected | Protect a second MT account; connect TradingView Paper Trading | The second is refused with the cap; Paper Trading connects |
+| SUB-04 | Paid, 10 accounts, none Ended | Connect an 11th | Refused with the cap message |
 | SUB-05 | 10 accounts, 2 Ended | Connect a new one | Allowed after removing an Ended one (immediate) |
-| SUB-06 | Chargeback at 20:00 | — | Protection until 08:00 next day (the later of the 00:00 reset and 20:00 + 12 h) |
-| SUB-07 | Plan ended yesterday. 6 entries today, R1 max 5 | Pays at 11:00, entry at 11:10 | R1 (today's entries count) |
+| SUB-06 | Paid, chargeback at 20:00 | — | Back on Free; protection stays on |
 | ALR-01 | Partner, amounts not shared | Place anyway on R8 | Partner real-time message without counts or amounts |
 | ALR-02 | Partner | Place anyway on R1 | In the partner digest, not real time |
 | ALR-03 | Partner | 4 unclassified orders | Trader told. Partner never |

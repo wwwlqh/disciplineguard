@@ -67,7 +67,7 @@ export function Plans({ me, reload }: PageProps) {
       )}
       {r && r.daysTraded + r.pauses > 0 && (
         <div className="card">
-          <h2>{lic.state === 'trial' || !me.user.planKind ? 'In your trial' : 'So far'}</h2>
+          <h2>So far</h2>
           <p>
             {plural(r.pauses, 'pause')}. You skipped {plural(r.skipped, 'trade')}. You kept your rules on {r.daysKept} of the {plural(r.daysTraded, 'day')} you traded.
             {r.topRule && ` Your most frequent pause: ${(RULE_NAMES[r.topRule as TitleId] ?? r.topRule).toLowerCase()}.`}

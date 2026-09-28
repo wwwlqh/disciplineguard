@@ -184,6 +184,10 @@ async function register(account: TvAccount): Promise<void> {
       terminalId, kind: 'tv', server: account.broker, login: account.login, broker: account.broker, currency: account.currency, demo: /paper/i.test(account.broker), version: VERSION,
     });
     if (r.status === 401) s.appToken = undefined;
+    const cache = await getCache();
+    const capped = (cache.capped ?? []).filter((x) => x !== k);
+    if (r.status === 409 && r.data?.error === 'account_cap') capped.push(k);
+    await setCache({ ...cache, capped });
     if (r.status !== 200) return;
     s.links[k] = { token: r.data.token, connectionId: r.data.connectionId, terminalId, account };
   });

@@ -69,7 +69,6 @@ export async function ownerMetrics(req: Request, env: Env): Promise<Response> {
   const paidEarly = await one("SELECT COUNT(DISTINCT user_id) FROM payments WHERE plan_kind = 'earlybird_yearly' AND type IN ('subscription_created', 'order_created')");
   const paidList = await one("SELECT COUNT(DISTINCT user_id) FROM payments WHERE plan_kind IN ('yearly', 'monthly') AND type IN ('subscription_created', 'order_created')");
   const byCountry = await q("SELECT COALESCE(country, '?') AS country, COUNT(DISTINCT user_id) AS n FROM payments WHERE type IN ('subscription_created', 'order_created') GROUP BY country ORDER BY n DESC LIMIT 20");
-  const trialsEnded = users.filter((u) => u.first_on_at && t > u.first_on_at + 14 * DAY).length;
 
   const reports = await q("SELECT type, COUNT(*) AS n FROM problem_reports GROUP BY type ORDER BY n DESC");
   const active7 = await one(`SELECT COUNT(DISTINCT user_id) FROM connections WHERE last_seen >= ?`, t - 7 * DAY);
@@ -94,8 +93,8 @@ export async function ownerMetrics(req: Request, env: Env): Promise<Response> {
     },
     retention: { eligible: eligibleForRetention, retained, rate: pct(retained, eligibleForRetention), keptOnNotWorking },
     payment: {
-      trialsEnded, paidUsers, paidEarlyBird: paidEarly, paidList,
-      trialToPaid: pct(paidUsers, trialsEnded), activatedToPaid: pct(paidUsers, activated.length), byCountry,
+      paidUsers, paidEarlyBird: paidEarly, paidList,
+      activatedToPaid: pct(paidUsers, activated.length), byCountry,
     },
     speed: { panelEntries, delayedClicks: delayed, delayedShare: pct(delayed, panelEntries) },
     support: { reports, activeUsers7d: active7, per100: active7 ? Math.round((reports.reduce((a: number, b: any) => a + b.n, 0) / active7) * 1000) / 10 : null },

@@ -338,12 +338,15 @@ function pillView(): PillView | undefined {
   if (!c || c.status === 'signed_out') return { tone: 'off', text: 'Off · Signed out', lines: ['Orders go through normally.', 'Sign in from the DisciplineGuard toolbar button.'], actions: false };
   const account = readAccount();
   const acct = account && c.accounts[accountKey(account)];
+  if (account && !acct && c.capped?.includes(accountKey(account))) {
+    return { tone: 'off', text: 'Off · Account limit', lines: ['The free plan covers 1 trading account. Paper Trading doesn’t count.', 'Remove the other account on disciplineguard.com/devices. Orders go through normally.'], actions: false };
+  }
   if (!account || !acct || !c.signed) {
     return { tone: 'setup', text: 'Setting up', lines: ['Connect your broker in TradingView’s trading panel to turn on protection.'], actions: false };
   }
   const where = `${account.broker} …${acct.last3}`;
   if (c.status === 'attention') return { tone: 'attention', text: 'Needs attention', lines: ['Sign in again. Your saved rules still apply.', where], actions: false };
-  if (!acct.enforced) return { tone: 'off', text: 'Off', lines: ['This account already used a free trial with another login. Orders go through normally.'], actions: false };
+  if (!acct.enforced) return { tone: 'off', text: 'Off', lines: ['This account isn’t protected. Orders go through normally.'], actions: false };
   if (!c.signed.license.enforcing) return { tone: 'off', text: 'Off · Plan ended', lines: ['Trades are no longer paused. Orders go through normally.'], actions: false };
 
   const s = c.signed;

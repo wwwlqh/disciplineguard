@@ -12,7 +12,6 @@ const STATE_LABEL: Record<string, string> = {
   active: 'Active',
   not_seen: 'Not seen',
   ended: 'Ended',
-  not_enforced: 'Not enforced',
 };
 
 export function Devices({ me, reload }: PageProps) {
@@ -84,7 +83,6 @@ export function Devices({ me, reload }: PageProps) {
                   <td>
                     {STATE_LABEL[a.state]}
                     {a.state === 'not_seen' && a.lastSeen ? ` since ${date(a.lastSeen)}` : ''}
-                    {a.state === 'not_enforced' && <div className="small muted">Trial already used by another login. Subscribe to protect it.</div>}
                   </td>
                   <td className="small muted">{ago(a.lastSeen)}</td>
                   <td>

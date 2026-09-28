@@ -61,7 +61,6 @@ export interface AccountRow {
   netting: number;
   is_demo: number;
   trade_allowed: number;
-  not_enforced: number;
   created_at: number;
   last_seen: number | null;
   last_entry_at: number | null;
@@ -139,10 +138,10 @@ export async function userCtx(env: Env, userId: string, now: number): Promise<Us
   const user = await loadUser(env.DB, userId);
   const settings = await loadSettings(env.DB, userId, now);
   const asm = assemble(settings);
-  const from = Math.min(now - 3 * DAY, user.plan_state === 'trial' ? user.created_at - DAY : Infinity);
+  const from = now - 3 * DAY;
   const far = Math.min(
-    // Must reach valid_until + 8 days for resolvedTime(): paid end, trial end (≤ day 22, or first On + 15 days).
-    Math.max(now + 45 * DAY, (user.paid_until ?? 0) + 11 * DAY, user.created_at + 32 * DAY, (user.first_on_at ?? 0) + 25 * DAY),
+    // Must reach valid_until + 8 days for resolvedTime(): the paid end, or the free window (30 days).
+    Math.max(now + 45 * DAY, (user.paid_until ?? 0) + 11 * DAY),
     now + 400 * DAY,
   );
   const userResets = cachedResets(asm.reset, from, far);

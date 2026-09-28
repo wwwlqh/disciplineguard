@@ -140,7 +140,7 @@ export async function scheduleOffCheck(env: Env, userId: string, connectionId: s
 export async function offCheck(env: Env, p: { userId: string; connectionId: string; t: number }): Promise<void> {
   const conn = await env.DB.prepare('SELECT name FROM connections WHERE id = ?').bind(p.connectionId).first<{ name: string }>();
   const { results } = await env.DB.prepare(
-    'SELECT sb.account_id FROM seen_by sb JOIN trading_accounts ta ON ta.id = sb.account_id WHERE sb.connection_id = ? AND ta.removed_at IS NULL AND ta.not_enforced = 0',
+    'SELECT sb.account_id FROM seen_by sb JOIN trading_accounts ta ON ta.id = sb.account_id WHERE sb.connection_id = ? AND ta.removed_at IS NULL',
   ).bind(p.connectionId).all<{ account_id: string }>();
   let uncovered = results.length === 0;
   for (const r of results) {
@@ -209,7 +209,6 @@ export async function sendSummary(env: Env, p: { userId: string; dayStart: numbe
   // Periods DisciplineGuard was off while the trader was active (SPEC §11.2).
   if (span?.a) {
     for (const a of uc.accounts) {
-      if (a.not_enforced) continue;
       for (const g of await coverageGaps(env, a.id, Math.max(span.a, a.created_at), span.b)) {
         lines.push(`DisciplineGuard was off on …${a.last3} from ${hhmm(uc, g.from)} to ${hhmm(uc, g.to)}.`);
       }

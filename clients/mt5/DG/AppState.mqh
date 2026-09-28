@@ -437,7 +437,7 @@ void OnSyncReply(const int code, const string resp)
          string st = gSJ.Str(gSJ.Get(c, "state"));
          string id = gSJ.Str(gSJ.Get(c, "id"));
          if(st != gAcctState || id != gAcctId) { gAcctState = st; gAcctId = id; SaveAccountId(); }
-         if(st == "active" || st == "not_enforced") gProtect = false;
+         if(st == "active") gProtect = false;
         }
    // History cursor: only read once, at start.
    if(!gCursorLoaded && gAcctId != "")

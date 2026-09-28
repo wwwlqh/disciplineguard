@@ -165,21 +165,6 @@ export function Today({ me, reload }: PageProps) {
           <a className="btn primary" href="/rules?lock=1" onClick={onLink}>Lock my rules</a>
         </div>
       )}
-      {lic.state === 'trial' && lic.trialDay !== undefined && (
-        <div className={`banner ${lic.trialEndsAt && lic.trialEndsAt - d.now < 3 * 86_400_000 ? 'amber' : 'neutral'}`}>
-          <span>
-            Trial · day {lic.trialDay} of 14
-            {lic.trialEndsAt && lic.trialEndsAt - d.now < 3 * 86_400_000 ? ` · ends ${time(lic.trialEndsAt, d.now)}` : ''}
-          </span>
-          <a className="btn" href="/plans" onClick={onLink}>See plans</a>
-        </div>
-      )}
-      {lic.state === 'ended' && (
-        <div className="banner amber">
-          <span>Off: {me.user.planKind ? 'plan ended' : 'trial ended'}. Your rules are saved.</span>
-          <a className="btn primary" href="/plans" onClick={onLink}>See plans</a>
-        </div>
-      )}
       {lic.state === 'past_due' && (
         <div className="banner amber">
           <span>Payment failed. Update your card by {time(lic.validUntil, d.now)}.</span>
@@ -212,11 +197,10 @@ export function Today({ me, reload }: PageProps) {
           <ul className="list">
             {d.connections.map((c) => {
               const st = deviceStatus(c, d.now);
-              const accts = d.accounts.filter((a) => c.accounts.includes(a.id));
               return (
                 <li key={c.id} className="row between">
                   <span className="row"><Dot kind={st.kind} /> {c.name}</span>
-                  <span className="small muted">{st.label} · seen {ago(c.lastSeen, d.now)}{accts.some((a) => a.state === 'not_enforced') ? ' · an account isn\'t enforced' : ''}</span>
+                  <span className="small muted">{st.label} · seen {ago(c.lastSeen, d.now)}</span>
                 </li>
               );
             })}

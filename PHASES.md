@@ -35,7 +35,7 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 
 **Left**
 - TradingView extension (clients/extension): works on TradingView Paper Trading (spike Q1a passed 27 Sep 2026), with the pill, outside detection, closes, R8 from the Account Manager and the signed remote page config. Left: the founder's check on one real broker account, uploading the unlisted Chrome Web Store item (`clients/extension/store/listing.md`), self-tests and health events for the page config, and the coach card. MT4 if wanted.
-- The founder: Lemon Squeezy products (yearly, monthly, early-bird), their redirect to `/plans?paid`, and the secrets in server/wrangler.toml.
+- The founder, only when paid plans open: Lemon Squeezy products, their redirect to `/plans?paid`, and the secrets in server/wrangler.toml.
 
 ## Phase 2: Public launch
 
@@ -48,6 +48,7 @@ MT5 and TradingView first; other platforms wait for Phase 3.
 - Status and changelog at `/status`: a live server check; the TradingView and MT5 lines and the changelog are edited by hand in web/src/pages/Status.tsx.
 - Session check-in on Today: tighten for today only (max trades, loss limit), in the signed rules so MT5 and TradingView enforce it until the next reset. No mood question.
 - Take a break for 1, 7 or 30 days (Account): 45 s and type to confirm on MT5 and TradingView. The TradingView pause now asks for type to confirm too.
+- Free for everyone (28 Sep 2026): no trial, 1 trading account across MT5 and TradingView (Paper Trading not counted), every rule. The EA and the TradingView pill name the account limit. Paid plans priced by number of accounts come later; `/plans` and the billing code stay but aren't linked (SPEC §12).
 
 **Left** (the founder)
 - Public Chrome listing (the same store item) and an Edge listing.
