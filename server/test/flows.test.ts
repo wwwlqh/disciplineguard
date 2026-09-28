@@ -340,6 +340,19 @@ describe('accounts, coverage and plans', () => {
     expect((await web.get('/api/me')).data.accounts).toHaveLength(0);
   });
 
+  it('SUB-04: a second MT terminal over the free cap still links, and its EA is told the cap', async () => {
+    const w = new World();
+    const web = await w.signIn('a@b.co');
+    await web.connect('100');
+    const second = await web.connect('200');
+    const r = await second.sync([], {}, [{ ...second.account, protect: true }]);
+    expect(r.data.accounts[0].state).toBe('cap');
+    expect((await web.get('/api/me')).data.accounts).toHaveLength(1);
+    // TradingView over the cap is refused; the extension shows the limit itself.
+    const tv = await web.w.call('POST', '/v1/desktop/terminals', { terminalId: 'tvterm1', kind: 'tv', server: 'OANDA', login: '300' }, { authorization: `Bearer ${web.desktopToken}` });
+    expect(tv.status).toBe(409);
+  });
+
   it('SUB-04: free covers 1 account (TradingView Paper Trading not counted); a paid plan covers 10', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');

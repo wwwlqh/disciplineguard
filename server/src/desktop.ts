@@ -3,7 +3,7 @@
 import { DAY } from '@dg/core';
 import { accountHashes, registerAccount } from './accounts.ts';
 import { audit, rateLimit, securityEmail, type Ctx } from './common.ts';
-import { userCtx, type UserRow } from './context.ts';
+import { userCtx, type AccountRow, type UserRow } from './context.ts';
 import { maskEmail, randomId, sha256, token } from './crypto.ts';
 import { now as clock, type Env } from './env.ts';
 import { body, clientIp, HttpError, json, str } from './http.ts';
@@ -84,10 +84,17 @@ export async function registerTerminal(req: Request, env: Env, ctx: Ctx): Promis
   const version = typeof b.version === 'string' ? b.version.slice(0, 20) : null;
   const hashes = await accountHashes(env, { platform: kind, server, login });
   const lic = (await userCtx(env, d.user.id, t)).license.state;
-  const { account } = await registerAccount(env, d.user.id, lic === 'active' || lic === 'past_due', {
-    platform: kind, server, hashes, broker: typeof b.broker === 'string' ? b.broker.slice(0, 80) : undefined,
-    netting: !!b.netting, currency: typeof b.currency === 'string' ? b.currency.slice(0, 8) : undefined, demo: !!b.demo,
-  }, ctx);
+  let account: AccountRow | null = null;
+  try {
+    ({ account } = await registerAccount(env, d.user.id, lic === 'active' || lic === 'past_due', {
+      platform: kind, server, hashes, broker: typeof b.broker === 'string' ? b.broker.slice(0, 80) : undefined,
+      netting: !!b.netting, currency: typeof b.currency === 'string' ? b.currency.slice(0, 8) : undefined, demo: !!b.demo,
+    }, ctx));
+  } catch (e) {
+    // Over the cap: an MT terminal still links, so the EA's own sync shows "The free plan covers 1 account" (SPEC §12.5).
+    // The extension handles the 409 itself.
+    if (!(e instanceof HttpError && e.code === 'account_cap') || kind === 'tv') throw e;
+  }
   const deviceToken = token(32);
   const existing = await env.DB.prepare('SELECT id FROM connections WHERE desktop_id = ? AND install_id = ? AND removed_at IS NULL').bind(d.id, terminalId).first<{ id: string }>();
   const connId = existing?.id ?? randomId('c_');
@@ -101,7 +108,7 @@ export async function registerTerminal(req: Request, env: Env, ctx: Ctx): Promis
     await audit(env, d.user.id, 'user', 'device_connected', { connection: connId, desktop: d.id });
     await securityEmail(env, d.user.email, `${name} was connected from ${d.name}.`, req, ctx);
   }
-  await env.DB.prepare('INSERT OR IGNORE INTO seen_by (connection_id, account_id, first_seen, last_seen) VALUES (?, ?, ?, ?)').bind(connId, account.id, t, t).run();
+  if (account) await env.DB.prepare('INSERT OR IGNORE INTO seen_by (connection_id, account_id, first_seen, last_seen) VALUES (?, ?, ?, ?)').bind(connId, account.id, t, t).run();
   const known = build !== null && (env.KNOWN_BUILDS ?? '').toLowerCase().split(',').map((s) => s.trim()).includes(build);
   return json({ token: deviceToken, connectionId: connId, knownBuild: known });
 }
