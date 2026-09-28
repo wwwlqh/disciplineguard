@@ -126,7 +126,7 @@ const STATUS: Article[] = [
     title: 'Plan ended',
     body: [
       'Protection is off and orders go through normally. The panel keeps working with the lot calculator.',
-      'Subscribe on Plans (disciplineguard.com/plans). Protection comes back at once with your last rules.',
+      'Subscribe on Plans. Protection comes back at once with your last rules.',
     ],
   },
   {

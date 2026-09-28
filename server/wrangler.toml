@@ -14,18 +14,18 @@ run_worker_first = ["/v1/*", "/api/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "disciplineguard"
-database_id = "REPLACE_WITH_D1_ID"   # wrangler d1 create disciplineguard
+database_id = "03336a22-d8df-4110-98ac-e4401257acd8"
 migrations_dir = "migrations"
 
 [triggers]
 crons = ["*/5 * * * *"]
 
 [vars]
-APP_URL = "https://disciplineguard.com"
+APP_URL = "https://disciplineguard.leowqiheng.workers.dev"
 EMAIL_FROM = "DisciplineGuard <hello@disciplineguard.com>"
 
 # Secrets (wrangler secret put NAME): HMAC_SECRET, SIGNING_KEY, SIGNING_PUB, RESEND_KEY,
 # LS_WEBHOOK_SECRET, LS_API_KEY, LS_CHECKOUT_EARLYBIRD, LS_CHECKOUT_YEARLY, LS_CHECKOUT_MONTHLY,
 # LS_VARIANT_YEARLY, LS_VARIANT_MONTHLY, OWNER_EMAILS, TURNSTILE_SECRET, KNOWN_BUILDS, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
-# Google sign-in: a Google Cloud OAuth client (web application) with the redirect URI https://disciplineguard.com/v1/auth/google/callback
-# In Lemon Squeezy, set each product's redirect after purchase to https://disciplineguard.com/plans?paid
+# Google sign-in: a Google Cloud OAuth client (web application) with the redirect URI https://disciplineguard.leowqiheng.workers.dev/v1/auth/google/callback
+# In Lemon Squeezy, set each product's redirect after purchase to https://disciplineguard.leowqiheng.workers.dev/plans?paid

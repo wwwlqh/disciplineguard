@@ -6,7 +6,7 @@
 //| Windows app. See SPEC.md §9.2, §9.5 and EXPERIENCE.md §7, §9.    |
 //+------------------------------------------------------------------+
 #property copyright   "DisciplineGuard"
-#property link        "https://disciplineguard.com"
+#property link        "https://disciplineguard.leowqiheng.workers.dev"
 #property version     "0.10"
 #property description "Pauses you at the click, in your own words. The choice stays yours."
 

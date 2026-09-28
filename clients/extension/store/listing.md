@@ -26,7 +26,7 @@ DisciplineGuard holds a new TradingView order that breaks one of your rules and 
 - Works on TradingView's order panel with your broker or Paper Trading.
 - The same rules protect MetaTrader 5 through DisciplineGuard for Windows.
 
-Set your rules at disciplineguard.com. Then click Sign in in the extension and press Allow. Nothing to type.
+Set your rules at disciplineguard.leowqiheng.workers.dev. Then click Sign in in the extension and press Allow. Nothing to type.
 
 **Category**: Productivity (Tools)
 
@@ -44,7 +44,7 @@ Set your rules at disciplineguard.com. Then click Sign in in the extension and p
 | `alarms` | Syncs rules and trades every minute. |
 | `notifications` | Shows the trader's own alerts, such as daily loss limit reached. |
 | Host `tradingview.com` | Reads the order panel and Account Manager on chart pages to pause orders that break the trader's rules. |
-| Host `disciplineguard.com` | Signs in and syncs rules and trades with the trader's account. |
+| Host `disciplineguard.leowqiheng.workers.dev` | Signs in and syncs rules and trades with the trader's account. |
 
 **Remote code**: No. All code is in the package. The page config it downloads is signed data (selectors only), not code.
 
@@ -54,4 +54,4 @@ Set your rules at disciplineguard.com. Then click Sign in in the extension and p
 
 Certify all three: not sold to third parties, not used for unrelated purposes, not used for creditworthiness or lending.
 
-**Privacy policy URL**: https://disciplineguard.com/help/data
+**Privacy policy URL**: https://disciplineguard.leowqiheng.workers.dev/help/data

@@ -24,6 +24,7 @@ async function turnstileOk(env: Env, tokenValue: unknown, ip: string): Promise<b
 
 /** POST /v1/auth/email */
 export async function requestSignIn(req: Request, env: Env, ctx: Ctx): Promise<Response> {
+  if (!env.RESEND_KEY && env.DEV !== '1') throw new HttpError(503, 'email_off');
   const b = await body(req);
   const email = str(b.email, 254).trim().toLowerCase();
   if (!EMAIL_RE.test(email)) throw new HttpError(400, 'bad_email');

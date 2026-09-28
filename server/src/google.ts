@@ -32,7 +32,8 @@ function redirect(location: string, cookies: string[]): Response {
 
 /** GET /v1/auth/options: which sign-in methods the sign-in page shows. */
 export async function authOptions(_req: Request, env: Env): Promise<Response> {
-  return json({ google: on(env) });
+  // Email sign-in needs a sender (RESEND_KEY on a domain we own); without one the form is hidden.
+  return json({ google: on(env), email: !!env.RESEND_KEY || env.DEV === '1' });
 }
 
 /** GET /v1/auth/google?next=/allow?... : off to Google's account chooser. */

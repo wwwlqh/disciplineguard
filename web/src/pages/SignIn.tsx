@@ -33,9 +33,10 @@ export function SignIn({ onDone }: { onDone(): void }) {
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState<{ token: string; email: string; sameBrowser: boolean } | null>(null);
   const [google, setGoogle] = useState(false);
+  const [emailOn, setEmailOn] = useState(true);
 
   useEffect(() => {
-    api<{ google: boolean }>('GET', '/v1/auth/options').then((o) => setGoogle(o.google)).catch(() => {});
+    api<{ google: boolean; email: boolean }>('GET', '/v1/auth/options').then((o) => { setGoogle(o.google); setEmailOn(o.email); }).catch(() => {});
     if (new URLSearchParams(location.search).get('google') === 'failed') {
       setErr("Google sign-in didn't work. Try again, or use your email.");
       history.replaceState(null, '', '/signin');
@@ -100,18 +101,25 @@ export function SignIn({ onDone }: { onDone(): void }) {
                 <a className="btn" style={{ width: '100%', margin: '10px 0 4px' }} href={`/v1/auth/google?next=${encodeURIComponent(next)}`}>
                   Continue with Google
                 </a>
-                <p className="muted small" style={{ textAlign: 'center', margin: '8px 0' }}>or</p>
+                {emailOn && <p className="muted small" style={{ textAlign: 'center', margin: '8px 0' }}>or</p>}
               </>
             )}
-            <p className="muted">We'll email you a link and a code.</p>
-            <label className="field">
-              Email
-              <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            </label>
+            {emailOn && (
+              <>
+                <p className="muted">We'll email you a link and a code.</p>
+                <label className="field">
+                  Email
+                  <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </label>
+              </>
+            )}
             {err && <p role="alert" style={{ marginTop: 10 }}>{err}</p>}
-            <button className="primary" style={{ width: '100%', marginTop: 12 }} disabled={busy}>
-              Continue
-            </button>
+            {emailOn && (
+              <button className="primary" style={{ width: '100%', marginTop: 12 }} disabled={busy}>
+                Continue
+              </button>
+            )}
+            {!emailOn && !google && <p className="muted">Sign-in opens soon.</p>}
           </form>
         ) : (
           <form onSubmit={(e) => { e.preventDefault(); void run(async () => { await api('POST', '/v1/auth/verify', { email, code }); onDone(); }); }}>

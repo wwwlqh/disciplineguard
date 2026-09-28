@@ -15,7 +15,7 @@ use tauri::{AppHandle, Emitter, Manager, State, WindowEvent};
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_updater::UpdaterExt;
 
-const WEB: &str = "https://disciplineguard.com";
+const WEB: &str = "https://disciplineguard.leowqiheng.workers.dev";
 const TRAY: &[u8] = include_bytes!("../icons/tray.png");
 
 /// The server and web app. A debug build can point at a local server (`DG_API=http://127.0.0.1:8787`).

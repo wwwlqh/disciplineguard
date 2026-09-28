@@ -22,13 +22,13 @@ afterEach(() => vi.unstubAllGlobals());
 describe('Google sign-in', () => {
   it('is hidden and inert until configured', async () => {
     const w = new World();
-    expect((await w.call('GET', '/v1/auth/options')).data).toEqual({ google: false });
+    expect((await w.call('GET', '/v1/auth/options')).data).toEqual({ google: false, email: true });
     expect((await w.call('GET', '/v1/auth/google')).headers.get('location')).toBe('https://app.test/signin');
   });
 
   it('sends the trader to Google with PKCE, then signs in the verified email and returns to next', async () => {
     const w = new World(ENV);
-    expect((await w.call('GET', '/v1/auth/options')).data).toEqual({ google: true });
+    expect((await w.call('GET', '/v1/auth/options')).data).toEqual({ google: true, email: true });
     const { to, cookie, state } = await start(w, '/allow?ext=abc&challenge=def');
     expect(to.origin + to.pathname).toBe('https://accounts.google.com/o/oauth2/v2/auth');
     expect(to.searchParams.get('code_challenge_method')).toBe('S256');

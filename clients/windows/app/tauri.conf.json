@@ -28,7 +28,7 @@
   "plugins": {
     "updater": {
       "pubkey": "set by the release workflow",
-      "endpoints": ["https://disciplineguard.com/downloads/latest.json"],
+      "endpoints": ["https://disciplineguard.leowqiheng.workers.dev/downloads/latest.json"],
       "windows": { "installMode": "passive" }
     }
   }

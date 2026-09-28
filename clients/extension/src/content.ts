@@ -339,7 +339,7 @@ function pillView(): PillView | undefined {
   const account = readAccount();
   const acct = account && c.accounts[accountKey(account)];
   if (account && !acct && c.capped?.includes(accountKey(account))) {
-    return { tone: 'off', text: 'Off · Account limit', lines: ['The free plan covers 1 trading account. Paper Trading doesn’t count.', 'Remove the other account on disciplineguard.com/devices. Orders go through normally.'], actions: false };
+    return { tone: 'off', text: 'Off · Account limit', lines: ['The free plan covers 1 trading account. Paper Trading doesn’t count.', 'Remove the other account on disciplineguard.leowqiheng.workers.dev/devices. Orders go through normally.'], actions: false };
   }
   if (!account || !acct || !c.signed) {
     return { tone: 'setup', text: 'Setting up', lines: ['Connect your broker in TradingView’s trading panel to turn on protection.'], actions: false };
