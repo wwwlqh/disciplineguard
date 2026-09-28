@@ -6,7 +6,7 @@ import { coreFmt } from '../fmt.ts';
 import { onLink } from '../router.ts';
 import { Pause } from '../ui/Pause.tsx';
 
-const SOURCE = 'https://github.com/wwwlqh/disciplineguard-clients';
+const SOURCE = 'https://github.com/wwwlqh/disciplineguard';
 
 /** A revenge trade four minutes after a loss: the moment the product is for. */
 function demo(): { plan: PausePlan; order: Order } {

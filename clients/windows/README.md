@@ -40,7 +40,7 @@ cd clients\windows && cargo run -p disciplineguard
 ## Releasing
 
 1. Bump `version` in `clients/windows/Cargo.toml`.
-2. Run the `Windows app` workflow with **release** ticked. It compiles the EA with MetaEditor on the runner (`clients/mt5/compile.ps1`), signs the EA manifest, builds and code-signs the installer, and publishes `DisciplineGuard-Setup.exe` and `latest.json` to the releases of `wwwlqh/disciplineguard-clients`. `disciplineguard.com/downloads/…` redirects there (`web/public/_redirects`), so the web app's download button and the updater always get the latest release. Installed apps update themselves within 6 hours.
+2. Run the `Windows app` workflow with **release** ticked. It compiles the EA with MetaEditor on the runner (`clients/mt5/compile.ps1`), signs the EA manifest, builds and code-signs the installer, and publishes `DisciplineGuard-Setup.exe` and `latest.json` to the releases of `wwwlqh/disciplineguard`. `disciplineguard.com/downloads/…` redirects there (`web/public/_redirects`), so the web app's download button and the updater always get the latest release. Installed apps update themselves within 6 hours.
 
 Repository secrets for the release:
 
@@ -49,6 +49,5 @@ Repository secrets for the release:
 | `DG_RELEASE_KEY`, `DG_RELEASE_PUB` | EA release key pair, from `node scripts/sign-ea-manifest.ts --new-key` |
 | `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `TAURI_UPDATER_PUBKEY` | Updater key pair, from `npx @tauri-apps/cli signer generate` |
 | `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, `AZURE_SIGNING_ENDPOINT`, `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE` | Code signing with Azure Trusted Signing, so Windows shows no warning |
-| `PUBLIC_REPO_TOKEN` | A fine-grained token with Contents write on `wwwlqh/disciplineguard-clients` |
 
 Keep the private keys offline as well: losing the updater key means installed apps can't update.

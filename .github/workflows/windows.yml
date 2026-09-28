@@ -2,7 +2,7 @@
 # Every change: the app's tests against the real server handler, clippy, a debug build, and the EA compiled with
 # MetaEditor in a fresh portable MetaTrader 5 (so nobody compiles it by hand).
 # Run by hand with "release" ticked: signs the EA manifest, builds the signed installer and publishes it with the
-# signed update manifest to github.com/wwwlqh/disciplineguard-clients/releases, where disciplineguard.com/downloads
+# signed update manifest to github.com/wwwlqh/disciplineguard/releases, where disciplineguard.com/downloads
 # points (web/public/_redirects). Secrets are listed in clients/windows/README.md.
 name: Windows app
 on:
@@ -50,6 +50,8 @@ jobs:
 
   release:
     if: github.event_name == 'workflow_dispatch' && inputs.release
+    permissions:
+      contents: write
     needs: [test, ea]
     runs-on: windows-latest
     steps:
@@ -92,7 +94,7 @@ jobs:
       - name: Publish
         shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           $v = "${{ steps.v.outputs.version }}"
           $dir = "clients/windows/target/release/bundle/nsis"
@@ -101,6 +103,6 @@ jobs:
           @{
             version = $v
             pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-            platforms = @{ "windows-x86_64" = @{ signature = $sig.Trim(); url = "https://github.com/wwwlqh/disciplineguard-clients/releases/download/v$v/DisciplineGuard-Setup.exe" } }
+            platforms = @{ "windows-x86_64" = @{ signature = $sig.Trim(); url = "https://github.com/wwwlqh/disciplineguard/releases/download/v$v/DisciplineGuard-Setup.exe" } }
           } | ConvertTo-Json -Depth 5 | Set-Content latest.json
-          gh release create "v$v" DisciplineGuard-Setup.exe latest.json --repo wwwlqh/disciplineguard-clients --title "DisciplineGuard for Windows $v" --notes "Built from the source in this repository."
+          gh release create "v$v" DisciplineGuard-Setup.exe latest.json --repo wwwlqh/disciplineguard --title "DisciplineGuard for Windows $v" --notes "Built from the source in this repository."

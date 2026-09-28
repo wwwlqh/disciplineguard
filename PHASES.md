@@ -8,7 +8,6 @@ Behavior is in SPEC.md, screens and words in EXPERIENCE.md.
 1. **Review** the changes for bugs and security (`/code-review`, `/security-review`) and check the safety invariants (SPEC §1.3).
 2. **Clean up**: no dead code, and no doc that describes something the code no longer does.
 3. **Green**: `npm test`, `npm run typecheck`, the "Windows app" workflow, and the EA compiles with 0 errors.
-4. **Publish** the client source: `scripts/publish-public.sh` (public repo `wwwlqh/disciplineguard-clients`).
 
 A confirmed breach of safety invariants 1–3 stops feature work until it is fixed.
 
