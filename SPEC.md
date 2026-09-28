@@ -801,7 +801,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 **Updates**
 - The app updates itself through a signed update manifest (checked every 6 hours) and carries the EA with a signed EA manifest. After an update the new EA build is copied into each protected terminal while that terminal is closed, because MT reloads an EA whose file changes and that would end an open pause. The trader does nothing.
-- Releases are published in the public source repository (`wwwlqh/disciplineguard`); `disciplineguard.com/downloads/` points to the latest one.
+- Releases are published in the public source repository (`wwwlqh/disciplineguard`); `/downloads/` on the site points to the latest one.
 - An MT5 installed later shows a tray notice: "New MetaTrader found: IC Markets MT5. Protect it? [Protect]".
 
 **Protection-off signals**

@@ -20,7 +20,7 @@ export interface D1Like {
 export interface Env {
   DB: D1Like;
   ASSETS?: { fetch(req: Request): Promise<Response> };
-  /** Public origin of the web app and API, e.g. https://disciplineguard.com */
+  /** Public origin of the web app and API, e.g. https://disciplineguard.leowqiheng.workers.dev */
   APP_URL: string;
   /** Secret for account-number HMACs (SPEC §9.1). */
   HMAC_SECRET: string;

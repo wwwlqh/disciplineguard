@@ -38,7 +38,7 @@ export function SignIn({ onDone }: { onDone(): void }) {
   useEffect(() => {
     api<{ google: boolean; email: boolean }>('GET', '/v1/auth/options').then((o) => { setGoogle(o.google); setEmailOn(o.email); }).catch(() => {});
     if (new URLSearchParams(location.search).get('google') === 'failed') {
-      setErr("Google sign-in didn't work. Try again, or use your email.");
+      setErr("Google sign-in didn't work. Try again.");
       history.replaceState(null, '', '/signin');
     }
   }, []);
