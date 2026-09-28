@@ -48,6 +48,6 @@ Repository secrets for the release:
 |---|---|
 | `DG_RELEASE_KEY`, `DG_RELEASE_PUB` | EA release key pair, from `node scripts/sign-ea-manifest.ts --new-key` |
 | `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `TAURI_UPDATER_PUBKEY` | Updater key pair, from `npx @tauri-apps/cli signer generate` |
-| `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, `AZURE_SIGNING_ENDPOINT`, `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE` | Code signing with Azure Trusted Signing, so Windows shows no warning |
+| `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, `AZURE_SIGNING_ENDPOINT`, `AZURE_SIGNING_ACCOUNT`, `AZURE_SIGNING_PROFILE` | Optional. Code signing with Azure Trusted Signing, so Windows shows no warning. Without them the installer is unsigned and SmartScreen warns once |
 
 Keep the private keys offline as well: losing the updater key means installed apps can't update.

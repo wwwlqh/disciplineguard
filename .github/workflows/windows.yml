@@ -54,6 +54,8 @@ jobs:
       contents: write
     needs: [test, ea]
     runs-on: windows-latest
+    env:
+      HAS_SIGNING: ${{ secrets.AZURE_SIGNING_ENDPOINT != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -70,7 +72,9 @@ jobs:
         env:
           DG_RELEASE_KEY: ${{ secrets.DG_RELEASE_KEY }}
         run: node scripts/sign-ea-manifest.ts ea-build/DisciplineGuard.ex5 ${{ steps.v.outputs.version }}
-      - run: cargo install trusted-signing-cli --locked
+      # Code signing is optional: without the Azure secrets the installer is unsigned and SmartScreen warns once.
+      - if: ${{ env.HAS_SIGNING == 'true' }}
+        run: cargo install trusted-signing-cli --locked
       - name: Build and code-sign
         working-directory: clients/windows/app
         shell: pwsh
@@ -86,10 +90,9 @@ jobs:
           SIGN_PROFILE: ${{ secrets.AZURE_SIGNING_PROFILE }}
           UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
         run: |
-          @{
-            bundle = @{ windows = @{ signCommand = "trusted-signing-cli -e $env:SIGN_ENDPOINT -a $env:SIGN_ACCOUNT -c $env:SIGN_PROFILE -d DisciplineGuard %1" } }
-            plugins = @{ updater = @{ pubkey = $env:UPDATER_PUBKEY } }
-          } | ConvertTo-Json -Depth 5 | Set-Content release.conf.json
+          $conf = @{ plugins = @{ updater = @{ pubkey = $env:UPDATER_PUBKEY } } }
+          if ($env:SIGN_ENDPOINT) { $conf.bundle = @{ windows = @{ signCommand = "trusted-signing-cli -e $env:SIGN_ENDPOINT -a $env:SIGN_ACCOUNT -c $env:SIGN_PROFILE -d DisciplineGuard %1" } } }
+          $conf | ConvertTo-Json -Depth 5 | Set-Content release.conf.json
           npx --yes @tauri-apps/cli@2 build --config release.conf.json
       - name: Publish
         shell: pwsh
