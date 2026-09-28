@@ -964,7 +964,6 @@ A trader installs at most one thing per kind of platform, never one per platform
 **Release integrity** (before the first beta install)
 
 - Hardware-key two-factor authentication on the store developer account, Cloudflare, the domain registrar, the payment provider and the email provider.
-- Verified uploads turned on in the Chrome Web Store.
 - Dependencies pinned with a lockfile and reviewed on update.
 - The Windows app and its installer are code-signed. The app checks every EA build against a signed release manifest before copying it.
 - The EA reports its build hash when it connects, and the server warns about unknown builds.

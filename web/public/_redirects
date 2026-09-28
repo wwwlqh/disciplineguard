@@ -1,3 +1,4 @@
-# The Windows app download and its signed update manifest are published on the public client repo (SPEC §9.5).
+# The Windows app, its signed update manifest and the TradingView extension zip are GitHub release assets (SPEC §9.5).
 /downloads/DisciplineGuard-Setup.exe https://github.com/wwwlqh/disciplineguard/releases/latest/download/DisciplineGuard-Setup.exe 302
 /downloads/latest.json https://github.com/wwwlqh/disciplineguard/releases/latest/download/latest.json 302
+/downloads/DisciplineGuard-TradingView.zip https://github.com/wwwlqh/disciplineguard/releases/latest/download/DisciplineGuard-TradingView.zip 302

@@ -34,4 +34,3 @@ outside entry, a close with its net, and the daily loss limit.
 
 On real TradingView: `spikes/tv-runner/live.js` drives a signed-in Paper Trading chart with a live-test build (see its header). Paper Trading only, never a real broker.
 
-Store listing text, permission reasons and screenshots: `store/`.

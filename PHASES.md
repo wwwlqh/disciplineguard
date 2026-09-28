@@ -33,7 +33,7 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 - Self-serve export (emailed ZIP link) and deletion (SPEC §12.6, §13.4).
 
 **Left**
-- TradingView extension (clients/extension): works on TradingView Paper Trading (spike Q1a passed 27 Sep 2026), with the pill, outside detection, closes, R8 from the Account Manager and the signed remote page config. Left: the founder's check on one real broker account, uploading the unlisted Chrome Web Store item (`clients/extension/store/listing.md`), self-tests and health events for the page config, and the coach card. MT4 if wanted.
+- TradingView extension (clients/extension): works on TradingView Paper Trading (spike Q1a passed 27 Sep 2026), with the pill, outside detection, closes, R8 from the Account Manager and the signed remote page config. Left: the founder's check on one real broker account, self-tests and health events for the page config, and the coach card. MT4 if wanted.
 - The founder, only when paid plans open: Lemon Squeezy products, their redirect to `/plans?paid`, and the secrets in server/wrangler.toml.
 
 ## Phase 2: Public launch
@@ -43,6 +43,7 @@ MT5 and TradingView first; other platforms wait for Phase 3.
 **Built**
 - Launch website: one page at `/` for signed-out visitors (how it works, comparison, platforms, pricing, a live demo pause).
 - Google sign-in. The founder: a Google Cloud OAuth client and its two secrets (server/wrangler.toml).
+- No extension store (28 Sep 2026): each release publishes the extension zip; Help → Install the TradingView extension covers Load unpacked.
 - TradingView demo clip on the home page (`web/public/demo-tradingview.webm`, recorded on Paper Trading with `spikes/tv-runner/record.js`).
 - Status and changelog at `/status`: a live server check; the TradingView and MT5 lines and the changelog are edited by hand in web/src/pages/Status.tsx.
 - Session check-in on Today: tighten for today only (max trades, loss limit), in the signed rules so MT5 and TradingView enforce it until the next reset. No mood question.
@@ -50,7 +51,6 @@ MT5 and TradingView first; other platforms wait for Phase 3.
 - Free for everyone (28 Sep 2026): no trial, 1 trading account across MT5 and TradingView (Paper Trading not counted), every rule. The EA and the TradingView pill name the account limit. Paid plans priced by number of accounts come later; `/plans` and the billing code stay but aren't linked (SPEC §12).
 
 **Left** (the founder)
-- Public Chrome listing (the same store item) and an Edge listing.
 - The MT5 demo clip (from a demo account: a Buy past the limit, the pause, Skip).
 
 **Not now** (the founder, 27 Sep 2026): the accountability partner, the affiliate program, referral credit, and the reflection in the summary.

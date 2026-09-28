@@ -10,6 +10,16 @@ interface Article {
 
 const SETUP: Article[] = [
   {
+    slug: 'tradingview',
+    title: 'Install the TradingView extension',
+    body: [
+      '1. Download disciplineguard.leowqiheng.workers.dev/downloads/DisciplineGuard-TradingView.zip and unzip it.',
+      '2. Open chrome://extensions (in Edge: edge://extensions) and turn on Developer mode.',
+      '3. Click Load unpacked and pick the unzipped folder.',
+      '4. Click the DisciplineGuard button in the toolbar, Sign in, then Allow. Open a TradingView chart with your broker connected.',
+    ],
+  },
+  {
     slug: 'install',
     title: 'Install DisciplineGuard for Windows',
     body: [

@@ -94,6 +94,12 @@ jobs:
           if ($env:SIGN_ENDPOINT) { $conf.bundle = @{ windows = @{ signCommand = "trusted-signing-cli -e $env:SIGN_ENDPOINT -a $env:SIGN_ACCOUNT -c $env:SIGN_PROFILE -d DisciplineGuard %1" } } }
           $conf | ConvertTo-Json -Depth 5 | Set-Content release.conf.json
           npx --yes @tauri-apps/cli@2 build --config release.conf.json
+      - name: Build the TradingView extension
+        shell: pwsh
+        run: |
+          npm ci
+          npm run build -w clients/extension
+          Compress-Archive -Path clients/extension/dist/* -DestinationPath DisciplineGuard-TradingView.zip
       - name: Publish
         shell: pwsh
         env:
@@ -108,4 +114,4 @@ jobs:
             pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             platforms = @{ "windows-x86_64" = @{ signature = $sig.Trim(); url = "https://github.com/wwwlqh/disciplineguard/releases/download/v$v/DisciplineGuard-Setup.exe" } }
           } | ConvertTo-Json -Depth 5 | Set-Content latest.json
-          gh release create "v$v" DisciplineGuard-Setup.exe latest.json --repo wwwlqh/disciplineguard --title "DisciplineGuard for Windows $v" --notes "Built from the source in this repository."
+          gh release create "v$v" DisciplineGuard-Setup.exe latest.json DisciplineGuard-TradingView.zip --repo wwwlqh/disciplineguard --title "DisciplineGuard $v" --notes "Built from the source in this repository."
