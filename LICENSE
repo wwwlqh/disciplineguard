@@ -1,0 +1,24 @@
+Copyright (c) 2026 wwwlqh. All rights reserved.
+
+The source code in this repository is public so anyone can read it and check
+what DisciplineGuard does. That is the only permission it grants.
+
+You may:
+- read the source code;
+- install and use the official DisciplineGuard releases published at
+  https://github.com/wwwlqh/disciplineguard/releases.
+
+You may not, without written permission from the copyright holder:
+- copy, modify, merge, publish, distribute, sublicense or sell the source code
+  or any part of it;
+- build, run or offer a product or service based on it.
+
+Opening an issue or pull request does not grant you any further rights.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE,
+INCLUDING ANY TRADING LOSSES.

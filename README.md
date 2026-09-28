@@ -106,6 +106,8 @@ Run locally with `npm run dev -w server` and `npm run dev -w web`. The EA compil
 
 How it behaves is in [SPEC.md](SPEC.md), what it says and shows is in [EXPERIENCE.md](EXPERIENCE.md), and what's next is in [PHASES.md](PHASES.md).
 
+The code is public to read, not to reuse: see [LICENSE](LICENSE).
+
 <div align="center">
 <br>
 <sub>Built by a trader, for traders who know their rules and want to keep them.</sub>
