@@ -7,8 +7,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "dev": "node dev.ts",
-    "deploy": "wrangler deploy",
-    "migrate": "wrangler d1 migrations apply disciplineguard --remote",
+    "deploy": "npx -y wrangler deploy",
+    "migrate": "npx -y wrangler d1 migrations apply disciplineguard --remote",
     "keys": "node scripts/keys.ts"
   },
   "dependencies": {
