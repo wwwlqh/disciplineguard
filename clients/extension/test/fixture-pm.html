@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- A stand-in Polymarket market page for test/e2e-pm.ts: the trade box's structure as on polymarket.com, 2 Oct 2026. -->
+<html>
+<head><meta charset="utf-8"><title>Stand-in market | Polymarket</title></head>
+<body>
+  <div id="box">
+    <div role="radiogroup">
+      <button type="button" role="radio" id="buy" value="BUY" aria-checked="true">Buy</button>
+      <button type="button" role="radio" id="sell" value="SELL" aria-checked="false">Sell</button>
+    </div>
+    <span data-trading-button-wrapper><button class="trading-button" type="button" role="radio" id="yes" value="0" aria-checked="true">Yes<span>40¢</span></button></span>
+    <span data-trading-button-wrapper><button class="trading-button" type="button" role="radio" id="no" value="1" aria-checked="false">No<span>61¢</span></button></span>
+    <input id="market-order-amount-input" inputmode="decimal" type="text" value="10">
+    <span data-trading-button-wrapper><button class="trading-button" type="button" id="submit">Buy Yes</button></span>
+  </div>
+  <script>
+    window.sent = 0;
+    const submit = document.getElementById('submit');
+    submit.addEventListener('click', () => submit.textContent !== 'Deposit' && window.sent++);
+    const side = (s) => {
+      document.getElementById('buy').setAttribute('aria-checked', String(s === 'BUY'));
+      document.getElementById('sell').setAttribute('aria-checked', String(s === 'SELL'));
+      submit.textContent = s === 'BUY' ? 'Buy Yes' : 'Sell Yes';
+    };
+    document.getElementById('buy').addEventListener('click', () => side('BUY'));
+    document.getElementById('sell').addEventListener('click', () => side('SELL'));
+    window.setPortfolio = (v) => localStorage.setItem('pm_navbar_balances_v2', JSON.stringify({ proxyAddress: '0x00000000000000000000000000000000000000ab', portfolio: v, cash: v, timestamp: Date.now() }));
+    localStorage.setItem('polymarket.auth.proxyWallet', '0x00000000000000000000000000000000000000Ab');
+    setPortfolio(1000);
+  </script>
+</body>
+</html>

@@ -18,7 +18,7 @@ if (process.env.DG_TEST) define.__DG_TEST__ = 'true';
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out);
-for (const name of ['background', 'content', 'popup', 'welcome']) {
+for (const name of ['background', 'content', 'content-pm', 'popup', 'welcome']) {
   await build({
     input: join(here, 'src', `${name}.ts`),
     output: { file: join(out, `${name}.js`), format: 'iife', minify: false },
@@ -33,13 +33,16 @@ const manifest = {
   manifest_version: 3,
   name: 'DisciplineGuard',
   version: '0.1.1',
-  description: 'Pauses new TradingView trades that break your own rules. Closing is never paused.',
+  description: 'Pauses new TradingView trades and Polymarket bets that break your own rules. Closing is never paused.',
   icons: { 16: 'icon16.png', 48: 'icon48.png', 128: 'icon128.png' },
   action: { default_popup: 'popup.html', default_icon: { 16: 'icon16.png', 48: 'icon48.png' } },
   background: { service_worker: 'background.js' },
   permissions: ['storage', 'alarms', 'notifications'],
-  host_permissions: ['https://www.tradingview.com/*', `${origin}/*`],
-  content_scripts: [{ matches: ['https://www.tradingview.com/chart/*'], js: ['content.js'], run_at: 'document_start', all_frames: false }],
+  host_permissions: ['https://www.tradingview.com/*', 'https://polymarket.com/*', `${origin}/*`],
+  content_scripts: [
+    { matches: ['https://www.tradingview.com/chart/*'], js: ['content.js'], run_at: 'document_start', all_frames: false },
+    { matches: ['https://polymarket.com/*'], js: ['content-pm.js'], run_at: 'document_start', all_frames: false },
+  ],
   externally_connectable: { matches: [`${origin}/*`] },
 };
 writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));

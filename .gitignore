@@ -13,6 +13,7 @@ clients/windows/target/
 clients/windows/app/gen/
 clients/windows/app/release.conf.json
 clients/extension/test-dist/
+clients/extension/test-dist-pm/
 clients/extension/live-dist/
 
 # Downloaded credentials never go in this public repo.

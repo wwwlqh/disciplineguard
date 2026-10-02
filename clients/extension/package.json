@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.ts",
-    "e2e": "node test/e2e.ts",
+    "e2e": "node test/e2e.ts && node test/e2e-pm.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
