@@ -1,6 +1,6 @@
 // Trader alerts (SPEC §11). The server decides what to send; the Windows app fetches them and shows Windows
 // notifications. Nothing to link or install beyond the app the trader already has.
-import { dayOf, DAY, HOUR, localParts, localToUtc, MIN, RULE_NAMES, type TitleId } from '@dg/core';
+import { dayOf, DAY, HOUR, localParts, localToUtc, MIN, placedWhere, RULE_NAMES, type TitleId } from '@dg/core';
 import { scheduleJob } from './common.ts';
 import { resolvedTime, userCtx, type AccountRow, type UserCtx } from './context.ts';
 import { coverageGaps } from './coverage.ts';
@@ -125,13 +125,13 @@ export async function placedAnyway(env: Env, uc: UserCtx, a: AccountRow | undefi
 }
 
 export async function outsideViolation(env: Env, uc: UserCtx, rules: string[], label: string | undefined): Promise<void> {
-  const where = label ? `placed on ${label}` : 'placed outside DisciplineGuard';
+  const where = `placed ${placedWhere(label)}`;
   await alert(env, uc, 'outside', 'A trade went past your rule', `A trade ${where} went past ${ruleName(rules[0])}. It counts toward today.`);
 }
 
 /** "Close outside trades" (SPEC §9.2): the EA closed an outside trade that went past a rule, or couldn't. */
 export async function outsideClosed(env: Env, uc: UserCtx, rules: string[], label: string | undefined, ok: boolean, reason?: string): Promise<void> {
-  const where = label ? `placed on ${label}` : 'placed outside DisciplineGuard';
+  const where = `placed ${placedWhere(label)}`;
   if (ok) {
     await alert(env, uc, 'closed', 'Outside trade closed', `A trade ${where} went past ${ruleName(rules[0])}. DisciplineGuard closed it.`);
   } else {

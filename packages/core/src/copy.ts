@@ -25,6 +25,15 @@ export const RULE_NAMES: Record<TitleId, string> = {
   DONE_TODAY: 'Done for today',
 };
 
+/** Where an outside trade was placed, from the EA's label: "A trade placed on your phone". Same as PlacedWhere in DG/AppTrades.mqh. */
+export function placedWhere(label: string | null | undefined): string {
+  if (label === 'mobile') return 'on your phone';
+  if (label === 'web') return 'on the web terminal';
+  if (label === 'desktop') return "in MetaTrader's order window";
+  if (label === 'ea') return 'by another EA';
+  return 'outside DisciplineGuard';
+}
+
 export function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;

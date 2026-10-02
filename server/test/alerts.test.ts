@@ -19,7 +19,7 @@ async function setup() {
   return { w, web, ea, poll, cursor, cron };
 }
 
-const outside = (ticket: number) => ({ type: 'entry', ticket, symbol: 'EURUSD', side: 'buy', size: 1, source: 'outside', label: 'MT mobile', violations: ['R1'] });
+const outside = (ticket: number) => ({ type: 'entry', ticket, symbol: 'EURUSD', side: 'buy', size: 1, source: 'outside', label: 'mobile', violations: ['R1'] });
 
 describe('alerts (SPEC §11.2)', () => {
   it('the app gets new alerts after its cursor, and a new install does not replay old ones', async () => {
@@ -41,7 +41,7 @@ describe('alerts (SPEC §11.2)', () => {
     await ea.sync([outside(2), outside(3)]);
     let r = await poll(cursor);
     expect(r.alerts.map((a: any) => a.kind)).toEqual(['outside']);
-    expect(r.alerts[0].text).toContain('placed on MT mobile went past "Max trades per day"');
+    expect(r.alerts[0].text).toContain('placed on your phone went past "Max trades per day"');
     w.t += 26 * MIN;
     await cron();
     r = await poll(r.cursor);
@@ -51,11 +51,11 @@ describe('alerts (SPEC §11.2)', () => {
   it('close outside trades: one alert with the result instead of the outside alert', async () => {
     const { web, ea, poll, cursor } = await setup();
     const closing = (ticket: number, violations = ['R1']) => ({ ...outside(ticket), violations, autoClose: true });
-    const result = (ticket: number, r: string, extra: Record<string, unknown> = {}) => ({ type: 'auto_close', ticket, result: r, violations: ['R1'], label: 'MT mobile', symbol: 'EURUSD', side: 'buy', size: 1, ...extra });
+    const result = (ticket: number, r: string, extra: Record<string, unknown> = {}) => ({ type: 'auto_close', ticket, result: r, violations: ['R1'], label: 'mobile', symbol: 'EURUSD', side: 'buy', size: 1, ...extra });
     await ea.sync([closing(5), result(5, 'closed')]);
     let r = await poll(cursor);
     expect(r.alerts).toHaveLength(1);
-    expect(r.alerts[0]).toMatchObject({ kind: 'closed', title: 'Outside trade closed', text: 'A trade placed on MT mobile went past "Max trades per day". DisciplineGuard closed it.' });
+    expect(r.alerts[0]).toMatchObject({ kind: 'closed', title: 'Outside trade closed', text: 'A trade placed on your phone went past "Max trades per day". DisciplineGuard closed it.' });
     // A replay changes nothing.
     await ea.sync([result(5, 'closed')]);
     expect((await poll(r.cursor)).alerts).toHaveLength(0);
@@ -63,14 +63,14 @@ describe('alerts (SPEC §11.2)', () => {
     await ea.sync([closing(6), result(6, 'failed', { reason: 'Market is closed' })]);
     r = await poll(r.cursor);
     expect(r.alerts.map((a: any) => [a.kind, a.title, a.text])).toEqual([
-      ['closed', "Couldn't close an outside trade", `A trade placed on MT mobile went past "Max trades per day", and DisciplineGuard couldn't close it (Market is closed). Close it in MetaTrader.`],
+      ['closed', "Couldn't close an outside trade", `A trade placed on your phone went past "Max trades per day", and DisciplineGuard couldn't close it (Market is closed). Close it in MetaTrader.`],
     ]);
     // A stop loss added in time: the usual outside alert, once the EA knows.
     await ea.sync([closing(7, ['R9'])]);
     expect((await poll(r.cursor)).alerts).toHaveLength(0);
     await ea.sync([result(7, 'kept', { violations: ['R9'] })]);
     r = await poll(r.cursor);
-    expect(r.alerts.map((a: any) => a.text)).toEqual(['A trade placed on MT mobile went past "Stop loss required". It counts toward today.']);
+    expect(r.alerts.map((a: any) => a.text)).toEqual(['A trade placed on your phone went past "Stop loss required". It counts toward today.']);
     // Turned off before it closed: the usual outside alert too (held in the 30-minute window after the one above).
     await ea.sync([closing(8), result(8, 'off')]);
     expect((await poll(r.cursor)).alerts).toHaveLength(0);

@@ -1,6 +1,6 @@
 // Today (EXPERIENCE §5.4).
 import { useEffect, useState } from 'react';
-import { RULE_NAMES, type TitleId } from '@dg/core';
+import { placedWhere, RULE_NAMES, type TitleId } from '@dg/core';
 import { api, type Connection, type Me } from '../api.ts';
 import { ago, money, plural, time } from '../fmt.ts';
 import { onLink } from '../router.ts';
@@ -288,7 +288,7 @@ export function Today({ me, reload }: PageProps) {
               <li key={`${g.accountId}${g.from}`}>DisciplineGuard was off on …{g.last3} from {time(g.from, d.now)} to {time(g.to, d.now)}{g.trades ? ` (${plural(g.trades, 'trade')})` : ''}.</li>
             ))}
             {d.outside.filter((o) => o.violations.length > 0).map((o) => (
-              <li key={o.t}>{time(o.t, d.now)} · Outside trade{o.label ? ` (${o.label})` : ''} went past {o.violations.map((v) => `"${RULE_NAMES[v as TitleId] ?? v}"`).join(', ')}. {AUTO_CLOSE[o.autoClose ?? ''] ?? 'It counts.'}</li>
+              <li key={o.t}>{time(o.t, d.now)} · Trade placed {placedWhere(o.label)} went past {o.violations.map((v) => `"${RULE_NAMES[v as TitleId] ?? v}"`).join(', ')}. {AUTO_CLOSE[o.autoClose ?? ''] ?? 'It counts.'}</li>
             ))}
             {d.coverage.unclassified > 0 && <li>Orders we couldn't check: {d.coverage.unclassified}.</li>}
           </ul>
