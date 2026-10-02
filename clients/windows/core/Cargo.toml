@@ -16,6 +16,7 @@ sha2 = "0.11.0"
 ureq = { version = "3.4.2", default-features = false, features = ["json"] }
 
 [target."cfg(windows)".dependencies]
-# Windows' own TLS (SChannel) and certificate store.
-ureq = { version = "3.4.2", default-features = false, features = ["json", "native-tls-no-default"] }
+# Windows' own TLS (SChannel) and certificate store. ureq only compiles its native-tls connector with the full
+# "native-tls" feature ("native-tls-no-default" alone panics on every https request).
+ureq = { version = "3.4.2", default-features = false, features = ["json", "native-tls"] }
 windows-sys = { version = "0.61.2", features = ["Win32_Foundation", "Win32_Security_Cryptography", "Win32_System_Memory", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }

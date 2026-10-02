@@ -113,3 +113,25 @@ impl Api {
 pub fn parse(body: &str) -> Value {
     serde_json::from_str(body).unwrap_or(Value::Null)
 }
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::Api;
+    use std::net::TcpListener;
+
+    /// An https request reaches the TLS handshake and fails like any network error; it must never panic
+    /// (0.1.4 shipped without ureq's native-tls connector and crashed at sign-in).
+    #[test]
+    fn https_fails_without_panicking() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let server = std::thread::spawn(move || {
+            if let Ok((s, _)) = listener.accept() {
+                drop(s);
+            }
+        });
+        let api = Api::new(&format!("https://127.0.0.1:{port}"));
+        assert!(api.post("/v1/auth/desktop", None, "{}").is_err());
+        server.join().unwrap();
+    }
+}

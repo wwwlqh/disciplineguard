@@ -74,8 +74,13 @@ fn wait_for_code(listener: &TcpListener, timeout: Duration) -> Result<String, Si
             .and_then(|q| q.split('&').find_map(|kv| kv.strip_prefix("code=")))
             .filter(|c| !c.is_empty() && c.len() <= 100 && c.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_'));
         let mut w = &stream;
-        let page = "<!doctype html><meta charset=utf-8><title>DisciplineGuard</title>\
-            <p style=\"font-family:system-ui,sans-serif\">DisciplineGuard is signed in on this computer. You can close this tab.</p>";
+        let page = "<!doctype html><meta charset=utf-8><meta name=viewport content=\"width=device-width\"><title>DisciplineGuard</title>\
+            <body style=\"margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.5 'Segoe UI',system-ui,sans-serif;color:#0b1322;\
+            background:radial-gradient(600px 400px at 85% 0%,rgb(56 232 200/26%),transparent 70%),radial-gradient(600px 400px at 0% 100%,rgb(30 152 242/16%),transparent 70%),#f6f9fc\">\
+            <div style=\"text-align:center;padding:24px\"><div style=\"width:64px;height:64px;margin:0 auto 18px;border-radius:20px;display:grid;place-items:center;\
+            background:linear-gradient(135deg,#6af4cc,#1cd0d0 33%,#1e98f2 67%,#5262f4);box-shadow:0 14px 30px -12px rgb(30 120 240/65%)\">\
+            <svg width=30 height=30 viewBox=\"0 0 24 24\" fill=none stroke=#fff stroke-width=2.6 stroke-linecap=round stroke-linejoin=round><path d=\"m5 12.5 4.5 4.5L19 7.5\"/></svg></div>\
+            <h1 style=\"font-size:24px;margin:0 0 6px\">DisciplineGuard is signed in</h1><p style=\"margin:0;color:#526175\">You can close this tab.</p></div>";
         let _ = match code {
             Some(_) => write!(w, "HTTP/1.1 200 OK\r\ncontent-type: text/html; charset=utf-8\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{page}", page.len()),
             None => write!(w, "HTTP/1.1 404 Not Found\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"),

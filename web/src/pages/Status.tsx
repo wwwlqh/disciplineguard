@@ -5,6 +5,7 @@ import { Brand } from '../ui/Brand.tsx';
 
 /** Newest first. One line each, in the trader's words. */
 const CHANGES: [string, string][] = [
+  ['2026-10-02', 'Windows app 0.1.5: signing in no longer closes the app.'],
   ['2026-10-02', 'A brighter look and a new icon, in the app, the extension and the website.'],
   ['2026-09-27', 'Tighten for today: a lower max trades or loss limit until your next reset, from Today.'],
   ['2026-09-27', 'Take a break for 1, 7 or 30 days, from Account.'],
