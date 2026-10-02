@@ -105,7 +105,7 @@ npm test
 npm run typecheck
 ```
 
-Run locally with `npm run dev -w server` and `npm run dev -w web`. The EA compiles with `clients/mt5/compile.ps1`. Releases are built by the **Windows app** workflow in GitHub Actions.
+Run locally with `npm run dev -w server` and `npm run dev -w web`. The EA compiles with `clients/mt5/compile.ps1`, and `clients/mt5/tests/close-tests.ps1` runs Close outside trades in MT5's Strategy Tester (simulated trades only). Releases are built by the **Windows app** workflow in GitHub Actions.
 
 How it behaves is in [SPEC.md](SPEC.md), what it says and shows is in [EXPERIENCE.md](EXPERIENCE.md), and what's next is in [PHASES.md](PHASES.md).
 
