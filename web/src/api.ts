@@ -74,7 +74,7 @@ export interface Note {
   setAt: number;
 }
 
-export type AlertKind = 'limit' | 'after_limit' | 'off' | 'moved' | 'outside' | 'unchecked' | 'summary' | 'placed' | 'stop';
+export type AlertKind = 'limit' | 'after_limit' | 'off' | 'moved' | 'outside' | 'closed' | 'unchecked' | 'summary' | 'placed' | 'stop';
 
 export interface AlertPrefs {
   on: Record<AlertKind, boolean>;

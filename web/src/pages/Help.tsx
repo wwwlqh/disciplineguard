@@ -119,6 +119,7 @@ const STATUS: Article[] = [
     title: 'Trades placed outside the panel',
     body: [
       'MetaTrader lets you trade with F9, the one-click buttons and the phone app. DisciplineGuard can\'t pause those, but they still count toward today.',
+      'Rules → Close outside trades: with it on, such a trade that goes past a rule is closed within seconds, while MetaTrader with DisciplineGuard runs on your computer or VPS. If a missing stop loss is the only problem, you get 60 seconds to add one. Trades from other EAs are never closed.',
       'Panel menu → Hide quick-trade buttons on all charts removes the one-click buttons.',
       'Closing, stop loss, take profit and cancelling are never paused.',
     ],

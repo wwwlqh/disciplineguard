@@ -31,7 +31,7 @@ This spec uses precise internal terms. Users see the words in EXPERIENCE.md §2.
 ### 1.3 Invariants (never break these)
 
 1. **An order that only closes or reduces a position, changes SL/TP, or cancels a pending order is never paused.**
-2. **DisciplineGuard never opens, changes or closes a trade unless the trader clicks to do it.**
+2. **DisciplineGuard never opens, changes or closes a trade unless the trader clicks to do it.** The one exception is opt-in: with **Close outside trades** on (§9.2), the MT5 EA closes a trade placed outside DisciplineGuard that goes past a rule, right after its fill. It never opens or changes a trade, and never closes anything else.
 3. **No order ever waits on the network.** Every decision is made from data already on the device.
 4. **A looser change never takes effect early**, including offline and after a reinstall. Signing out, uninstalling and switching a connection to another login are not loosenings: they end protection on that connection at once, are always visible (§10.6), and never change either login's rules or pending changes.
 5. **Place anyway needs a deliberate act after the countdown**:
@@ -365,6 +365,7 @@ Every change is compared with the **active** value. If a change is not clearly s
 | Note or plan: add | Now | — |
 | Note or plan: edit or delete | — | Looser |
 | "Count the same trade on several accounts once", "copies" magic numbers | Turn off, or remove | Turn on, or add |
+| Close outside trades (§9.2) | Turn on | Turn off |
 | Keyboard place anyway (accessibility, §7.3) | Turn off | Turn on |
 | Partner: add | Now | — |
 | Partner: remove, or turn off "Share amounts" | **Now, with a final message to the partner** (§11.4). This is a privacy right and is never delayed | — |
@@ -696,6 +697,21 @@ A trader installs at most one thing per kind of platform, never one per platform
 - An outside trade is any entry deal that is not a known panel ticket (§4.4).
 - `DEAL_REASON` is recorded only to label the source: desktop, mobile, web or another EA.
 
+**Close outside trades** (opt-in, setting key `closeOutside`, off by default; the only exception to invariant 2)
+
+- Outside trades can't be paused. With this on, the primary instance closes an outside entry that goes past a rule, judged like any outside entry (at its fill, with the state before it).
+- Only fills placed by hand: `DEAL_REASON` client, mobile or web. Trades from other EAs are never closed.
+- Only within 2 minutes of the fill, while protection is on (§10.5) and the setting is on in the signed rules. A fill seen later (the EA wasn't running) is reported as usual and left open.
+- Only the position that outside order opened (its `DEAL_ORDER` is the position id). On a netting account, a fill that added to an already open position is reported as usual and never touched, because part of a position can't be told apart. Before closing, a netting position must hold no deal from another order.
+- If the only rules gone past are about the missing stop loss (R9, or R6 without a stop), the trader gets 60 seconds to add one. The panel says so. With a stop added and nothing else gone past, the trade stays.
+- The close is a market close of that position (`TRADE_ACTION_DEAL` with its ticket), with the trader's own magic number and no comment. It is tried up to 3 times; a closed market, trading disabled or Algo Trading off end it at once.
+- Waiting closes are kept in `MQL5\Files\DisciplineGuard\closing.txt`, so a reload or a new primary picks them up. A fill older than 5 minutes is never closed.
+- If the position is already gone (the trader closed it, or another terminal on the same account did), nothing else happens. A netting position that holds other trades by then is not touched.
+- The entry event carries `autoClose: true`; an `auto_close` event follows with the result: `closed`, `failed` (with the reason), `kept` (stop added in time), `gone`, or `off` (the setting or protection was turned off first).
+- The entry still counts toward today. The close is an ordinary close: its net counts toward the daily loss limit and can start a cooldown (R7, R10).
+- Panel cards: "Closed a trade placed on your phone. It went past your 'Max trades per day'.", "Couldn't close a trade placed on your phone (Market is closed). It went past your '…'. Close it yourself.", and while waiting: "A trade placed on your phone has no stop loss. Add one within 60 seconds or DisciplineGuard closes it."
+- TradingView: not available. The extension can't act on trades placed outside the page.
+
 **Network**
 
 - **The EA makes no web requests.** It exchanges files with the Windows app through the terminal's Common Files folder (§9.5). There is no web address to allow, and no order can wait on the network.
@@ -996,6 +1012,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 | Account connected to another DisciplineGuard login | On (also email) | Real time |
 | Placed anyway (other rules) | Off | In the digest |
 | Outside violation (other rules) | On | In the digest |
+| Close outside trades (§9.2): closed, or it couldn't be closed (never held for a roll-up). Replaces the outside violation alert for that trade | On | In the digest |
 | Stop removed or widened | Off | In the digest |
 | Orders we couldn't check (more than 3 in a trading day) | On (as a product problem) | **Never** |
 | Account deletion requested | Email | Real time |
@@ -1386,6 +1403,14 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 | SEC-07 | Primary lock timestamp set 1 h in the future (edited) | Another instance checks | Lock stale. Takeover |
 | COV-01 | No primary heartbeat on account A 11:00–11:40 | Entry at 11:20 reported later | Placed while protection was off. Listed on Today and in the summary |
 | COV-02 | Desktop EA stopped, VPS EA running on A | Outside entry | Not protection-off |
+| CLO-01 | Close outside trades on, R1 max 3, 3 trades today | A 4th trade from MT mobile fills | Closed within seconds with the trader's magic. Entry counted. Alert "Outside trade closed" |
+| CLO-02 | Close outside trades on, R9 on | A trade from MT mobile without a stop; a stop added 20 s later | Stays open. Reported `kept`; the usual outside alert |
+| CLO-03 | As CLO-02 | No stop within 60 s | Closed at 60 s |
+| CLO-04 | Close outside trades on, R1 broken | A trade from another EA fills | Reported, never closed |
+| CLO-05 | Netting account, long 1.0 from the panel, Close outside trades on, R1 broken | 0.5 more from the phone | Reported, never closed |
+| CLO-06 | Close outside trades on | The EA starts 6 minutes after a phone trade that went past a rule | Reported, never closed |
+| CLO-07 | Close outside trades on, the same account on two terminals | A phone trade past a rule | Closed once; the other terminal finds it gone |
+| CLO-08 | Locked, Close outside trades on at 10:00 | Turned off | Scheduled for the next reset (CHG-02) |
 | COV-03 | Extension uninstalled | No heartbeat within 10 min | Protection-off confirmed. Partner alerted (P2) |
 | COV-04 | Extension uninstalled and reinstalled within 5 min | — | No partner alert |
 | SUB-01 | Free user, first connection On | Any day later | Protection stays on; `valid_until` is at least 30 days ahead |

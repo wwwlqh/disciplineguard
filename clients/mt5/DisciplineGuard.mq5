@@ -109,6 +109,7 @@ void OnTimer()
       LoadAccountId();
       gCursorLoaded = false;
       gLocalDsbDay = 0; gLocalLimitAt = DG_NONE;
+      gJobsLoaded = false;
       gNextSync = 0;
      }
    gBridge.Tick();
@@ -128,6 +129,7 @@ void OnTimer()
       now = NowMs();
      }
    ScanHistory();
+   ProcessCloseJobs();
    TrackPendingOrders();
    BuildModel(now);
    TrackStops();

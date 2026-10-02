@@ -36,7 +36,7 @@ const OTHER_PLATFORMS: { id: string; label: string; note: string }[] = [
   { id: 'tv', label: 'TradingView', note: 'Chrome or Edge. Install the extension from Help → Install the TradingView extension.' },
   { id: 'mt4', label: 'MT4', note: "Coming later. We'll tell you." },
   { id: 'mt5_mac', label: 'MT5 on Mac', note: 'Not supported yet.' },
-  { id: 'mt_phone', label: 'MT on my phone', note: "Can't be paused, but they still count." },
+  { id: 'mt_phone', label: 'MT on my phone', note: "Can't be paused, but they still count. Rules → Close outside trades closes the ones that go past a rule." },
   { id: 'other', label: 'Something else', note: "We'll tell you if we add it." },
 ];
 

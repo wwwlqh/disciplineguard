@@ -16,6 +16,7 @@ function useSave(reload: () => Promise<void>) {
     else if (r.appliesAt === 'now') toast('Applied. Devices update within 5 minutes.');
     else toast(`Scheduled for ${time(r.appliesAt)}. Cancel anytime.`);
     await reload();
+    return r;
   };
 }
 
@@ -146,6 +147,49 @@ function PopupCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
   );
 }
 
+/** "Close outside trades" (SPEC §9.2): on applies now, off waits like any loosening. */
+function CloseOutsideCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
+  const cur = me.rules.closeOutside;
+  const [on, setOn] = useState(cur);
+  const v = useVerdict('closeOutside', on, on !== cur);
+  const save = useSave(reload);
+  useEffect(() => setOn(cur), [cur]);
+  return (
+    <div className="card">
+      <div className="row between">
+        <div>
+          <strong>Close outside trades</strong> <span className="chip">MT5</span>
+          <div className="small muted">
+            A trade placed on your phone, the web terminal or MetaTrader's own order window that goes past a rule is closed within seconds. If a missing stop loss is the only problem, you get 60 seconds to add one. Trades from other EAs are never closed.
+          </div>
+          <div className="small" style={{ marginTop: 4 }}>Now: {cur ? 'On' : 'Off'} <SetOn me={me} k="closeOutside" /></div>
+        </div>
+        <Switch label="Close outside trades" checked={on} onChange={setOn} />
+      </div>
+      <Scheduled me={me} k="closeOutside" render={(val) => (val ? 'on' : 'off')} />
+      {on !== cur && (
+        <div className="stack" style={{ marginTop: 12 }}>
+          <VerdictLine v={v} setupMode={me.user.setupMode} />
+          <div className="row">
+            <button
+              className="primary"
+              disabled={!v || v.direction === 'same'}
+              onClick={async () => {
+                const r = await save('closeOutside', on);
+                // Scheduled: the switch shows what applies now, and the line above shows the change to come.
+                setOn(r.appliesAt === 'now' ? on : cur);
+              }}
+            >
+              {applyLabel(v)}
+            </button>
+            <button onClick={() => setOn(cur)}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 type Limit = { unit: 'amount' | 'pct'; value: number } | null;
 
 function LimitEditor({ me, k, label, pctMax, allowPct, reload }: { me: Me; k: string; label: string; pctMax: number; allowPct: boolean; reload(): Promise<void> }) {
@@ -245,6 +289,7 @@ function LockSheet({ me, onClose, reload }: { me: Me; onClose(): void; reload():
       <h2>Lock my rules</h2>
       <ul>
         {on.map((id) => <li key={id}>{RULE_INFO[id].name}: {ruleSummary(id, me.rules)}</li>)}
+        {me.rules.closeOutside && <li>Close outside trades: on</li>}
         {on.length === 0 && <li>No rules on yet.</li>}
       </ul>
       <label className="check" style={{ margin: '10px 0' }}>
@@ -311,6 +356,7 @@ export function RulesPage({ me, reload }: PageProps) {
         {me.user.setupMode && <button className="primary" onClick={() => setLock(true)}>Lock my rules</button>}
       </div>
       {RULE_ORDER.map((id) => <RuleCard key={id} me={me} id={id} reload={reload} />)}
+      <CloseOutsideCard me={me} reload={reload} />
       <PopupCard me={me} reload={reload} />
       <DayCard me={me} reload={reload} />
       <h2 id="accounts" style={{ marginTop: 24 }}>Accounts</h2>

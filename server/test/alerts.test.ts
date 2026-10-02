@@ -48,6 +48,46 @@ describe('alerts (SPEC §11.2)', () => {
     expect(r.alerts.map((a: any) => a.text)).toContain('2 more outside trades went past a rule since 10:00.');
   });
 
+  it('close outside trades: one alert with the result instead of the outside alert', async () => {
+    const { web, ea, poll, cursor } = await setup();
+    const closing = (ticket: number, violations = ['R1']) => ({ ...outside(ticket), violations, autoClose: true });
+    const result = (ticket: number, r: string, extra: Record<string, unknown> = {}) => ({ type: 'auto_close', ticket, result: r, violations: ['R1'], label: 'MT mobile', symbol: 'EURUSD', side: 'buy', size: 1, ...extra });
+    await ea.sync([closing(5), result(5, 'closed')]);
+    let r = await poll(cursor);
+    expect(r.alerts).toHaveLength(1);
+    expect(r.alerts[0]).toMatchObject({ kind: 'closed', title: 'Outside trade closed', text: 'A trade placed on MT mobile went past "Max trades per day". DisciplineGuard closed it.' });
+    // A replay changes nothing.
+    await ea.sync([result(5, 'closed')]);
+    expect((await poll(r.cursor)).alerts).toHaveLength(0);
+    // A failed close is sent at once, even inside the 30-minute window.
+    await ea.sync([closing(6), result(6, 'failed', { reason: 'Market is closed' })]);
+    r = await poll(r.cursor);
+    expect(r.alerts.map((a: any) => [a.kind, a.title, a.text])).toEqual([
+      ['closed', "Couldn't close an outside trade", `A trade placed on MT mobile went past "Max trades per day", and DisciplineGuard couldn't close it (Market is closed). Close it in MetaTrader.`],
+    ]);
+    // A stop loss added in time: the usual outside alert, once the EA knows.
+    await ea.sync([closing(7, ['R9'])]);
+    expect((await poll(r.cursor)).alerts).toHaveLength(0);
+    await ea.sync([result(7, 'kept', { violations: ['R9'] })]);
+    r = await poll(r.cursor);
+    expect(r.alerts.map((a: any) => a.text)).toEqual(['A trade placed on MT mobile went past "Stop loss required". It counts toward today.']);
+    // Turned off before it closed: the usual outside alert too (held in the 30-minute window after the one above).
+    await ea.sync([closing(8), result(8, 'off')]);
+    expect((await poll(r.cursor)).alerts).toHaveLength(0);
+    // Unknown results are ignored, and the entry keeps waiting for a real one.
+    await ea.sync([closing(9), result(9, 'exploded')]);
+    // Today shows what happened to each.
+    const today = (await web.get('/api/today')).data;
+    expect(today.outside.map((o: any) => o.autoClose).sort()).toEqual(['closed', 'failed', 'kept', 'off', 'pending']);
+  });
+
+  it('the closed-trade alert can be turned off', async () => {
+    const { web, ea, poll, cursor } = await setup();
+    await web.send('PUT', '/api/alerts', { on: { closed: false } });
+    await ea.sync([{ ...outside(5), autoClose: true }, { type: 'auto_close', ticket: 5, result: 'closed', violations: ['R1'] }]);
+    expect((await poll(cursor)).alerts).toHaveLength(0);
+  });
+
   it('placed anyway is off by default; the trader can turn it on', async () => {
     const { web, ea, poll, cursor } = await setup();
     const pause = (id: string) => ({ type: 'pause', pauseId: id, rules: ['R1'], title: 'R1', decision: 'place', sent: true, symbol: 'EURUSD', side: 'buy', size: 0.5 });

@@ -114,7 +114,7 @@ These rules apply to product copy about the trader or their trades.
 
 1. "Closing a trade is never paused."
 2. "Trades that keep your rules go straight through. We never make an order wait for our server."
-3. "We never see your broker password, and we never open, change or close a trade unless you click to do it."
+3. "We never see your broker password, and we never open, change or close a trade unless you click to do it." Where the trader can turn on Close outside trades (MT5), add: "Or unless you turn on Close outside trades."
 
 ---
 
@@ -213,6 +213,7 @@ Top to bottom:
   - max position size in that account's unit;
   - "copies" magic numbers (MT).
 - **R4 editor** accepts windows across midnight (22:00–02:00) and explains: "Fri 22:00–Sat 02:00 counts as Friday's session."
+- **Close outside trades** (SPEC §9.2), a card after the rule cards with an MT5 badge, a switch and the same verdict line: "A trade placed on your phone, the web terminal or MetaTrader's own order window that goes past a rule is closed within seconds. If a missing stop loss is the only problem, you get 60 seconds to add one. Trades from other EAs are never closed." Turning it on applies now; turning it off is scheduled. Once a change is scheduled, the switch shows what applies now.
 
 ### 5.6 Plan and notes
 
@@ -410,6 +411,10 @@ When everything passes: "On. Try a practice pause."
 |---|---|
 | Secondary instance | "On (panel only). Another chart is doing the counting." |
 | Outside trade went past a rule | A quiet card: "A trade placed outside DisciplineGuard went past your 'Daily loss limit'. It counts toward today." |
+| Close outside trades: closed | "Closed a trade placed on your phone. It went past your 'Max trades per day'." |
+| Close outside trades: couldn't close | "Couldn't close a trade placed on your phone (Market is closed). It went past your 'Max trades per day'. Close it yourself." |
+| Close outside trades: waiting for a stop | "A trade placed on your phone has no stop loss. Add one within 60 seconds or DisciplineGuard closes it." Then "Stop loss added in time. The trade stays open and counts toward today." |
+| Close outside trades on | Details view: "Outside trades that go past a rule are closed" |
 | Account limit | "Off · The free plan covers 1 account · Orders go through normally" |
 | Built-in VPS migration | "Off · Can't run on MetaQuotes' built-in VPS. Use your terminal or your own VPS." |
 
@@ -586,6 +591,8 @@ The first time a device is On in a trading day, an optional, dismissible card of
 |---|---|
 | Daily loss limit reached | "Daily loss limit reached on FTMO …123: −$310 of $300. New trades are paused until Tue 11:10." |
 | Outside trade went past a rule | "A trade placed on MT mobile went past 'Max trades per day'. It counts toward today." |
+| Outside trade closed (Close outside trades) | "A trade placed on mobile went past 'Max trades per day'. DisciplineGuard closed it." |
+| Outside trade couldn't be closed | "A trade placed on mobile went past 'Max trades per day', and DisciplineGuard couldn't close it (Market is closed). Close it in MetaTrader." Sent at once, never held for a roll-up |
 | DisciplineGuard was off | "DisciplineGuard was off on …123 from 14:02 to 16:40. 2 trades were placed then." |
 | Account moved to another login | "Account …123 was connected to another DisciplineGuard login. If that wasn't you, sign in and check Devices." |
 | Orders we couldn't check | "We couldn't check 4 of your orders today because the Account Manager was closed. How to fix: <link>" |

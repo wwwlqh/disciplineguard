@@ -11,7 +11,7 @@ export type Direction = 'same' | 'stricter' | 'looser';
  * - `acct:<id>:r5` {r5Max, r5Overrides} · `acct:<id>:r6` / `acct:<id>:r8` {unit, value} | null
  * - `acct:<id>:r7ignore` number | null · `acct:<id>:copies` number[] · `acct:<id>:reset` ResetSpec
  * - `default:r5` / `default:r6` / `default:r8` / `default:r7ignore`: used by accounts without their own value
- * - `popup` PopupSettings · `countOnce` boolean · `tz` string · `reset` ResetSpec
+ * - `popup` PopupSettings · `countOnce` boolean · `closeOutside` boolean · `tz` string · `reset` ResetSpec
  * - `note:<id>` {text, tag} | null · `plan` string
  */
 export type SettingKey = string;
@@ -161,6 +161,7 @@ export function compareChange(key: SettingKey, active: any, proposed: any): Dire
   if (kind === 'default') return compareChange(`acct:*:${id}`, active, proposed);
   if (kind === 'popup') return comparePopup(active, proposed);
   if (kind === 'countOnce') return proposed ? 'looser' : 'stricter';
+  if (kind === 'closeOutside') return proposed ? 'stricter' : 'looser';
   if (kind === 'note') return active ? 'looser' : 'stricter';
   if (kind === 'plan') return active ? 'looser' : 'stricter';
   return 'looser'; // tz, reset and anything unknown

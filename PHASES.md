@@ -63,7 +63,7 @@ Independent bets, in the order the founder picks.
 |---|---|
 | Discipline report | Worst days, limit overshoots and size vs. plan, after a minimum sample (EXPERIENCE §5.8) |
 | Prop firm mode | Firm presets the user confirms, distance to breach, equity-based and trailing drawdown |
-| Stronger enforcement | Opt-in hard lock after the daily limit, loosening delays of 3 or 7 days, a "day off" rule, "pause after giving back 50% of today's peak profit" |
+| Stronger enforcement | Opt-in hard lock after the daily limit, loosening delays of 3 or 7 days, a "day off" rule, "pause after giving back 50% of today's peak profit". Shipped first (2 Oct 2026): Close outside trades on MT5 (SPEC §9.2) |
 | More TradingView paths | DOM ladder, chart trading, dragging order lines |
 | One account on TradingView and MT | Matching the same trade across platforms |
 | Web platforms | DXtrade, Match-Trader, TradeLocker, cTrader web, Tradovate web, TopstepX web, as extension adapters |

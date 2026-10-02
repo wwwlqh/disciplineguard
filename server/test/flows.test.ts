@@ -112,6 +112,7 @@ describe('sync (SPEC §10.3)', () => {
     expect(await verify(SIGNING_PUB, payload, sig)).toBe(true);
     const p = JSON.parse(payload);
     expect(p.rules.R1).toEqual({ on: true, max: 5 });
+    expect(p.rules.closeOutside).toBe(false);
     expect(p.license.state).toBe('free');
     expect(p.time.userResets.some((x: number) => x > w.t)).toBe(true);
     expect(p.notes[0].text).toBe('Stand up and breathe.');
@@ -269,6 +270,24 @@ describe('rule changes through the API (SPEC §6)', () => {
     me = (await web.get('/api/me')).data;
     expect(me.rules.R1.max).toBe(4);
     expect(me.pending).toHaveLength(0);
+  });
+
+  it('close outside trades: on applies now and reaches the EA signed; off waits for the reset', async () => {
+    const w = new World();
+    const web = await w.signIn('a@b.co');
+    await web.onboard();
+    const ea = await web.connect();
+    await web.send('POST', '/api/lock', { firstName: 'Alex', understood: true });
+    expect((await web.send('PUT', '/api/settings', { key: 'closeOutside', value: true })).data).toEqual({ direction: 'stricter', appliesAt: 'now' });
+    const r = await ea.sync();
+    expect(await verify(SIGNING_PUB, r.data.signed.payload, r.data.signed.sig)).toBe(true);
+    expect(JSON.parse(r.data.signed.payload).rules.closeOutside).toBe(true);
+    // CHG-02: turning it off at 10:00 waits until 00:00 tonight.
+    expect((await web.send('PUT', '/api/settings', { key: 'closeOutside', value: false })).data).toEqual({ direction: 'looser', appliesAt: Date.UTC(2026, 9, 6) });
+    expect((await web.get('/api/me')).data.rules.closeOutside).toBe(true);
+    w.t = Date.UTC(2026, 9, 6, 0, 1);
+    expect((await web.get('/api/me')).data.rules.closeOutside).toBe(false);
+    expect((await web.send('PUT', '/api/settings', { key: 'closeOutside', value: 'yes' })).status).toBe(400);
   });
 
   it('CHG-18: a scheduled change can be cancelled at once', async () => {

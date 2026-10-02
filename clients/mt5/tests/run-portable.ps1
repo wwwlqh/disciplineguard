@@ -20,7 +20,11 @@ Copy-Item $Ex5 "$Portable\MQL5\Experts\" -Force
 foreach ($f in $Inputs) { Copy-Item $f "$Portable\MQL5\Files\" -Force }
 $out = "$Portable\MQL5\Files\$Output"
 Remove-Item $out -ErrorAction SilentlyContinue
-"[StartUp]`r`nExpert=$name`r`nSymbol=EURUSD`r`nPeriod=H1`r`n" | Out-File -Encoding unicode "$Portable\run.ini"
+# Sign in with the account this copy last used (its saved demo account), so the chart gets data and the EA starts.
+$auth = Get-ChildItem "$Portable\logs\*.log" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending |
+  ForEach-Object { Get-Content -Encoding Unicode $_.FullName } | Select-String "'(\d+)': authorized on (\S+) " | Select-Object -First 1
+$common = if ($auth) { "[Common]`r`nLogin=$($auth.Matches[0].Groups[1].Value)`r`nServer=$($auth.Matches[0].Groups[2].Value)`r`n" } else { '' }
+"$common[StartUp]`r`nExpert=$name`r`nSymbol=EURUSD`r`nPeriod=H1`r`n" | Out-File -Encoding unicode "$Portable\run.ini"
 $p = Start-Process -FilePath "$Portable\terminal64.exe" -ArgumentList "/portable", "/config:`"$Portable\run.ini`"" -PassThru
 $t = 0
 while (-not (Test-Path $out) -and $t -lt $TimeoutSec) { Start-Sleep -Seconds 2; $t += 2 }

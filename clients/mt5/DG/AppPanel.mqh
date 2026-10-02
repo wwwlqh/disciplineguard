@@ -142,6 +142,7 @@ string DetailLines(const long now)
    int pend = gPJ.Get(gPJ.Root(), "pending");
    int np = gPJ.Size(pend);
    s += "\n" + (np == 0 ? "No scheduled changes" : IntegerToString(np) + " scheduled change" + (np == 1 ? "" : "s"));
+   if(PBool("rules.closeOutside")) s += "\nOutside trades that go past a rule are closed";
    long nr = gM.NextReset(gM.userResets, t);
    if(nr != LONG_MAX) s += "\nNext reset " + DGFmtTime(gM, nr, now);
    if(PBool("setupMode")) s += "\nSetup mode: changes apply at once" + (PValid("lockAt") ? " until " + DGFmtTime(gM, PLong("lockAt"), now) : "");

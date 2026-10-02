@@ -20,6 +20,7 @@ const ALERTS: [AlertKind, string][] = [
   ['off', 'DisciplineGuard turned off, or trades while it was off'],
   ['moved', 'Account connected to another login'],
   ['outside', 'Outside trade went past a rule'],
+  ['closed', "Outside trade closed, or couldn't be closed"],
   ['unchecked', "Orders we couldn't check"],
   ['summary', 'End-of-session summary'],
   ['placed', 'Placed anyway (other rules)'],

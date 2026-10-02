@@ -42,6 +42,11 @@ export interface Rules {
   accounts: Record<string, AccountRules>;
   /** "Count the same trade on several accounts once" (SPEC §4.2). */
   countOnce: boolean;
+  /**
+   * "Close outside trades" (SPEC §9.2): the MT5 EA closes a trade placed by hand outside DisciplineGuard (phone, web,
+   * the terminal's own order window) that goes past a rule, right after its fill. Off unless the trader turns it on.
+   */
+  closeOutside: boolean;
 }
 
 export interface PopupSettings {

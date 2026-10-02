@@ -51,6 +51,8 @@ Tightening a rule applies now. **Loosening one waits until your next day reset**
 
 Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morning check-in to tighten today's limits only.
 
+**Close outside trades** (MT5, off until you turn it on): a trade placed on your phone, the web terminal or MetaTrader's own order window can't be paused, so DisciplineGuard closes it within seconds if it goes past a rule. A missing stop loss alone gets 60 seconds to be added. Trades from other EAs are never closed.
+
 <div align="center">
 <img src="docs/pill.png" width="820" alt="The status pill on TradingView: 'On · 2 of 1 trades', today's trades and loss, Take a 15 min break, Done for today">
 </div>
@@ -68,7 +70,7 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 
 - **Closing a trade is never paused.** Nor are moving SL/TP or cancelling orders.
 - **We never make an order wait for our server.** Rules are checked on your computer.
-- **We never see your broker password**, and never open, change or close a trade unless you click to do it.
+- **We never see your broker password**, and never open, change or close a trade unless you click to do it or turn on Close outside trades.
 
 ## Get started
 

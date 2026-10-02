@@ -7,6 +7,14 @@ import { onLink } from '../router.ts';
 import { DeletionBanner, Dot, PracticePause, Sheet, useToast, type StatusKind } from '../ui/kit.tsx';
 import type { PageProps } from '../main.tsx';
 
+/** What "Close outside trades" did with an outside trade (SPEC §9.2). */
+const AUTO_CLOSE: Record<string, string> = {
+  pending: 'Closing it.',
+  closed: 'DisciplineGuard closed it.',
+  failed: "DisciplineGuard couldn't close it. Close it in MetaTrader.",
+  kept: 'A stop loss was added in time. It counts.',
+};
+
 /** Maps what a device last reported to the status vocabulary (EXPERIENCE §8). */
 export function deviceStatus(c: Connection, now = Date.now()): { kind: StatusKind; label: string } {
   if (c.offReason) return { kind: 'off', label: 'Off' };
@@ -36,6 +44,7 @@ export function pendingLabel(key: string, value: any): string {
   if (kind === 'acct' && sub === 'removed') return 'Remove an account';
   if (kind === 'conn') return 'Remove a device';
   if (kind === 'popup') return 'Popup settings';
+  if (kind === 'closeOutside') return `Close outside trades: turn ${value ? 'on' : 'off'}`;
   if (kind === 'note') return value ? 'Edit a note' : 'Delete a note';
   if (kind === 'plan') return 'Your plan';
   if (kind === 'tz') return `Timezone: ${value}`;
@@ -108,7 +117,7 @@ interface TodayData {
   meters: { tradesToday: number; r1Max: number | null; cooldownUntil: number | null; breakUntil: number | null; doneUntil: number | null; hours: { open: boolean; next: number | null } | null };
   pending: { key: string; value: any; effectiveAt: number }[];
   pauses: { t: number; title: string; decision: string; symbol?: string; side?: string; size?: number }[];
-  outside: { t: number; accountId: string; symbol: string; label?: string; violations: string[]; unprotected: boolean }[];
+  outside: { t: number; accountId: string; symbol: string; label?: string; violations: string[]; unprotected: boolean; autoClose?: 'pending' | 'closed' | 'failed' | 'kept' | 'gone' | 'off' }[];
   coverage: { gaps: { accountId: string; last3: string; from: number; to: number; trades: number }[]; unclassified: number; off: { t: number; reason?: string; last3?: string }[] };
   week: { pauses: number; skipped: number; placed: number; daysTraded: number; daysKept: number; keptToday: boolean };
   calibration: { rule: string; count: number } | null;
@@ -279,7 +288,7 @@ export function Today({ me, reload }: PageProps) {
               <li key={`${g.accountId}${g.from}`}>DisciplineGuard was off on …{g.last3} from {time(g.from, d.now)} to {time(g.to, d.now)}{g.trades ? ` (${plural(g.trades, 'trade')})` : ''}.</li>
             ))}
             {d.outside.filter((o) => o.violations.length > 0).map((o) => (
-              <li key={o.t}>{time(o.t, d.now)} · Outside trade{o.label ? ` (${o.label})` : ''} went past {o.violations.map((v) => `"${RULE_NAMES[v as TitleId] ?? v}"`).join(', ')}. It counts.</li>
+              <li key={o.t}>{time(o.t, d.now)} · Outside trade{o.label ? ` (${o.label})` : ''} went past {o.violations.map((v) => `"${RULE_NAMES[v as TitleId] ?? v}"`).join(', ')}. {AUTO_CLOSE[o.autoClose ?? ''] ?? 'It counts.'}</li>
             ))}
             {d.coverage.unclassified > 0 && <li>Orders we couldn't check: {d.coverage.unclassified}.</li>}
           </ul>

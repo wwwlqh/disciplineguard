@@ -73,6 +73,10 @@ describe('SPEC §15.5 setup mode and rule changes', () => {
   it('mixed popup change (one stricter, one looser) is looser', () =>
     expect(compareChange('popup', DEFAULT_POPUP, { ...DEFAULT_POPUP, wait: 30, skipCard: false })).toBe('looser'));
   it('count once: turning on is looser', () => expect(compareChange('countOnce', false, true)).toBe('looser'));
+  it('close outside trades: turning on applies now, turning off waits for the reset', () => {
+    expect(requestChange('closeOutside', { active: false }, true, locked(at(14))).appliesAt).toBe('now');
+    expect(requestChange('closeOutside', { active: true }, false, locked(at(14))).appliesAt).toBe(at(2, 0, 1));
+  });
 
   it('R4-06: 22:00–02:00 Mon–Fri splits into two windows', () => {
     const s = splitWindow([0, 1, 2, 3, 4], 22 * 60, 2 * 60);

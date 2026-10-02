@@ -7,12 +7,12 @@ import { coverageGaps } from './coverage.ts';
 import { dayRows, isKept } from './days.ts';
 import { now as clock, type Env } from './env.ts';
 
-export const ALERT_KINDS = ['limit', 'after_limit', 'off', 'moved', 'outside', 'unchecked', 'summary', 'placed', 'stop'] as const;
+export const ALERT_KINDS = ['limit', 'after_limit', 'off', 'moved', 'outside', 'closed', 'unchecked', 'summary', 'placed', 'stop'] as const;
 export type AlertKind = (typeof ALERT_KINDS)[number];
 
 /** SPEC §11.2 trader defaults. */
 const DEFAULT_ON: Record<AlertKind, boolean> = {
-  limit: true, after_limit: true, off: true, moved: true, outside: true, unchecked: true, summary: true, placed: false, stop: false,
+  limit: true, after_limit: true, off: true, moved: true, outside: true, closed: true, unchecked: true, summary: true, placed: false, stop: false,
 };
 
 export interface AlertPrefs {
@@ -39,6 +39,7 @@ const ROLLUP: Partial<Record<AlertKind, string>> = {
   after_limit: 'trades placed anyway after your daily loss limit',
   placed: 'trades placed anyway',
   outside: 'outside trades went past a rule',
+  closed: 'outside trades closed',
   off: 'trades placed while DisciplineGuard was off',
   stop: 'stops removed or widened',
 };
@@ -76,12 +77,12 @@ async function insertAlert(env: Env, userId: string, kind: string, title: string
   await env.DB.prepare('INSERT INTO alerts (user_id, kind, title, text, created_at) VALUES (?, ?, ?, ?, ?)').bind(userId, kind, title, text, clock(env)).run();
 }
 
-/** Queues an alert for the trader's Windows app, if that alert is on. */
-export async function alert(env: Env, uc: UserCtx, kind: AlertKind, title: string, text: string): Promise<void> {
+/** Queues an alert for the trader's Windows app, if that alert is on. `urgent` alerts are never held for a roll-up. */
+export async function alert(env: Env, uc: UserCtx, kind: AlertKind, title: string, text: string, urgent = false): Promise<void> {
   // No alerts once deletion is requested (SPEC §12.6).
   if (!alertPrefs(uc.user.alerts_json).on[kind] || uc.user.deletion_requested_at) return;
   const t = clock(env);
-  if (ROLLUP[kind]) {
+  if (ROLLUP[kind] && !urgent) {
     const st = await env.DB.prepare('SELECT sent_at FROM alert_state WHERE user_id = ? AND kind = ?').bind(uc.user.id, kind).first<{ sent_at: number }>();
     if (st && t - st.sent_at < WINDOW) {
       await env.DB.prepare('UPDATE alert_state SET held = held + 1 WHERE user_id = ? AND kind = ?').bind(uc.user.id, kind).run();
@@ -126,6 +127,18 @@ export async function placedAnyway(env: Env, uc: UserCtx, a: AccountRow | undefi
 export async function outsideViolation(env: Env, uc: UserCtx, rules: string[], label: string | undefined): Promise<void> {
   const where = label ? `placed on ${label}` : 'placed outside DisciplineGuard';
   await alert(env, uc, 'outside', 'A trade went past your rule', `A trade ${where} went past ${ruleName(rules[0])}. It counts toward today.`);
+}
+
+/** "Close outside trades" (SPEC §9.2): the EA closed an outside trade that went past a rule, or couldn't. */
+export async function outsideClosed(env: Env, uc: UserCtx, rules: string[], label: string | undefined, ok: boolean, reason?: string): Promise<void> {
+  const where = label ? `placed on ${label}` : 'placed outside DisciplineGuard';
+  if (ok) {
+    await alert(env, uc, 'closed', 'Outside trade closed', `A trade ${where} went past ${ruleName(rules[0])}. DisciplineGuard closed it.`);
+  } else {
+    // Never held for a roll-up: the trade is still open.
+    const why = reason ? ` (${reason})` : '';
+    await alert(env, uc, 'closed', "Couldn't close an outside trade", `A trade ${where} went past ${ruleName(rules[0])}, and DisciplineGuard couldn't close it${why}. Close it in MetaTrader.`, true);
+  }
 }
 
 export async function unprotectedEntry(env: Env, uc: UserCtx, a: AccountRow): Promise<void> {

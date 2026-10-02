@@ -146,6 +146,7 @@ export function assemble(settings: Map<string, StoredSetting>): Assembled {
     else if (kind === 'conn' && sub === 'removed' && v === true) removedConnections.add(id);
     else if (kind === 'popup') popup = { ...DEFAULT_POPUP, ...v };
     else if (kind === 'countOnce') rules.countOnce = !!v;
+    else if (kind === 'closeOutside') rules.closeOutside = !!v;
     else if (kind === 'tz') tz = v;
     else if (kind === 'reset') resetRaw = v;
     else if (kind === 'note') notes.push({ id, text: v.text, tag: v.tag ?? 'any', setAt: s.setAt });

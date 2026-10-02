@@ -40,6 +40,11 @@ interface SyncEvent {
 }
 
 const RULE_IDS = new Set(['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'BREAK', 'DONE_TODAY', 'CHECK']);
+/**
+ * closed · failed (still open) · kept (a stop loss was added in time) · gone (the trader closed it first) ·
+ * off (the setting or protection was turned off before it closed).
+ */
+const AUTO_CLOSE_RESULTS = new Set(['closed', 'failed', 'kept', 'gone', 'off']);
 const OFF_REASONS = new Set(['removed', 'chart_close', 'template', 'signed_out', 'switched_login', 'site_access_removed', 'uninstalled']);
 
 async function authDevice(req: Request, env: Env): Promise<ConnRow> {
@@ -245,14 +250,37 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
       const payload = {
         symbol: clean(e.symbol, 30), side: e.side === 'sell' ? 'sell' : 'buy', size: finite(e.size) ?? 0, source,
         label: clean(e.label, 12), pauseId: clean(e.pauseId, 64), pending: !!e.pending, violations: rules, unprotected: !covered || !!e.unprotected,
+        // "Close outside trades": the EA is closing it, and an auto_close event follows with the result.
+        autoClose: source === 'outside' && rules.length > 0 && e.autoClose === true ? 'pending' : undefined,
       };
       const stmts = [insert(id, 'entry', payload), env.DB.prepare('UPDATE trading_accounts SET last_entry_at = MAX(COALESCE(last_entry_at, 0), ?) WHERE id = ?').bind(t, acct.id)];
       if (source === 'outside' && rules.length > 0) stmts.push(insert(`${id}:ov`, 'override', { from: 'outside', rules }));
       const [stored] = await env.DB.batch(stmts);
       if (!stored.meta.changes) return;
       await alerts.scheduleSummary(env, uc, t);
-      if (source === 'outside' && rules.length > 0) await alerts.outsideViolation(env, uc, rules, payload.label);
+      // A trade the EA is closing gets its alert with the result (auto_close below).
+      if (source === 'outside' && rules.length > 0 && !payload.autoClose) await alerts.outsideViolation(env, uc, rules, payload.label);
       if (payload.unprotected) await alerts.unprotectedEntry(env, uc, acct);
+      return;
+    }
+    case 'auto_close': {
+      // "Close outside trades" (SPEC §9.2): what happened to an outside entry the EA set out to close.
+      if (!acct || !ticket || !AUTO_CLOSE_RESULTS.has(String(e.result))) return;
+      const result = String(e.result);
+      const rules = Array.isArray(e.violations) ? (e.violations as unknown[]).filter((r): r is string => typeof r === 'string' && RULE_IDS.has(r)) : [];
+      const label = clean(e.label, 12);
+      const reason = result === 'failed' ? clean(e.reason, 80) : undefined;
+      const stored = await insert(await eventId(acct.id, 'auto_close', ticket), 'auto_close', {
+        result, rules, label, reason, symbol: clean(e.symbol, 30), side: e.side === 'sell' ? 'sell' : 'buy', size: finite(e.size) ?? 0,
+      }).run();
+      if (!stored.meta.changes) return;
+      await env.DB.prepare("UPDATE events SET payload = json_set(payload, '$.autoClose', ?) WHERE id = ? AND user_id = ?")
+        .bind(result, await eventId(acct.id, 'entry', ticket), userId)
+        .run();
+      if (rules.length === 0) return;
+      if (result === 'closed' || result === 'failed') await alerts.outsideClosed(env, uc, rules, label, result === 'closed', reason);
+      // A stop loss added in time, closed by the trader first, or the setting turned off: the usual outside alert.
+      else await alerts.outsideViolation(env, uc, rules, label);
       return;
     }
     case 'entry_void': {

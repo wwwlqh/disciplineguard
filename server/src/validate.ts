@@ -152,6 +152,8 @@ export function validateSetting(key: string, value: unknown, account: AccountLoo
     }
     case 'countOnce':
       return bool(value, 'countOnce');
+    case 'closeOutside':
+      return bool(value, 'closeOutside');
     case 'tz':
       return tz(value);
     case 'reset':

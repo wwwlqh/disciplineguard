@@ -110,7 +110,7 @@ export function placeLabel(order: Order, f: Fmt): string {
 export const TRUST_LINES = [
   'Closing a trade is never paused.',
   'Trades that keep your rules go straight through. We never make an order wait for our server.',
-  'We never see your broker password, and we never open, change or close a trade unless you click to do it.',
+  'We never see your broker password, and we never open, change or close a trade unless you click to do it or turn on Close outside trades.',
 ];
 
 export const PAUSE_FOOTER = 'Closing, moving SL/TP and cancelling orders are never paused. To close a position, skip first.';

@@ -59,6 +59,7 @@ export function emptyRules(): Rules {
     R10: { on: false, minutes: 30 },
     accounts: {},
     countOnce: false,
+    closeOutside: false,
   };
 }
 

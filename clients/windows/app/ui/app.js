@@ -33,7 +33,7 @@ function signin(_v, error = '') {
     <footer>
       <p>Closing a trade is never paused.</p>
       <p>Trades that keep your rules go straight through. We never make an order wait for our server.</p>
-      <p>We never see your broker password, and we never open, change or close a trade unless you click to do it.</p>
+      <p>We never see your broker password, and we never open, change or close a trade unless you click to do it or turn on Close outside trades.</p>
     </footer>`;
   document.getElementById('go').onclick = async (e) => {
     e.target.disabled = true;
