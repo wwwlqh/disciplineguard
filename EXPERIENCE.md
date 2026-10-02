@@ -716,15 +716,17 @@ A calm pre-flight checklist. Not a parental lock, not a casino.
 
 | Token | Use |
 |---|---|
-| Neutral scale, dark and light | Surfaces, text, borders |
-| Accent (one hue, teal or indigo; not TradingView blue, not buy/sell red or green) | Primary actions, focus ring, Skip this trade, the "On" dot |
+| Neutral scale, light | Surfaces, text, borders |
+| Accent: the icon's mint to aqua, with dark ink on it (not TradingView blue, not buy/sell red or green) | Primary actions, focus ring, Skip this trade, the "On" dot |
 | Blue | "Setting up" |
 | Amber | "Needs attention" |
 | Grey | "Off", "Not running" |
 | Red | Destructive buttons only (delete account) |
 | P/L colors | Stats only, always with + or − signs |
 
-Dark mode is first-class. The web app follows the system setting with a manual switch. The extension follows TradingView. MT follows the chart background.
+Bright and light only: the website, web app and Windows app never switch to dark. The extension follows TradingView. MT follows the chart background.
+
+The icon: two candlesticks that read as a pause, on a mint-to-blue tile. `web/public/mark.svg` is the master; the Windows, tray and extension icons are drawn from it, pixel-tuned at 16–32 px.
 
 ### 14.3 Typography
 

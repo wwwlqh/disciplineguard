@@ -1,6 +1,7 @@
 // Status and changelog (EXPERIENCE §4): is our server up, does TradingView still work, and what changed. Public.
 import { useEffect, useState } from 'react';
 import { onLink } from '../router.ts';
+import { Brand } from '../ui/Brand.tsx';
 
 /** Newest first. One line each, in the trader's words. */
 const CHANGES: [string, string][] = [
@@ -37,7 +38,7 @@ export function Status() {
   return (
     <div className="help-page stack">
       <div className="row between">
-        <a href="/" onClick={onLink} className="brand"><img src="/mark.svg" alt="" /> Status</a>
+        <Brand href="/" label="Status" />
         <a href="/help" onClick={onLink} className="small">Help</a>
       </div>
       <div className="card">

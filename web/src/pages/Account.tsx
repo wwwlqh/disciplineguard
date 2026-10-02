@@ -4,6 +4,7 @@ import { api, ApiError, type AlertKind } from '../api.ts';
 import { onLink } from '../router.ts';
 import { ago, date, time } from '../fmt.ts';
 import { DeletionBanner, Sheet, Switch, useToast } from '../ui/kit.tsx';
+import { Icon } from '../ui/Icon.tsx';
 import type { PageProps } from '../main.tsx';
 
 const REPORT_TYPES = [
@@ -38,7 +39,7 @@ function LongBreak() {
   }
   return (
     <div className="card" id="break">
-      <h2>Take a break</h2>
+      <div className="card-head"><h2><Icon name="coffee" /> Take a break</h2></div>
       <p className="muted">Every new trade gets a 45-second pause, and you type to confirm. It can't be shortened.</p>
       <div className="row">
         {([1, 7, 30] as const).map((d) => <button key={d} onClick={() => setDays(d)}>{d === 1 ? '1 day' : `${d} days`}</button>)}
@@ -134,10 +135,15 @@ export function AccountPage({ me, reload }: PageProps) {
 
   return (
     <div className="stack">
-      <h1>Account</h1>
+      <div className="page-head">
+        <div>
+          <h1>Account</h1>
+          <div className="sub">{me.user.email}</div>
+        </div>
+      </div>
       <DeletionBanner me={me} reload={reload} />
       <div className="card" id="plan">
-        <h2>Plan</h2>
+        <div className="card-head"><h2><Icon name="star" /> Plan</h2></div>
         <p>{planLine}</p>
         {lic.state === 'past_due' && me.user.updateCardUrl && <a className="btn primary" href={me.user.updateCardUrl}>Update your card</a>}
         {lic.state === 'active' || lic.state === 'past_due' ? (
@@ -170,7 +176,7 @@ export function AccountPage({ me, reload }: PageProps) {
       <LongBreak />
 
       <div className="card" id="alerts">
-        <h2>Alerts</h2>
+        <div className="card-head"><h2><Icon name="bell" /> Alerts</h2></div>
         <p className="small muted">
           {me.user.hasApp ? 'Shown as notifications on your computer by DisciplineGuard for Windows.' : <>Alerts show on your computer through DisciplineGuard for Windows. <a href="/devices" onClick={onLink}>Install it</a></>}
         </p>
@@ -199,7 +205,7 @@ export function AccountPage({ me, reload }: PageProps) {
       </div>
 
       <div className="card">
-        <h2>Privacy</h2>
+        <div className="card-head"><h2><Icon name="eye" /> Privacy</h2></div>
         <ul className="list">
           <li className="row between">
             <span>Save the reasons I pick <span className="small muted">(only you see them)</span></span>
@@ -214,7 +220,7 @@ export function AccountPage({ me, reload }: PageProps) {
       </div>
 
       <div className="card">
-        <h2>Security</h2>
+        <div className="card-head"><h2><Icon name="key" /> Security</h2></div>
         <p className="small muted">Signed in as {me.user.email}.</p>
         {sessions && (
           <ul className="list">
@@ -233,7 +239,7 @@ export function AccountPage({ me, reload }: PageProps) {
       </div>
 
       <div className="card" id="report">
-        <h2>Report a problem</h2>
+        <div className="card-head"><h2><Icon name="mail" /> Report a problem</h2></div>
         <div className="stack">
           <select value={report.type} onChange={(e) => setReport({ ...report, type: e.target.value })} aria-label="Problem type">
             {REPORT_TYPES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
@@ -255,7 +261,7 @@ export function AccountPage({ me, reload }: PageProps) {
       </div>
 
       <div className="card">
-        <h2>Data</h2>
+        <div className="card-head"><h2><Icon name="file" /> Data</h2></div>
         <div className="row">
           <button onClick={exportData}>Email me an export</button>
           {!me.user.deletionAt && <button className="link small" onClick={openDelete}>Delete my account</button>}

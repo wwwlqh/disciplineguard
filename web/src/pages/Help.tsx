@@ -1,6 +1,7 @@
 // Help center (EXPERIENCE §15): one short article per setup step and status reason.
 // Public: the EA and the Windows app link here, signed in or not.
 import { onLink } from '../router.ts';
+import { Brand } from '../ui/Brand.tsx';
 
 interface Article {
   slug: string;
@@ -218,7 +219,7 @@ export function Help({ path, signedIn }: { path: string; signedIn: boolean }) {
   return (
     <div className="help-page stack">
       <div className="row between">
-        <a href="/help" onClick={onLink} className="brand"><img src="/mark.svg" alt="" /> Help</a>
+        <Brand href="/help" label="Help" />
         <a href={signedIn ? '/today' : '/signin'} onClick={onLink} className="small">{signedIn ? 'Dashboard' : 'Sign in'}</a>
       </div>
       {a ? (

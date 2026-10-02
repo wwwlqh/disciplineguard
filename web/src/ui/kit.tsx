@@ -54,8 +54,8 @@ export function Sheet({ children, onClose, label }: { children: ReactNode; onClo
 
 export type StatusKind = 'on' | 'setting_up' | 'attention' | 'off' | 'not_running';
 
-export function Dot({ kind }: { kind: StatusKind }) {
-  return <span className={`dot ${kind}`} aria-hidden="true" />;
+export function Dot({ kind, live = false }: { kind: StatusKind; live?: boolean }) {
+  return <span className={`dot ${kind}${live ? ' live' : ''}`} aria-hidden="true" />;
 }
 
 /** The live verdict line (EXPERIENCE §5.5), computed by the server with a dry run. */

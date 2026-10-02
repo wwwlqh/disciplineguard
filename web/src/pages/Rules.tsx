@@ -6,7 +6,20 @@ import { date, time } from '../fmt.ts';
 import { navigate } from '../router.ts';
 import { applyLabel, Sheet, Switch, useToast, useVerdict, VerdictLine } from '../ui/kit.tsx';
 import { RULE_INFO, RULE_ORDER, RuleFields, ruleSummary, validRule } from '../ui/RuleFields.tsx';
+import { Icon, RULE_ICON, type IconName } from '../ui/Icon.tsx';
 import type { PageProps } from '../main.tsx';
+
+/** The rules page in sections, so ten rules read as four short groups. */
+const SECTIONS: [string, RuleId[]][] = [
+  ['Trades', ['R1', 'R2', 'R3']],
+  ['Time', ['R4', 'R7']],
+  ['After a loss', ['R8', 'R10']],
+  ['Size and stops', ['R5', 'R6', 'R9']],
+];
+
+function Section({ title, icon }: { title: string; icon?: IconName }) {
+  return <div className="section-title">{icon && <Icon name={icon} size={15} />}<h2>{title}</h2></div>;
+}
 
 function useSave(reload: () => Promise<void>) {
   const toast = useToast();
@@ -50,32 +63,36 @@ function RuleCard({ me, id, reload }: { me: Me; id: RuleId; reload(): Promise<vo
   const info = RULE_INFO[id];
   useEffect(() => setDraft(active), [JSON.stringify(active)]);
   return (
-    <div className="card">
-      <div className="row between">
-        <div>
-          <strong>{info.name}</strong> {info.badges.map((b) => <span key={b} className="chip">{b}</span>)}
-          <div className="small muted">{info.meaning}</div>
-          <div className="small" style={{ marginTop: 4 }}>Now: {ruleSummary(id, me.rules)} <SetOn me={me} k={key} /></div>
+    <div className={`card rule-card${active.on ? '' : ' off'}`}>
+      <span className={`tile${active.on ? ' accent' : ''}`}><Icon name={RULE_ICON[id]} /></span>
+      <div className="rule-main">
+        <div className="rule-name">{info.name} {info.badges.map((b) => <span key={b} className="chip">{b}</span>)}</div>
+        <div className="small muted">{info.meaning}</div>
+        <div className="rule-now">
+          <span className={`value-pill${active.on ? ' on' : ''}`}>{ruleSummary(id, me.rules)}</span>
+          <SetOn me={me} k={key} />
         </div>
-        {!editing && <button onClick={() => setEditing(true)}>Change</button>}
       </div>
-      <Scheduled me={me} k={key} render={(val) => ruleSummary(id, { ...me.rules, [id]: val } as any)} />
-      {editing && (
-        <div className="stack" style={{ marginTop: 12 }}>
-          <div className="row">
-            <Switch label={`${info.name} on`} checked={draft.on} onChange={(on) => setDraft({ ...draft, on })} />
-            <span>{draft.on ? 'On' : 'Off'}</span>
+      {!editing ? <button onClick={() => setEditing(true)}>Change</button> : <span />}
+      <div className="rule-extra">
+        <Scheduled me={me} k={key} render={(val) => ruleSummary(id, { ...me.rules, [id]: val } as any)} />
+        {editing && (
+          <div className="rule-edit">
+            <div className="row">
+              <Switch label={`${info.name} on`} checked={draft.on} onChange={(on) => setDraft({ ...draft, on })} />
+              <span>{draft.on ? 'On' : 'Off'}</span>
+            </div>
+            {draft.on && <RuleFields id={id} value={draft} onChange={setDraft} />}
+            <VerdictLine v={v} setupMode={me.user.setupMode} />
+            <div className="row">
+              <button className="primary" disabled={!validRule(id, draft) || !v || v.direction === 'same'} onClick={async () => { await save(key, draft); setEditing(false); }}>
+                {applyLabel(v)}
+              </button>
+              <button onClick={() => { setDraft(active); setEditing(false); }}>Cancel</button>
+            </div>
           </div>
-          {draft.on && <RuleFields id={id} value={draft} onChange={setDraft} />}
-          <VerdictLine v={v} setupMode={me.user.setupMode} />
-          <div className="row">
-            <button className="primary" disabled={!validRule(id, draft) || !v || v.direction === 'same'} onClick={async () => { await save(key, draft); setEditing(false); }}>
-              {applyLabel(v)}
-            </button>
-            <button onClick={() => { setDraft(active); setEditing(false); }}>Cancel</button>
-                      </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -91,7 +108,7 @@ function PopupCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
   const seq = p.growing.on ? [0, 1, 2, 3].map((n) => Math.min(p.wait + p.growing.step * n, Math.max(p.growing.cap, p.wait))).join(' s → ') + ' s' : '';
   return (
     <div className="card">
-      <h2>Popup settings</h2>
+      <div className="card-head"><h2><Icon name="pause" /> Popup settings</h2></div>
       <p className="small muted">Trades that keep your rules go straight through, unless you pick "every new trade".</p>
       <div className="stack">
         <label className="field">When it shows
@@ -155,20 +172,20 @@ function CloseOutsideCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
   const save = useSave(reload);
   useEffect(() => setOn(cur), [cur]);
   return (
-    <div className="card">
-      <div className="row between">
-        <div>
-          <strong>Close outside trades</strong> <span className="chip">MT5</span>
-          <div className="small muted">
-            A trade placed on your phone, the web terminal or MetaTrader's own order window that goes past a rule is closed within seconds. If a missing stop loss is the only problem, you get 60 seconds to add one. Trades from other EAs are never closed.
-          </div>
-          <div className="small" style={{ marginTop: 4 }}>Now: {cur ? 'On' : 'Off'} <SetOn me={me} k="closeOutside" /></div>
+    <div className={`card rule-card${cur ? '' : ' off'}`}>
+      <span className={`tile${cur ? ' accent' : ''}`}><Icon name="phone" /></span>
+      <div className="rule-main">
+        <div className="rule-name">Close outside trades <span className="chip">MT5</span></div>
+        <div className="small muted">
+          A trade placed on your phone, the web terminal or MetaTrader's own order window that goes past a rule is closed within seconds. If a missing stop loss is the only problem, you get 60 seconds to add one. Trades from other EAs are never closed.
         </div>
-        <Switch label="Close outside trades" checked={on} onChange={setOn} />
+        <div className="rule-now"><span className={`value-pill${cur ? ' on' : ''}`}>{cur ? 'On' : 'Off'}</span> <SetOn me={me} k="closeOutside" /></div>
       </div>
+      <Switch label="Close outside trades" checked={on} onChange={setOn} />
+      <div className="rule-extra">
       <Scheduled me={me} k="closeOutside" render={(val) => (val ? 'on' : 'off')} />
       {on !== cur && (
-        <div className="stack" style={{ marginTop: 12 }}>
+        <div className="rule-edit">
           <VerdictLine v={v} setupMode={me.user.setupMode} />
           <div className="row">
             <button
@@ -186,6 +203,7 @@ function CloseOutsideCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -261,9 +279,9 @@ function AccountSheet({ me, a, reload }: { me: Me; a: Account; reload(): Promise
   const toast = useToast();
   return (
     <div className="card">
-      <div className="row between">
-        <strong>{a.platform.toUpperCase()} · {a.server} · …{a.last3}</strong>
-        <span className="chip">{a.state.replace('_', ' ')}</span>
+      <div className="card-head">
+        <h2><Icon name="devices" /> {a.nickname ? `${a.nickname} · ` : ''}{a.platform.toUpperCase()} · {a.server} · …{a.last3}</h2>
+        <span className={`chip${a.state === 'active' ? ' accent' : ''}`}>{a.state.replace('_', ' ')}</span>
       </div>
       <div className="row small" style={{ margin: '10px 0' }}>
         Nickname <input value={nick} maxLength={40} onChange={(e) => setNick(e.target.value)} />
@@ -318,7 +336,7 @@ function DayCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
   const save = useSave(reload);
   return (
     <div className="card">
-      <h2>Your trading day</h2>
+      <div className="card-head"><h2><Icon name="clock" /> Your trading day</h2></div>
       <div className="grid two">
         <label className="field">Timezone<input value={tz} onChange={(e) => setTz(e.target.value)} /></label>
         <label className="field">Day reset
@@ -353,17 +371,30 @@ export function RulesPage({ me, reload }: PageProps) {
             {me.user.setupMode ? 'Setup mode: every change applies now.' : `Locked${me.user.lockedBy && me.user.lockedBy !== 'auto' ? ` by ${me.user.lockedBy}` : ''} on ${me.user.lockedAt ? date(me.user.lockedAt) : ''}. Tighter applies now; looser waits.`}
           </div>
         </div>
-        {me.user.setupMode && <button className="primary" onClick={() => setLock(true)}>Lock my rules</button>}
+        {me.user.setupMode && <button className="primary" onClick={() => setLock(true)}><Icon name="lock" size={16} /> Lock my rules</button>}
       </div>
-      {RULE_ORDER.map((id) => <RuleCard key={id} me={me} id={id} reload={reload} />)}
-      <CloseOutsideCard me={me} reload={reload} />
-      <PopupCard me={me} reload={reload} />
-      <DayCard me={me} reload={reload} />
-      <h2 id="accounts" style={{ marginTop: 24 }}>Accounts</h2>
-      {me.accounts.length === 0 && <p className="muted">No accounts yet.</p>}
-      {me.accounts.map((a) => <AccountSheet key={a.id} me={me} a={a} reload={reload} />)}
+      {SECTIONS.map(([title, ids]) => (
+        <div key={title}>
+          <Section title={title} />
+          {ids.map((id) => <RuleCard key={id} me={me} id={id} reload={reload} />)}
+        </div>
+      ))}
+      <div>
+        <Section title="Outside trades" />
+        <CloseOutsideCard me={me} reload={reload} />
+      </div>
+      <div>
+        <Section title="The pause and your day" />
+        <PopupCard me={me} reload={reload} />
+        <DayCard me={me} reload={reload} />
+      </div>
+      <div id="accounts">
+        <Section title="Accounts" />
+        {me.accounts.length === 0 && <p className="muted">No accounts yet.</p>}
+        {me.accounts.map((a) => <AccountSheet key={a.id} me={me} a={a} reload={reload} />)}
+      </div>
       <div className="card">
-        <h2>Defaults for accounts</h2>
+        <div className="card-head"><h2><Icon name="layers" /> Defaults for accounts</h2></div>
         <p className="small muted">For any account without its own value.</p>
         <div className="stack">
           <LimitEditor me={me} k="default:r8" label="Daily loss limit" pctMax={20} allowPct reload={reload} />

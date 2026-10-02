@@ -7,6 +7,8 @@ import { browserTz } from '../fmt.ts';
 import { navigate } from '../router.ts';
 import { ConnectMt5 } from '../ui/Connect.tsx';
 import { PracticePause, Switch } from '../ui/kit.tsx';
+import { Brand } from '../ui/Brand.tsx';
+import { Icon, type IconName } from '../ui/Icon.tsx';
 import { RULE_INFO, RULE_ORDER, RuleFields, validRule } from '../ui/RuleFields.tsx';
 
 type AccountType = 'prop_challenge' | 'prop_funded' | 'own' | 'demo';
@@ -40,14 +42,14 @@ const OTHER_PLATFORMS: { id: string; label: string; note: string }[] = [
   { id: 'other', label: 'Something else', note: "We'll tell you if we add it." },
 ];
 
-const COSTS: { id: Choice; label: string }[] = [
-  { id: 'too_many', label: 'I take too many trades' },
-  { id: 'win_back', label: 'I trade to win back a loss' },
-  { id: 'size_up', label: 'I size up after a loss' },
-  { id: 'hours', label: 'I trade outside my plan hours' },
-  { id: 'skip_sl', label: 'I skip my stop loss' },
-  { id: 'bad_days', label: 'I keep going on a bad day' },
-  { id: 'give_back', label: 'I give back profits after a good start' },
+const COSTS: { id: Choice; label: string; icon: IconName }[] = [
+  { id: 'too_many', label: 'I take too many trades', icon: 'hash' },
+  { id: 'win_back', label: 'I trade to win back a loss', icon: 'hourglass' },
+  { id: 'size_up', label: 'I size up after a loss', icon: 'sizeUp' },
+  { id: 'hours', label: 'I trade outside my plan hours', icon: 'sun' },
+  { id: 'skip_sl', label: 'I skip my stop loss', icon: 'stop' },
+  { id: 'bad_days', label: 'I keep going on a bad day', icon: 'trendDown' },
+  { id: 'give_back', label: 'I give back profits after a good start', icon: 'refresh' },
 ];
 
 /** Firm presets: daily loss limit and reset. Check your firm's current rules. */
@@ -226,20 +228,31 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
 
   return (
     <div className="wizard">
-      <div className="row between small muted">
-        <span>Step {d.step + 1} of {STEPS.length} · {STEPS[d.step]}</span>
-        <span>{me.user.email}</span>
+      <div className="wizard-top">
+        <Brand />
+        <span className="small faint">{me.user.email}</span>
       </div>
-      <div className="progress" aria-hidden="true"><i style={{ width: `${((d.step + 1) / STEPS.length) * 100}%` }} /></div>
+      <ol className="stepper" aria-label={`Step ${d.step + 1} of ${STEPS.length}`}>
+        {STEPS.map((s, i) => (
+          <li key={s} className={i < d.step ? 'done' : i === d.step ? 'now' : ''} aria-current={i === d.step ? 'step' : undefined}>
+            <span className="n">{i < d.step ? <Icon name="check" size={14} strokeWidth={2.4} /> : i + 1}</span>
+            <span className="l">{s}</span>
+          </li>
+        ))}
+      </ol>
 
       {d.step === 0 && (
         <section className="stack">
           <h1>About your trading</h1>
           <div>
             <p className="muted">What kind of account do you trade most?</p>
-            <div className="row">
-              {([['prop_challenge', 'Prop challenge'], ['prop_funded', 'Funded prop'], ['own', 'My own money'], ['demo', 'Demo']] as const).map(([id, label]) => (
-                <label key={id} className="check"><input type="radio" name="acct" checked={d.accountType === id} onChange={() => set({ accountType: id, rules: null, defaults: null, reset: id.startsWith('prop') && FIRMS[d.firm] ? 'firm' : d.reset === 'firm' ? 'midnight' : d.reset })} /> {label}</label>
+            <div className="option-grid">
+              {([['prop_challenge', 'Prop challenge', 'target'], ['prop_funded', 'Funded prop', 'star'], ['own', 'My own money', 'account'], ['demo', 'Demo', 'play']] as const).map(([id, label, icon]) => (
+                <label key={id} className="option">
+                  <input type="radio" name="acct" checked={d.accountType === id} onChange={() => set({ accountType: id, rules: null, defaults: null, reset: id.startsWith('prop') && FIRMS[d.firm] ? 'firm' : d.reset === 'firm' ? 'midnight' : d.reset })} />
+                  <span className="tile"><Icon name={icon} /></span>
+                  <strong>{label}</strong>
+                </label>
               ))}
             </div>
           </div>
@@ -294,25 +307,30 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
               const on = d.choices.includes(c.id);
               const ids = on ? (choiceRules[c.id] ?? []).filter((id) => !shownBefore(c.id).has(id)) : [];
               return (
-                <div key={c.id} className={on ? 'card stack' : ''}>
+                <div key={c.id} className={`card cost-card${on ? ' on' : ''}`}>
                   <label className="choice">
                     <input
                       type="checkbox"
                       checked={on}
                       onChange={(e) => set({ choices: e.target.checked ? [...d.choices, c.id] : d.choices.filter((x) => x !== c.id), rules: null, defaults: null })}
                     />
+                    <span className={`tile${on ? ' accent' : ''}`}><Icon name={c.icon} /></span>
                     <span>
                       <strong>{c.label}</strong>
                       {c.id === 'give_back' && <div className="small muted">Coming later.</div>}
                     </span>
                   </label>
-                  {on && c.id === 'hours' && (
-                    <div className="row">
-                      <label className="check small"><input type="radio" name="sess" checked={d.session === 'london'} onChange={() => set({ session: 'london', rules: null, defaults: null })} /> London 08:00–11:00</label>
-                      <label className="check small"><input type="radio" name="sess" checked={d.session === 'new_york'} onChange={() => set({ session: 'new_york', rules: null, defaults: null })} /> New York 14:30–17:00</label>
+                  {on && (c.id === 'hours' || ids.length > 0) && (
+                    <div className="cost-rules">
+                      {c.id === 'hours' && (
+                        <div className="row">
+                          <label className="check small"><input type="radio" name="sess" checked={d.session === 'london'} onChange={() => set({ session: 'london', rules: null, defaults: null })} /> London 08:00–11:00</label>
+                          <label className="check small"><input type="radio" name="sess" checked={d.session === 'new_york'} onChange={() => set({ session: 'new_york', rules: null, defaults: null })} /> New York 14:30–17:00</label>
+                        </div>
+                      )}
+                      {ids.map(ruleEditor)}
                     </div>
                   )}
-                  {ids.map(ruleEditor)}
                 </div>
               );
             })}

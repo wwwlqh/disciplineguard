@@ -30,6 +30,16 @@ export function date(t: number): string {
   return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, day: 'numeric', month: 'short' }).format(t);
 }
 
+/** "Mon" in the trader's timezone. */
+export function weekday(t: number): string {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short' }).format(t);
+}
+
+/** 0 for Monday … 6 for Sunday, in the trader's timezone. */
+export function weekdayIndex(t: number): number {
+  return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(weekday(t));
+}
+
 /** "4 min ago", "2 h ago", or the time. */
 export function ago(t: number | null | undefined, now = Date.now()): string {
   if (!t) return 'never';

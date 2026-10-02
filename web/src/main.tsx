@@ -1,13 +1,16 @@
 import { StrictMode, useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import '@fontsource-variable/inter/opsz.css';
 import './styles.css';
 import { api, ApiError, type Me } from './api.ts';
 import { setFormatContext } from './fmt.ts';
 import { navigate, onLink, usePath } from './router.ts';
-import { ToastHost } from './ui/kit.tsx';
+import { Dot, ToastHost } from './ui/kit.tsx';
+import { Brand } from './ui/Brand.tsx';
+import { Icon, type IconName } from './ui/Icon.tsx';
 import { SignIn } from './pages/SignIn.tsx';
 import { Onboarding } from './pages/Onboarding.tsx';
-import { Today } from './pages/Today.tsx';
+import { deviceStatus, Today } from './pages/Today.tsx';
 import { RulesPage } from './pages/Rules.tsx';
 import { Devices } from './pages/Devices.tsx';
 import { Stats } from './pages/Stats.tsx';
@@ -24,13 +27,24 @@ export interface PageProps {
   reload(): Promise<void>;
 }
 
-const NAV = [
-  ['/today', 'Today'],
-  ['/rules', 'Rules'],
-  ['/devices', 'Devices'],
-  ['/stats', 'Stats'],
-  ['/account', 'Account'],
-] as const;
+const NAV: [string, string, IconName][] = [
+  ['/today', 'Today', 'today'],
+  ['/rules', 'Rules', 'rules'],
+  ['/devices', 'Devices', 'devices'],
+  ['/stats', 'Stats', 'stats'],
+  ['/account', 'Account', 'account'],
+];
+
+/** One line for the whole setup: protected, needs a look, or nothing connected yet. */
+function protection(me: Me): { kind: 'on' | 'attention' | 'off' | 'setting_up'; title: string; line: string } {
+  const st = me.connections.map((c) => deviceStatus(c));
+  const on = st.filter((s) => s.kind === 'on').length;
+  if (!me.license.enforcing) return { kind: 'off', title: 'Off', line: 'Orders go through normally.' };
+  if (me.connections.length === 0) return { kind: 'setting_up', title: 'Not connected', line: 'Connect MT5 or TradingView.' };
+  if (st.some((s) => s.kind === 'attention')) return { kind: 'attention', title: 'Needs attention', line: 'A device needs a look.' };
+  if (on > 0) return { kind: 'on', title: 'Protected', line: `${on} ${on === 1 ? 'device' : 'devices'} on` };
+  return { kind: 'off', title: 'Not running', line: 'Open MetaTrader or a chart.' };
+}
 
 function Shell({ me, reload, path }: PageProps & { path: string }) {
   const page = (() => {
@@ -43,35 +57,49 @@ function Shell({ me, reload, path }: PageProps & { path: string }) {
     return <Today me={me} reload={reload} />;
   })();
   const active = (href: string) => (path.startsWith(href) || (href === '/today' && path === '/') ? 'active' : '');
+  const p = protection(me);
   return (
     <div className="shell">
       <aside className="side">
-        <div className="brand">
-          <img src="/mark.svg" alt="" /> DisciplineGuard
-        </div>
+        <Brand href="/today" />
         <nav className="nav" aria-label="Main">
-          {NAV.map(([href, label]) => (
+          {NAV.map(([href, label, icon]) => (
             <a key={href} href={href} onClick={onLink} className={active(href)} aria-current={active(href) ? 'page' : undefined}>
-              {label}
+              <Icon name={icon} /> {label}
             </a>
           ))}
           {me.user.owner && (
             <a href="/owner" onClick={onLink} className={active('/owner')}>
-              Owner
+              <Icon name="owner" /> Owner
             </a>
           )}
         </nav>
+        <div className="side-foot">
+          <a className="side-status" href="/devices" onClick={onLink}>
+            <span className="row"><Dot kind={p.kind} live={p.kind === 'on'} /><strong>{p.title}</strong></span>
+            <span className="small muted">{p.line}</span>
+          </a>
+          <nav className="nav">
+            <a href="/help" onClick={onLink}><Icon name="help" /> Help</a>
+          </nav>
+          <div className="side-user" title={me.user.email}>
+            <span className="avatar" aria-hidden="true">{(me.user.firstName ?? me.user.email).slice(0, 1).toUpperCase()}</span>
+            <span>{me.user.email}</span>
+          </div>
+        </div>
       </aside>
+      <header className="topbar">
+        <Brand href="/today" size={26} />
+        <a className="chip" href="/devices" onClick={onLink}><Dot kind={p.kind} live={p.kind === 'on'} /> {p.title}</a>
+      </header>
       <main>{page}</main>
       <nav className="bottom-tabs" aria-label="Main">
-        {NAV.slice(0, 4).map(([href, label]) => (
-          <a key={href} href={href} onClick={onLink} className={active(href)}>
+        {NAV.map(([href, label, icon]) => (
+          <a key={href} href={href} onClick={onLink} className={active(href)} aria-current={active(href) ? 'page' : undefined}>
+            <Icon name={icon} size={20} />
             {label}
           </a>
         ))}
-        <a href="/account" onClick={onLink} className={active('/account')}>
-          More
-        </a>
       </nav>
     </div>
   );

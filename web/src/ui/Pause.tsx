@@ -2,6 +2,7 @@
 // the extension renders the same layout. Place anyway needs a real pointer click after the wait.
 import { useEffect, useRef, useState } from 'react';
 import { headline, otherRules, PAUSE_FOOTER, PAUSE_TIMEOUT_SEC, placeLabel, REASONS, wayOut, type Fmt, type Order, type PausePlan } from '@dg/core';
+import { Mark } from './Brand.tsx';
 
 export interface PauseProps {
   plan: PausePlan;
@@ -67,7 +68,7 @@ export function Pause(p: PauseProps) {
     <div className="pause-backdrop" onKeyDown={onKey}>
       <div className="pause" role="alertdialog" aria-modal="true" aria-labelledby="pause-h" aria-describedby="pause-note">
         <div className="label">
-          <img src="/mark.svg" alt="" /> PAUSE · YOUR RULE {p.practice && <span className="practice-tag">PRACTICE</span>}
+          <Mark size={18} /> PAUSE · YOUR RULE {p.practice && <span className="practice-tag">PRACTICE</span>}
         </div>
         <div id="pause-h" className="headline">{title}</div>
         {others.length > 0 && <div className="others">Also: {others.join(' · ')}</div>}

@@ -113,26 +113,39 @@ fn show(app: &AppHandle, screen: &str) {
 /// The tray icon: the mark with a status dot (EXPERIENCE §8). Red is never a status color.
 fn tray_icon(status: Option<Status>) -> Image<'static> {
     let img = Image::from_bytes(TRAY).expect("tray icon");
-    let (w, h) = (img.width() as i32, img.height() as i32);
-    let mut rgba = img.rgba().to_vec();
+    let (w, h) = (img.width(), img.height());
     let color = match status {
         Some(Status::On) => [0x2d, 0xd4, 0xbf],
         Some(Status::SettingUp) | None => [0x25, 0x63, 0xeb],
         Some(Status::NeedsAttention) => [0xf5, 0x9e, 0x0b],
         Some(Status::Off) | Some(Status::NotRunning) => [0x9c, 0xa3, 0xaf],
     };
-    let (cx, cy, r) = (w - 8, h - 8, 7);
+    Image::new_owned(with_dot(img.rgba().to_vec(), w, h, color), w, h)
+}
+
+/// Draws the status dot, anti-aliased, in the bottom-right corner: a white ring around the color.
+fn with_dot(mut rgba: Vec<u8>, w: u32, h: u32, color: [u8; 3]) -> Vec<u8> {
+    let s = w as f32 / 32.0;
+    let (cx, cy, r, ring) = (w as f32 - 7.0 * s, h as f32 - 7.0 * s, 6.5 * s, 1.75 * s);
     for y in 0..h {
         for x in 0..w {
-            let d2 = (x - cx).pow(2) + (y - cy).pow(2);
-            let px = ((y * w + x) * 4) as usize;
-            if d2 <= r * r {
-                let c = if d2 > (r - 2) * (r - 2) { [255, 255, 255] } else { color };
-                rgba[px..px + 4].copy_from_slice(&[c[0], c[1], c[2], 255]);
+            let d = (x as f32 + 0.5 - cx).hypot(y as f32 + 0.5 - cy);
+            let cover = (r - d + 0.5).clamp(0.0, 1.0);
+            if cover <= 0.0 {
+                continue;
             }
+            let fill = (r - ring - d + 0.5).clamp(0.0, 1.0);
+            let px = ((y * w + x) * 4) as usize;
+            let under = rgba[px + 3] as f32 / 255.0;
+            let alpha = cover + under * (1.0 - cover);
+            for (i, &c) in color.iter().enumerate() {
+                let dot = 255.0 + (c as f32 - 255.0) * fill;
+                rgba[px + i] = ((dot * cover + rgba[px + i] as f32 * under * (1.0 - cover)) / alpha).round() as u8;
+            }
+            rgba[px + 3] = (alpha * 255.0).round() as u8;
         }
     }
-    Image::new_owned(rgba, w as u32, h as u32)
+    rgba
 }
 
 /// The tray menu as (id, text, enabled) rows; None is a separator.

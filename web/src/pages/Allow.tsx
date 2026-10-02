@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { TRUST_LINES } from '@dg/core';
 import { api, type Me } from '../api.ts';
+import { Icon } from '../ui/Icon.tsx';
 
 export function Allow({ me }: { me: Me }) {
   const q = new URLSearchParams(location.search);
@@ -34,23 +35,31 @@ export function Allow({ me }: { me: Me }) {
 
   return (
     <div className="center-page">
-      <div className="card stack">
+      <div className="card stack allow-card">
         {!valid ? (
-          <p>This link is incomplete. Sign in from the DisciplineGuard app or extension.</p>
+          <>
+            <span className="tile amber"><Icon name="alert" size={24} /></span>
+            <p>This link is incomplete. Sign in from the DisciplineGuard app or extension.</p>
+          </>
         ) : state === 'done' ? (
-          <p>{toExtension ? 'Allowed. Open a TradingView chart.' : 'Allowed. Go back to the DisciplineGuard app.'}</p>
+          <>
+            <span className="tile accent"><Icon name="check" size={26} strokeWidth={2.2} /></span>
+            <h1>Allowed</h1>
+            <p className="muted">{toExtension ? 'Open a TradingView chart.' : 'Go back to the DisciplineGuard app.'}</p>
+          </>
         ) : state === 'cancelled' ? (
           <p>Nothing was allowed. You can close this tab.</p>
         ) : (
           <>
+            <span className="tile accent"><Icon name={toExtension ? 'globe' : 'window'} size={24} /></span>
             <h1>Allow DisciplineGuard on {name}?</h1>
             <p className="muted">Signed in as {me.user.email}.</p>
-            {state === 'error' && <p role="alert">Something went wrong. Try again from the app.</p>}
-            <div className="row">
-              <button className="primary" onClick={allow}>Allow</button>
-              <button onClick={() => setState('cancelled')}>Cancel</button>
+            {state === 'error' && <p role="alert" className="banner amber"><span><Icon name="alert" /> Something went wrong. Try again from the app.</span></p>}
+            <div className="row" style={{ justifyContent: 'center' }}>
+              <button className="primary big" onClick={allow}>Allow</button>
+              <button className="big" onClick={() => setState('cancelled')}>Cancel</button>
             </div>
-            <ul className="small muted" style={{ paddingLeft: 18 }}>{TRUST_LINES.map((l) => <li key={l}>{l}</li>)}</ul>
+            <ul className="auth-promises small">{TRUST_LINES.map((l) => <li key={l}><Icon name="shieldCheck" size={17} /><span>{l}</span></li>)}</ul>
           </>
         )}
       </div>

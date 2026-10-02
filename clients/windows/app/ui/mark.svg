@@ -1,1 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#0f766e"/><rect x="10" y="9" width="4" height="14" rx="1.5" fill="#fff"/><rect x="18" y="9" width="4" height="14" rx="1.5" fill="#fff"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+<defs>
+<path id="t" d="M162.1 8c30.1 0 45.1 0 56.6 5.9a53.7 53.7 0 0 1 23.5 23.5c5.9 11.5 5.9 26.5 5.9 56.6L248 162.1c0 30.1 0 45.1-5.9 56.6a53.7 53.7 0 0 1-23.5 23.5c-11.5 5.9-26.5 5.9-56.6 5.9L93.9 248c-30.1 0-45.1 0-56.6-5.9a53.7 53.7 0 0 1-23.5-23.5c-5.9-11.5-5.9-26.5-5.9-56.6L8 93.9c0-30.1 0-45.1 5.9-56.6a53.7 53.7 0 0 1 23.5-23.5c11.5-5.9 26.5-5.9 56.6-5.9Z"/>
+<linearGradient id="g" x1="40" y1="8" x2="216" y2="248" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6af4cc"/><stop offset=".33" stop-color="#1cd0d0"/><stop offset=".67" stop-color="#1e98f2"/><stop offset="1" stop-color="#5262f4"/></linearGradient>
+<radialGradient id="h" cx="60" cy="0" r="240" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".62" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<radialGradient id="l" cx="128" cy="118" r="120" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".2"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<linearGradient id="e" x1="0" y1="8" x2="0" y2="248" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".5" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".1"/></linearGradient>
+<linearGradient id="c" x1="0" y1="40" x2="0" y2="216" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#e6f4ff"/></linearGradient>
+<filter id="s" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dy="9" stdDeviation="10" flood-color="#0b2f86" flood-opacity=".32"/></filter>
+</defs>
+<use href="#t" fill="url(#g)"/><use href="#t" fill="url(#h)"/><use href="#t" fill="url(#l)"/>
+<use href="#t" fill="none" stroke="url(#e)" stroke-width="2" transform="translate(128 128) scale(.9917) translate(-128 -128)"/>
+<g fill="url(#c)" filter="url(#s)"><rect x="92" y="62" width="12" height="150" rx="6"/><rect x="76" y="92" width="44" height="94" rx="13"/><rect x="152" y="42" width="12" height="150" rx="6"/><rect x="136" y="70" width="44" height="94" rx="13"/></g>
+</svg>

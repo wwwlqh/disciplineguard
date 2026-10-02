@@ -358,6 +358,8 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
       placed: pausesWeek.results.filter((r) => r.d === 'place').reduce((a, b) => a + b.n, 0),
       daysTraded: weekDays.filter((d) => d.entries + d.pauses > 0).length,
       daysKept: weekDays.filter(isKept).length,
+      // The last 7 trading days, oldest first, for the week strip.
+      days: weekDays.slice(-7).map((d) => ({ start: d.start, traded: d.entries + d.pauses > 0, kept: isKept(d) })),
       keptToday: (() => {
         const d = weekDays.find((x) => x.start === day.start);
         return d ? d.placed === 0 && d.outside === 0 && d.unprotected === 0 : true;
@@ -404,6 +406,8 @@ async function stats(req: Request, env: Env, s: Session): Promise<Response> {
     daysTraded: traded.length,
     daysKept: traded.filter(isKept).length,
     cameBackDays: cameBack,
+    // Every day of the period, oldest first, for the calendar.
+    daily: rows.map((d) => ({ start: d.start, entries: d.entries, pauses: d.pauses, traded: d.entries + d.pauses > 0, kept: isKept(d) })),
     coverage: {
       outside: await count('entry', " AND json_extract(payload, '$.source') = 'outside'"),
       unprotected: await count('entry', " AND json_extract(payload, '$.unprotected') = 1"),
