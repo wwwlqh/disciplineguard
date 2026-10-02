@@ -93,7 +93,8 @@ async function connectionsView(env: Env, uc: UserCtx) {
   ).bind(uc.user.id).all<any>();
   const known = (env.KNOWN_BUILDS ?? '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean);
   return results.map((c) => ({
-    id: c.id, kind: c.kind, name: c.name, version: c.version, role: c.role, status: c.status, lastSeen: c.last_seen, firstOnAt: c.first_on_at,
+    // Polymarket and Kalshi connections made before they had their own names said "TradingView · Polymarket …".
+    id: c.id, kind: c.kind, name: String(c.name).replace(/^TradingView · (Polymarket|Kalshi) /, '$1 '), version: c.version, role: c.role, status: c.status, lastSeen: c.last_seen, firstOnAt: c.first_on_at,
     offReason: c.off_reason, accounts: c.accounts ? String(c.accounts).split(',') : [],
     unknownBuild: !!c.build_hash && known.length > 0 && !known.includes(String(c.build_hash).toLowerCase()),
     removalAt: uc.settings.get(`conn:${c.id}:removed`)?.pending?.effectiveAt ?? null,
@@ -105,6 +106,7 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
   const u = uc.user;
   const raw: Record<string, unknown> = {};
   for (const [k, v] of uc.settings) raw[k] = { active: v.active, pending: v.pending ?? null, setAt: v.setAt };
+  const apps = await appsView(env, u.id);
   return json({
     now: uc.now,
     user: {
@@ -112,7 +114,7 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
       lockAt: u.setup_mode && u.first_on_at ? autoLockAt(uc.userResets, u.first_on_at) : null, firstOnAt: u.first_on_at,
       lastRealPauseAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts, analyticsConsent: u.analytics_consent, reasonConsent: u.reason_consent, reasonAsked: u.reason_asked_at !== null,
       onboarding: u.onboarding_json ? JSON.parse(u.onboarding_json) : null,
-      alerts: alertPrefs(u.alerts_json), hasApp: await hasApp(env, u.id),
+      alerts: alertPrefs(u.alerts_json), hasApp: apps.length > 0,
       isBeta: !!u.is_beta, owner: isOwner(env, u), country: u.country, planKind: u.plan_kind, cancelAtPeriodEnd: !!u.cancel_at_period_end,
       portalUrl: u.portal_url, updateCardUrl: u.update_card_url, deletionAt: u.deletion_at,
       refundable: u.first_paid_at !== null && uc.now - u.first_paid_at <= REFUND_DAYS * DAY,
@@ -128,6 +130,7 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
     time: resolvedTime(uc),
     accounts: uc.accounts.map((a) => accountView(a, uc)),
     connections: await connectionsView(env, uc),
+    apps,
   });
 }
 
@@ -507,8 +510,15 @@ async function prefs(req: Request, env: Env, s: Session): Promise<Response> {
   return json({ ok: true });
 }
 
-async function hasApp(env: Env, userId: string): Promise<boolean> {
-  return !!(await env.DB.prepare('SELECT 1 FROM desktop_installs WHERE user_id = ? AND revoked_at IS NULL LIMIT 1').bind(userId).first());
+/**
+ * Where the trader allowed DisciplineGuard: the Windows app (named after the computer) and the browser extension
+ * ("Chrome" or "Edge"), so the connect steps can show "signed in" before the first account reports in.
+ */
+async function appsView(env: Env, userId: string) {
+  const { results } = await env.DB.prepare('SELECT id, name, last_seen FROM desktop_installs WHERE user_id = ? AND revoked_at IS NULL ORDER BY created_at')
+    .bind(userId)
+    .all<{ id: string; name: string; last_seen: number | null }>();
+  return results.map((d) => ({ id: d.id, name: d.name, browser: d.name === 'Chrome' || d.name === 'Edge', lastSeen: d.last_seen }));
 }
 
 /** PUT /api/alerts {on?, summaryAt?, amounts?}: the trader's own alerts are not protected (SPEC §6.2 last row). */

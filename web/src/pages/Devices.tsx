@@ -1,8 +1,8 @@
 // Devices and accounts (EXPERIENCE §5.7).
 import { useState } from 'react';
 import { api } from '../api.ts';
-import { ago, date, time } from '../fmt.ts';
-import { ConnectMt5 } from '../ui/Connect.tsx';
+import { ago, date, platformName, time } from '../fmt.ts';
+import { ConnectBrowser, ConnectMt5 } from '../ui/Connect.tsx';
 import { Dot, Sheet, useToast } from '../ui/kit.tsx';
 import { Icon } from '../ui/Icon.tsx';
 import { deviceStatus } from './Today.tsx';
@@ -16,7 +16,8 @@ const STATE_LABEL: Record<string, string> = {
 };
 
 export function Devices({ me, reload }: PageProps) {
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<'mt5' | 'browser' | null>(null);
+  const toggle = (k: 'mt5' | 'browser') => setAdding(adding === k ? null : k);
   const [removing, setRemoving] = useState<{ kind: 'account' | 'device'; id: string; label: string; ended: boolean } | null>(null);
   const toast = useToast();
   const accounts = [...me.accounts].sort((a, b) => (a.state === 'ended' ? -1 : 0) - (b.state === 'ended' ? -1 : 0));
@@ -37,15 +38,21 @@ export function Devices({ me, reload }: PageProps) {
           <div className="sub">{me.accounts.length} of 10 accounts</div>
         </div>
         <div className="row">
-          <a className="btn" href="/help/tradingview" onClick={onLink}><Icon name="globe" size={16} /> Browser extension</a>
-          <button className="primary" onClick={() => setAdding(!adding)}><Icon name={adding ? 'x' : 'plus'} size={16} /> {adding ? 'Close' : 'Add MT5'}</button>
+          <button onClick={() => toggle('browser')}><Icon name={adding === 'browser' ? 'x' : 'globe'} size={16} /> {adding === 'browser' ? 'Close' : 'Add TradingView, Polymarket, Kalshi'}</button>
+          <button className="primary" onClick={() => toggle('mt5')}><Icon name={adding === 'mt5' ? 'x' : 'plus'} size={16} /> {adding === 'mt5' ? 'Close' : 'Add MT5'}</button>
         </div>
       </div>
 
-      {adding && (
+      {adding === 'mt5' && (
         <div className="card">
-          <div className="card-head"><h2><Icon name="window" /> Add MT5</h2></div>
-          <ConnectMt5 me={me} onConnected={() => void reload()} />
+          <div className="card-head"><h2><Icon name="window" /> MetaTrader 5 · Windows app</h2></div>
+          <ConnectMt5 me={me} onlyNew onConnected={() => void reload()} />
+        </div>
+      )}
+      {adding === 'browser' && (
+        <div className="card">
+          <div className="card-head"><h2><Icon name="globe" /> TradingView, Polymarket and Kalshi · Chrome or Edge</h2></div>
+          <ConnectBrowser me={me} onlyNew onConnected={() => void reload()} />
         </div>
       )}
       {!adding && me.connections.length === 0 && (
@@ -54,7 +61,10 @@ export function Devices({ me, reload }: PageProps) {
             <span className="tile accent"><Icon name="devices" size={22} /></span>
             <strong>No devices yet</strong>
             <span className="small">MetaTrader 5 connects through the Windows app. TradingView, Polymarket and Kalshi through the browser extension.</span>
-            <button className="primary" style={{ marginTop: 6 }} onClick={() => setAdding(true)}><Icon name="plus" size={16} /> Add MT5</button>
+            <div className="row" style={{ marginTop: 6, justifyContent: 'center' }}>
+              <button className="primary" onClick={() => setAdding('mt5')}><Icon name="window" size={16} /> Add MT5</button>
+              <button onClick={() => setAdding('browser')}><Icon name="globe" size={16} /> Add TradingView, Polymarket, Kalshi</button>
+            </div>
           </div>
         </div>
       )}
@@ -64,7 +74,7 @@ export function Devices({ me, reload }: PageProps) {
         const tone = st.kind === 'on' ? 'accent' : st.kind === 'attention' ? 'amber' : st.kind === 'setting_up' ? 'blue' : '';
         return (
           <div key={c.id} className="card device-card">
-            <span className={`tile ${tone}`}><Icon name={c.kind === 'tv' || c.kind === 'extension' ? 'globe' : 'window'} /></span>
+            <span className={`tile ${tone}`}><Icon name={c.kind === 'mt5' || c.kind === 'mt4' ? 'window' : 'globe'} /></span>
             <div className="rule-main">
               <div className="rule-name">{c.name} <span className={`chip ${tone}`}><Dot kind={st.kind} live={st.kind === 'on'} /> {st.label}</span></div>
               <div className="device-meta">
@@ -93,7 +103,7 @@ export function Devices({ me, reload }: PageProps) {
               <tbody>
                 {accounts.map((a) => (
                   <tr key={a.id}>
-                    <td><strong>{a.nickname ? `${a.nickname} · ` : ''}{a.platform.toUpperCase()}</strong> <span className="muted">· {a.server} · …{a.last3}</span>{a.demo ? <span className="chip" style={{ marginLeft: 8 }}>demo</span> : null}</td>
+                    <td><strong>{a.nickname ? `${a.nickname} · ` : ''}{platformName(a.platform, a.server)}</strong> <span className="muted">{a.server && a.server !== platformName(a.platform, a.server) ? `· ${a.server} ` : ''}· …{a.last3}</span>{a.demo ? <span className="chip" style={{ marginLeft: 8 }}>demo</span> : null}</td>
                     <td>
                       <span className={`chip${a.state === 'active' ? ' accent' : ''}`}>{STATE_LABEL[a.state]}</span>
                       {a.state === 'not_seen' && a.lastSeen ? <span className="small muted"> since {date(a.lastSeen)}</span> : ''}

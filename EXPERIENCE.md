@@ -132,13 +132,14 @@ These rules apply to product copy about the trader or their trades.
 - Email → an email with a sign-in link **and a 6-digit code**. The screen that asked offers "Enter code instead", so a link opened on the phone never strands the laptop.
 - **[P2]** Continue with Google.
 
-**Onboarding: three screens, nothing to type**
+**Onboarding: four screens, nothing to type**
 
-Start free opens it signed out: screens 1 and 2 need no account and the draft stays in the browser. [Save my rules] then asks to sign in ("Save your rules") and saves them to the account right after. Back is always available until the rules are saved, and progress is saved so it can be resumed.
+Start free opens it signed out: screens 1 to 3 need no account and the draft stays in the browser. [Save my rules] then asks to sign in ("Save your rules") and saves them to the account right after. Back is always available until the rules are saved, and progress is saved so it can be resumed.
 
-1. **About your trading**: account type (prop challenge · funded prop · own money · demo; for prop, the firm and its daily loss limit), how you trade, usual position size, and "Also trade somewhere else?" chips that record "tell me when it's ready".
-2. **Your rules**: "What costs you the most?", tick all that apply (§5.3). Each ticked choice opens its rules right under it, ready to adjust; a rule shows once. Below: the day reset (folded), "Tightening applies now. Loosening waits until your next day reset", [Try a pause with these rules], and [Save my rules].
-3. **Connect MT5**: the three steps of §5.7 with the live "Waiting for your computer…" state. On a phone: "Finish on your computer". Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
+1. **Where do you trade?**, by device, tick all that apply: **Windows** (MetaTrader 5 with the app; MetaTrader 4 "Coming later"), **Website** in Chrome or Edge on Windows or Mac (TradingView, Polymarket, Kalshi), **Mac** (MetaTrader 5 "Not yet"), **iPhone · Android** ("Phone apps can't be paused"), and Somewhere else. Picks that can't be protected record "tell me when it's ready".
+2. **About your trading**: account type (prop challenge · funded prop · own money · demo; for prop, the firm and its daily loss limit), how you trade, usual position size. Only Polymarket or Kalshi: "Usual bet ($)" and no prop types.
+3. **Your rules**: "What costs you the most?", tick all that apply (§5.3). Each ticked choice opens its rules right under it, ready to adjust; a rule shows once. Max risk per trade only with MetaTrader. Below: the day reset (folded), "Tightening applies now. Loosening waits until your next day reset", [Try a pause with these rules], and [Save my rules].
+4. **Connect**: one card per way in (§5.7): MetaTrader 5 through the Windows app; TradingView, Polymarket and Kalshi through the browser extension (a site's phone app also gets this card, since its website can be paused). Each card's live line goes "Waiting…" → "Allowed on DESKTOP-4F2" (or Chrome) → each account and its state. One line per pick that can't be connected. On a phone: "Finish on your computer". Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
 
 ### 5.3 Starting templates
 
@@ -222,17 +223,20 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
 ### 5.7 Devices and accounts
 
 - **Device rows** with their trading accounts, state (§8), last seen and version. Account rows show nickname, platform, server and last 3 digits.
-- **Add TradingView**:
-  - **Pre-permission explainer**: "Chrome will say DisciplineGuard can 'read and change your data on tradingview.com'. We need that to see the order button and your positions. We don't read any other site."
-  - The store link. In P1 an unlisted listing, with "why it's unlisted".
-  - The welcome tab (§6.1).
+- **Add TradingView, Polymarket, Kalshi** (the browser extension, Chrome or Edge):
+  1. **[Download the extension]**, then unzip it.
+  2. Go to `chrome://extensions` (copy button; `edge://extensions` in Edge), turn on Developer mode, Load unpacked.
+  3. On the tab that opens (§6.1), Sign in, then Allow.
+  4. Open TradingView, Polymarket or Kalshi.
+
+  The same live line as MT5: "Waiting for the extension…" → "Allowed on Chrome" → "Polymarket …a90 · On". In Safari or Firefox: "Open this page in Chrome or Edge".
 - **Add MT5 (MT4 in P2)**: three steps, all outside MT.
   1. **[Download DisciplineGuard for Windows]**. One line under it: "Signed by <company>. It sets up MetaTrader for you."
   2. Open it and click **Allow** in the browser tab it opens (§7.1).
   3. Tick your MetaTrader and press **Protect**.
 
   Around the steps:
-  - A live "Waiting for your computer…" state that flips to "MT5 · FTMO-Server3 · …123 · On" when the EA first reports in.
+  - A live "Waiting for your computer…" state that flips to "Allowed on DESKTOP-4F2. Tick your MetaTrader and press Protect." after Allow, then "MT5 · FTMO-Server3 · …123 · On" when the EA first reports in.
   - Troubleshooting: "My MetaTrader isn't listed" (Browse to it) · antivirus · "I use a VPS" (install the app there too) · MT4 history setting.
   - A 30-second video.
 - **New account notice**: "MT5 · FTMO-Server3 · …123 connected from DESKTOP-4F2 just now. [Not mine]".

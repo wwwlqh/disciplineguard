@@ -70,6 +70,18 @@ export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+/** The browser extension files Polymarket and Kalshi accounts under 'tv', with the site as the server. */
+export function platformName(platform: string, server?: string | null): string {
+  if (platform !== 'tv') return platform.toUpperCase();
+  return server === 'Polymarket' || server === 'Kalshi' ? server : 'TradingView';
+}
+
+/** "MT5 · FTMO-Server3 · …123", "Kalshi · …4f1": the server only where it isn't the platform itself. */
+export function accountName(a: { platform: string; server: string | null; last3: string; nickname?: string | null }): string {
+  const p = platformName(a.platform, a.server);
+  return `${a.nickname ? `${a.nickname} · ` : ''}${p}${a.server && a.server !== p ? ` · ${a.server}` : ''} · …${a.last3}`;
+}
+
 export const coreFmt = (currencyOf: (account: string) => string = () => 'USD'): Fmt => ({
   time: (t: number) => time(t),
   money: (x: number, account: string) => money(x, currencyOf(account)),

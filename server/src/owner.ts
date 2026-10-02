@@ -14,7 +14,7 @@ export async function ownerMetrics(req: Request, env: Env): Promise<Response> {
 
   // Users with a connection of this platform.
   const platUsers = platform
-    ? `AND u.id IN (SELECT user_id FROM connections WHERE kind = '${platform === 'tv' ? 'extension' : platform === 'mt4' ? 'mt4' : 'mt5'}')`
+    ? `AND u.id IN (SELECT user_id FROM connections WHERE kind = '${platform === 'tv' ? 'tv' : platform === 'mt4' ? 'mt4' : 'mt5'}')`
     : '';
   const users = await q<any>(`SELECT u.id, u.created_at, u.first_on_at, u.locked_at, u.setup_mode, u.plan_state, u.is_beta FROM users u WHERE u.deleted_at IS NULL ${platUsers}`);
   const activated = users.filter((u) => u.first_on_at && u.locked_at);

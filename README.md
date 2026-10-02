@@ -65,6 +65,8 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 | **TradingView** (Chrome, Edge) | Browser extension. Pauses the order panel and one-click Buy/Sell. | ✅ Live |
 | **Polymarket** (Chrome, Edge) | The same browser extension. Pauses Buy in the trade box (market orders). Sell is never paused. | ✅ New |
 | **Kalshi** (Chrome, Edge) | The same browser extension. Pauses Submit Buy and Buy with 1-Click (dollars or shares). Sell is never paused. | ✅ New |
+| **Mac** | TradingView, Polymarket and Kalshi work in Chrome or Edge on a Mac. MetaTrader 5 on Mac isn't supported yet. | Website only |
+| **iPhone, Android** | Phone apps can't be paused. MT5 trades from the phone still count while MT5 runs with DisciplineGuard on a computer or VPS. | Not paused |
 | MT4, cTrader, NinjaTrader, web prop platforms | | Planned |
 
 ## What it never does
@@ -75,10 +77,10 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 
 ## Get started
 
-1. Sign in at **[disciplineguard.leowqiheng.workers.dev](https://disciplineguard.leowqiheng.workers.dev)** with Google and set your rules.
-2. Connect your platform:
+1. Click **[Start free](https://disciplineguard.leowqiheng.workers.dev/start)**, pick where you trade (Windows, Mac, phone or website) and set your rules. Sign in with Google or email to save them.
+2. Connect your platform. The last step shows each one live as it connects:
    - **MT5:** download the [Windows app](https://disciplineguard.leowqiheng.workers.dev/downloads/DisciplineGuard-Setup.exe), click **Allow**, tick your MetaTrader, then **Protect**.
-   - **TradingView, Polymarket or Kalshi:** follow [Install the TradingView extension](https://disciplineguard.leowqiheng.workers.dev/help/tradingview) (download, unzip, *Load unpacked*).
+   - **TradingView, Polymarket or Kalshi:** [install the browser extension](https://disciplineguard.leowqiheng.workers.dev/help/tradingview) (download, unzip, *Load unpacked*), then **Sign in** and **Allow**.
 3. Trade.
 
 **Free for everyone: every rule, on 1 trading account.** TradingView Paper Trading doesn't count toward it. Plans for more accounts are coming.

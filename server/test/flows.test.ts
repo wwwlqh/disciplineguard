@@ -93,6 +93,23 @@ describe('Windows app connect (SPEC §9.5)', () => {
     expect(dump).not.toContain('7654321');
   });
 
+  it('lists where it was allowed, and names Polymarket and Kalshi connections by their site', async () => {
+    const w = new World();
+    const web = await w.signIn('a@b.co');
+    expect((await web.get('/api/me')).data.apps).toEqual([]);
+    const ext = await web.allowDesktop('Chrome');
+    await web.allowDesktop('DESKTOP-4F2');
+    const me = (await web.get('/api/me')).data;
+    expect(me.apps.map((a: any) => [a.name, a.browser])).toEqual([['Chrome', true], ['DESKTOP-4F2', false]]);
+    expect(me.user.hasApp).toBe(true);
+    const pm = await w.call('POST', '/v1/desktop/terminals', { terminalId: 'tvpm1', kind: 'tv', server: 'Polymarket', login: 'abcdef1234' }, { authorization: `Bearer ${ext}` });
+    expect(pm.status).toBe(200);
+    expect((await web.get('/api/me')).data.connections[0].name).toBe('Polymarket …234');
+    // Named before Polymarket and Kalshi had their own names.
+    w.db.db.prepare("UPDATE connections SET name = 'TradingView · Polymarket …234'").run();
+    expect((await web.get('/api/me')).data.connections[0].name).toBe('Polymarket …234');
+  });
+
   it('rejects terminal registration without a valid app token', async () => {
     const w = new World();
     const r = await w.call('POST', '/v1/desktop/terminals', { terminalId: 'TERM1', server: 's', login: '1' }, { authorization: 'Bearer ' + 'a'.repeat(40) });

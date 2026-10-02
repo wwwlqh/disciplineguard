@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { REASONS, RULE_NAMES, type RuleId, type TitleId } from '@dg/core';
 import { api } from '../api.ts';
-import { date } from '../fmt.ts';
+import { date, platformName } from '../fmt.ts';
 import { Icon, RULE_ICON, type IconName } from '../ui/Icon.tsx';
 import { Calendar, Columns, HBars, Ring, Stat, StackedBar, type DayCell } from '../ui/viz.tsx';
 import type { PageProps } from '../main.tsx';
@@ -50,7 +50,7 @@ export function Stats({ me }: PageProps) {
         <div className="row">
           <select value={account} onChange={(e) => setAccount(e.target.value)} aria-label="Account">
             <option value="">All accounts</option>
-            {me.accounts.map((a) => <option key={a.id} value={a.id}>{a.nickname ?? `${a.platform.toUpperCase()} …${a.last3}`}</option>)}
+            {me.accounts.map((a) => <option key={a.id} value={a.id}>{a.nickname ?? `${platformName(a.platform, a.server)} …${a.last3}`}</option>)}
           </select>
           <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Period">
             <option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option>

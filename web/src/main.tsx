@@ -40,7 +40,7 @@ function protection(me: Me): { kind: 'on' | 'attention' | 'off' | 'setting_up'; 
   const st = me.connections.map((c) => deviceStatus(c));
   const on = st.filter((s) => s.kind === 'on').length;
   if (!me.license.enforcing) return { kind: 'off', title: 'Off', line: 'Orders go through normally.' };
-  if (me.connections.length === 0) return { kind: 'setting_up', title: 'Not connected', line: 'Connect MT5 or TradingView.' };
+  if (me.connections.length === 0) return { kind: 'setting_up', title: 'Not connected', line: 'Connect your platform.' };
   if (st.some((s) => s.kind === 'attention')) return { kind: 'attention', title: 'Needs attention', line: 'A device needs a look.' };
   if (on > 0) return { kind: 'on', title: 'Protected', line: `${on} ${on === 1 ? 'device' : 'devices'} on` };
   return { kind: 'off', title: 'Not running', line: 'Open MetaTrader or a chart.' };

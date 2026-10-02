@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { type PopupSettings, type RuleId } from '@dg/core';
 import { api, saveSetting, type Account, type Me } from '../api.ts';
-import { date, time } from '../fmt.ts';
+import { accountName, date, time } from '../fmt.ts';
 import { navigate } from '../router.ts';
 import { applyLabel, Sheet, Switch, useToast, useVerdict, VerdictLine } from '../ui/kit.tsx';
 import { RULE_INFO, RULE_ORDER, RuleFields, ruleSummary, validRule } from '../ui/RuleFields.tsx';
@@ -280,7 +280,7 @@ function AccountSheet({ me, a, reload }: { me: Me; a: Account; reload(): Promise
   return (
     <div className="card">
       <div className="card-head">
-        <h2><Icon name="devices" /> {a.nickname ? `${a.nickname} · ` : ''}{a.platform.toUpperCase()} · {a.server} · …{a.last3}</h2>
+        <h2><Icon name="devices" /> {accountName(a)}</h2>
         <span className={`chip${a.state === 'active' ? ' accent' : ''}`}>{a.state.replace('_', ' ')}</span>
       </div>
       <div className="row small" style={{ margin: '10px 0' }}>

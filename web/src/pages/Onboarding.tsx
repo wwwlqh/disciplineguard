@@ -1,6 +1,7 @@
-// Onboarding (EXPERIENCE §5.2): three screens, nothing to type, Back always available, resumable.
-// 1 About you · 2 Your rules (each ticked cost opens its rules; trading day) · 3 Connect MT5.
-// Signed out (Start free, at /start), the first two run without an account: the draft stays in this browser,
+// Onboarding (EXPERIENCE §5.2): four screens, nothing to type, Back always available, resumable.
+// 1 Where you trade (by device) · 2 About you · 3 Your rules (each ticked cost opens its rules; trading day) ·
+// 4 Connect (the Windows app for MT5, the browser extension for TradingView, Polymarket and Kalshi).
+// Signed out (Start free, at /start), the first three run without an account: the draft stays in this browser,
 // Save my rules asks to sign in, and the rules are saved to the account right after.
 import { useEffect, useMemo, useState } from 'react';
 import { buildTemplate, DEFAULT_POPUP, type Choice, type Rules } from '@dg/core';
@@ -8,7 +9,7 @@ import { api, type Me } from '../api.ts';
 import { browserTz } from '../fmt.ts';
 import { navigate } from '../router.ts';
 import { SignIn } from './SignIn.tsx';
-import { ConnectMt5 } from '../ui/Connect.tsx';
+import { ConnectBrowser, ConnectMt5, siteList, type Site } from '../ui/Connect.tsx';
 import { PracticePause, Switch } from '../ui/kit.tsx';
 import { Brand } from '../ui/Brand.tsx';
 import { Icon, type IconName } from '../ui/Icon.tsx';
@@ -18,6 +19,8 @@ type AccountType = 'prop_challenge' | 'prop_funded' | 'own' | 'demo';
 type Defaults = { r5?: { r5Max: number }; r6?: { unit: 'pct'; value: number }; r8?: { unit: 'pct' | 'amount'; value: number }; r7ignore?: number };
 
 interface Draft {
+  /** 2 since "Where you trade" became the first screen. */
+  v?: number;
   step: number;
   platforms: string[];
   accountType: AccountType;
@@ -27,6 +30,8 @@ interface Draft {
   choices: Choice[];
   session: 'london' | 'new_york';
   usualSize: number;
+  /** Polymarket and Kalshi sizes are in dollars. */
+  usualBet?: number;
   /** Set once the trader edits a starting rule; until then rules follow the template. */
   rules: Rules | null;
   defaults: Defaults | null;
@@ -36,14 +41,36 @@ interface Draft {
   applied: boolean;
 }
 
-/** MT5 on Windows is protected today. The others collect "tell me when it's ready". */
-const OTHER_PLATFORMS: { id: string; label: string; note: string }[] = [
-  { id: 'tv', label: 'TradingView', note: 'Chrome or Edge. Install the extension from Help → Install the TradingView extension.' },
-  { id: 'mt4', label: 'MT4', note: "Coming later. We'll tell you." },
-  { id: 'mt5_mac', label: 'MT5 on Mac', note: 'Not supported yet.' },
-  { id: 'mt_phone', label: 'MT on my phone', note: "Can't be paused, but they still count. Rules → Close outside trades closes the ones that go past a rule." },
-  { id: 'other', label: 'Something else', note: "We'll tell you if we add it." },
+/** Where the trader trades, by device. MT5 on Windows and the three websites get the pause today. */
+const PLACES: { id: string; label: string; icon: IconName; line: string; items: { id: string; label: string; chip?: string }[] }[] = [
+  { id: 'windows', label: 'Windows', icon: 'window', line: 'With the DisciplineGuard app', items: [{ id: 'mt5', label: 'MetaTrader 5' }, { id: 'mt4', label: 'MetaTrader 4', chip: 'Coming later' }] },
+  { id: 'web', label: 'Website', icon: 'globe', line: 'In Chrome or Edge, on Windows or Mac', items: [{ id: 'tv', label: 'TradingView' }, { id: 'pm', label: 'Polymarket' }, { id: 'kalshi', label: 'Kalshi' }] },
+  { id: 'mac', label: 'Mac', icon: 'laptop', line: 'TradingView, Polymarket and Kalshi work on the website', items: [{ id: 'mt5_mac', label: 'MetaTrader 5', chip: 'Not yet' }] },
+  { id: 'phone', label: 'iPhone · Android', icon: 'phone', line: "Phone apps can't be paused", items: [{ id: 'mt_phone', label: 'MetaTrader 5' }, { id: 'tv_phone', label: 'TradingView' }, { id: 'pm_phone', label: 'Polymarket' }, { id: 'kalshi_phone', label: 'Kalshi' }] },
 ];
+/** Picks DisciplineGuard protects today. The others are kept as "tell me when it's ready". */
+const LIVE = ['mt5', 'tv', 'pm', 'kalshi'];
+const SITE_IDS: Site[] = ['tv', 'pm', 'kalshi'];
+/** Only Polymarket or Kalshi: sizes are in dollars, and prop accounts don't apply. */
+function onlyBets(p: string[]): boolean {
+  return !p.some((x) => ['mt5', 'mt4', 'mt5_mac', 'mt_phone', 'tv', 'tv_phone'].includes(x)) && p.some((x) => ['pm', 'kalshi', 'pm_phone', 'kalshi_phone'].includes(x));
+}
+
+const hasMt = (p: string[]) => p.some((x) => x.startsWith('mt'));
+
+/** What can't be connected from the picks, in one line each. */
+function limits(p: string[]): string[] {
+  const out: string[] = [];
+  if (p.includes('mt4')) out.push("MetaTrader 4 is coming later. We'll tell you.");
+  if (p.includes('mt5_mac')) out.push("MetaTrader 5 on Mac isn't supported yet. We'll tell you.");
+  if (p.some((x) => x.endsWith('_phone'))) out.push("Phone apps can't be paused. Trade on your computer for the pause.");
+  if (p.includes('mt_phone')) out.push('MetaTrader trades from your phone still count while MetaTrader 5 runs with DisciplineGuard on your computer or VPS.');
+  if (p.includes('other')) out.push("We'll tell you if we add your platform.");
+  return out;
+}
+
+/** A phone or tablet: nothing there can be paused, so setup finishes on a computer. */
+const MOBILE = typeof navigator !== 'undefined' && (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
 
 const COSTS: { id: Choice; label: string; icon: IconName }[] = [
   { id: 'too_many', label: 'I take too many trades', icon: 'hash' },
@@ -60,7 +87,9 @@ const FIRMS: Record<string, { pct: number; reset: { at: string; tz: string }; ba
   FTMO: { pct: 5, reset: { at: '00:00', tz: 'Europe/Prague' }, basis: 'the day\'s starting balance or equity' },
 };
 
-const STEPS = ['About you', 'Your rules', 'Connect MT5'];
+const STEPS = ['Where you trade', 'About you', 'Your rules', 'Connect'];
+const RULES_STEP = 2;
+const CONNECT_STEP = 3;
 
 /** A signed-out draft, kept in this browser until the trader signs in. */
 const GUEST_KEY = 'dg:onboarding';
@@ -95,14 +124,21 @@ const RESETS: Record<Draft['reset'], string> = {
   custom: 'a custom time',
 };
 
+/** A draft from before "Where you trade" was added resumes one screen later. */
+function upgrade<T extends Draft>(x: T): T {
+  return x.v === 2 ? x : { ...x, v: 2, step: x.step + 1 };
+}
+
 function initial(me: Me | null): Draft {
-  const guest = readGuest();
+  const stored = readGuest();
+  const guest = stored && upgrade(stored);
   // Rules set before signing in win: Save my rules was pressed for them.
-  if (guest && (!me || guest.pending)) return { ...guest, step: Math.min(guest.step, 1), applied: false };
-  const saved = me?.user.onboarding;
-  if (saved && typeof saved === 'object' && saved.step !== undefined && !saved.done && saved.step < STEPS.length) return { ...(saved as Draft), step: saved.applied ? saved.step : Math.min(saved.step, 1) };
+  if (guest && (!me || guest.pending)) return { ...guest, step: Math.min(guest.step, RULES_STEP), applied: false };
+  const raw = me?.user.onboarding;
+  const saved = raw && typeof raw === 'object' && typeof raw.step === 'number' && !raw.done ? upgrade(raw as Draft) : null;
+  if (saved && saved.step < STEPS.length) return { ...saved, step: saved.applied ? saved.step : Math.min(saved.step, RULES_STEP) };
   return {
-    step: 0, platforms: ['mt5'], accountType: 'own', firm: 'FTMO', firmDailyPct: 5, style: 'day', choices: [], session: 'london', usualSize: 0.5,
+    v: 2, step: 0, platforms: [], accountType: 'own', firm: 'FTMO', firmDailyPct: 5, style: 'day', choices: [], session: 'london', usualSize: 0.5, usualBet: 20,
     rules: null, defaults: null, tz: browserTz(), reset: 'midnight', customAt: '00:00',
     applied: false,
   };
@@ -116,8 +152,18 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
   const [signIn, setSignIn] = useState(false);
   const [pending] = useState(() => !!me && !!readGuest()?.pending);
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }));
-  const isProp = d.accountType === 'prop_challenge' || d.accountType === 'prop_funded';
-  const phone = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
+  const betsOnly = onlyBets(d.platforms);
+  /** Max risk per trade works on MetaTrader only. */
+  const mt = hasMt(d.platforms);
+  const usualSize = betsOnly ? (d.usualBet ?? 20) : d.usualSize;
+  const accountType: AccountType = betsOnly && d.accountType.startsWith('prop') ? 'own' : d.accountType;
+  const isProp = accountType === 'prop_challenge' || accountType === 'prop_funded';
+  const reset: Draft['reset'] = d.reset === 'firm' && !isProp ? 'midnight' : d.reset;
+  // The starting rules follow a switch between lots and dollars, or to and from MetaTrader.
+  const togglePlatform = (id: string, on: boolean) => {
+    const platforms = on ? [...d.platforms, id] : d.platforms.filter((x) => x !== id);
+    set(onlyBets(platforms) === betsOnly && hasMt(platforms) === mt ? { platforms } : { platforms, rules: null, defaults: null });
+  };
 
   // Save progress so onboarding can be resumed (EXPERIENCE §5.2).
   useEffect(() => {
@@ -132,13 +178,17 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
     if (pending) void apply();
   }, []);
 
-  const template = useMemo(() => buildTemplate({
-    choices: isProp && !d.choices.includes('bad_days') ? [...d.choices, 'bad_days'] : d.choices,
-    style: d.style,
-    userTz: d.tz,
-    session: d.session,
-    accounts: [{ id: 'default', platform: 'mt5', type: d.accountType, usualSize: d.usualSize, prop: isProp ? { dailyLimitPct: d.firmDailyPct } : undefined }],
-  }), [d.choices, d.style, d.tz, d.session, d.accountType, d.usualSize, d.firmDailyPct]);
+  const template = useMemo(() => {
+    const t = buildTemplate({
+      choices: isProp && !d.choices.includes('bad_days') ? [...d.choices, 'bad_days'] : d.choices,
+      style: d.style,
+      userTz: d.tz,
+      session: d.session,
+      accounts: [{ id: 'default', platform: 'mt5', type: accountType, usualSize, prop: isProp ? { dailyLimitPct: d.firmDailyPct } : undefined }],
+    });
+    if (!mt) t.rules.R6 = { on: false };
+    return t;
+  }, [d.choices, d.style, d.tz, d.session, accountType, usualSize, d.firmDailyPct, mt]);
 
   const tplAcc = template.rules.accounts.default ?? {};
   const rules = d.rules ?? template.rules;
@@ -156,11 +206,11 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
   const choiceRules = useMemo(() => {
     const out: Partial<Record<Choice, string[]>> = {};
     for (const c of COSTS) {
-      const t = buildTemplate({ choices: [c.id], style: d.style, userTz: d.tz, session: d.session, accounts: [{ id: 'default', platform: 'mt5', type: d.accountType, usualSize: d.usualSize }] });
-      out[c.id] = RULE_ORDER.filter((id) => (t.rules as any)[id]?.on);
+      const t = buildTemplate({ choices: [c.id], style: d.style, userTz: d.tz, session: d.session, accounts: [{ id: 'default', platform: 'mt5', type: accountType, usualSize }] });
+      out[c.id] = RULE_ORDER.filter((id) => (t.rules as any)[id]?.on && (mt || id !== 'R6'));
     }
     return out;
-  }, [d.style, d.tz, d.session, d.accountType, d.usualSize]);
+  }, [d.style, d.tz, d.session, accountType, usualSize, mt]);
   /** Rules already shown under an earlier ticked choice: each rule shows once. */
   const shownBefore = (c: Choice) => {
     const seen = new Set<string>();
@@ -187,8 +237,8 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
         {v.on && (
           <div style={{ marginTop: 8 }}>
             {id === 'R5' ? (
-              <label className="field">Max size (lots)
-                <input type="number" className="narrow" min={0.01} step={0.01} value={defaults.r5?.r5Max ?? ''} onChange={(e) => editDefaults({ r5: { r5Max: Number(e.target.value) } })} />
+              <label className="field">{betsOnly ? 'Max bet ($)' : 'Max size (lots)'}
+                <input type="number" className="narrow" min={betsOnly ? 1 : 0.01} step={betsOnly ? 1 : 0.01} value={defaults.r5?.r5Max ?? ''} onChange={(e) => editDefaults({ r5: { r5Max: Number(e.target.value) } })} />
               </label>
             ) : id === 'R6' ? (
               <label className="field">Max risk per trade (% of the day's starting balance)
@@ -221,25 +271,25 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
     setBusy(true);
     setErr('');
     try {
-      const reset =
-        d.reset === 'firm' && FIRMS[d.firm]
+      const resetSpec =
+        reset === 'firm' && FIRMS[d.firm]
           ? { preset: 'custom', ...FIRMS[d.firm].reset }
-          : d.reset === 'custom'
+          : reset === 'custom'
             ? { preset: 'custom', at: d.customAt, tz: d.tz }
-            : { preset: d.reset };
+            : { preset: reset };
       const payloadRules: Record<string, unknown> = {};
       for (const id of RULE_ORDER) payloadRules[id] = (rules as any)[id];
       await api('POST', '/api/onboarding/apply', {
-        tz: d.tz, reset, rules: payloadRules,
+        tz: d.tz, reset: resetSpec, rules: payloadRules,
         defaults: {
           r5: defaults.r5 ? { r5Max: defaults.r5.r5Max, r5Overrides: [] } : undefined,
           r6: defaults.r6, r8: defaults.r8, r7ignore: defaults.r7ignore,
         },
         popup: DEFAULT_POPUP, choices: d.choices, style: d.style,
-        platforms: d.platforms, accountTypes: d.accountType, tellMe: d.platforms.filter((p) => p !== 'mt5'),
+        platforms: d.platforms, accountTypes: accountType, tellMe: d.platforms.filter((p) => !LIVE.includes(p)),
       });
       writeGuest(null);
-      set({ applied: true, step: 2 });
+      set({ applied: true, step: CONNECT_STEP });
     } catch (e: any) {
       setErr(e.message === e.code ? 'Something is missing. Check the earlier screens.' : e.message);
     } finally {
@@ -249,19 +299,24 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
 
   const canNext = (() => {
     switch (d.step) {
-      case 1: return d.choices.length > 0 && RULE_ORDER.every((id) => validRule(id, (rules as any)[id]));
+      case 0: return d.platforms.length > 0;
+      case RULES_STEP: return d.choices.length > 0 && RULE_ORDER.every((id) => validRule(id, (rules as any)[id]));
       default: return true;
     }
   })();
 
   function next() {
-    if (d.step === 1 && !me) {
+    if (d.step === RULES_STEP && !me) {
       writeGuest({ ...d, pending: true });
       return setSignIn(true);
     }
-    if (d.step === 1) return void apply();
+    if (d.step === RULES_STEP) return void apply();
     set({ step: Math.min(STEPS.length - 1, d.step + 1) });
   }
+
+  // Connect: the Windows app for MT5, the extension for the websites (also for a site's phone app: the website gets the pause).
+  const sites = SITE_IDS.filter((s) => d.platforms.includes(s) || d.platforms.includes(`${s}_phone`));
+  const cantConnect = limits(d.platforms);
 
   async function finish(lock: boolean) {
     navigate(lock ? '/rules?lock=1' : '/today', true);
@@ -290,17 +345,51 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
 
       {d.step === 0 && (
         <section className="stack">
+          <h1>Where do you trade?</h1>
+          <p className="muted">Tick all that apply.</p>
+          <div className="places">
+            {PLACES.map((p) => (
+              <div key={p.id} className="card place">
+                <div className="place-head">
+                  <span className={`tile${p.items.some((it) => d.platforms.includes(it.id)) ? ' accent' : ''}`}><Icon name={p.icon} /></span>
+                  <div>
+                    <strong>{p.label}</strong>
+                    <div className="small muted">{p.line}</div>
+                  </div>
+                </div>
+                <div className="place-items">
+                  {p.items.map((it) => (
+                    <label key={it.id} className="choice place-item">
+                      <input type="checkbox" aria-label={`${it.label}, ${p.label}`} checked={d.platforms.includes(it.id)} onChange={(e) => togglePlatform(it.id, e.target.checked)} />
+                      <span className="grow">{it.label}</span>
+                      {it.chip && <span className="chip">{it.chip}</span>}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <label className="check small muted">
+            <input type="checkbox" checked={d.platforms.includes('other')} onChange={(e) => togglePlatform('other', e.target.checked)} /> Somewhere else
+          </label>
+        </section>
+      )}
+
+      {d.step === 1 && (
+        <section className="stack">
           <h1>About your trading</h1>
           <div>
             <p className="muted">What kind of account do you trade most?</p>
             <div className="option-grid">
-              {([['prop_challenge', 'Prop challenge', 'target'], ['prop_funded', 'Funded prop', 'star'], ['own', 'My own money', 'account'], ['demo', 'Demo', 'play']] as const).map(([id, label, icon]) => (
-                <label key={id} className="option">
-                  <input type="radio" name="acct" checked={d.accountType === id} onChange={() => set({ accountType: id, rules: null, defaults: null, reset: id.startsWith('prop') && FIRMS[d.firm] ? 'firm' : d.reset === 'firm' ? 'midnight' : d.reset })} />
-                  <span className="tile"><Icon name={icon} /></span>
-                  <strong>{label}</strong>
-                </label>
-              ))}
+              {([['prop_challenge', 'Prop challenge', 'target'], ['prop_funded', 'Funded prop', 'star'], ['own', 'My own money', 'account'], ['demo', 'Demo', 'play']] as const)
+                .filter(([id]) => !betsOnly || !id.startsWith('prop'))
+                .map(([id, label, icon]) => (
+                  <label key={id} className="option">
+                    <input type="radio" name="acct" checked={accountType === id} onChange={() => set({ accountType: id, rules: null, defaults: null, reset: id.startsWith('prop') && FIRMS[d.firm] ? 'firm' : d.reset === 'firm' ? 'midnight' : d.reset })} />
+                    <span className="tile"><Icon name={icon} /></span>
+                    <strong>{label}</strong>
+                  </label>
+                ))}
             </div>
           </div>
           {isProp && (
@@ -326,26 +415,22 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
                 <option value="swing">Swing (held for days)</option>
               </select>
             </label>
-            <label className="field">
-              Usual position size (lots)
-              <input type="number" min={0.01} step={0.01} value={d.usualSize} onChange={(e) => set({ usualSize: Number(e.target.value), rules: null, defaults: null })} />
-            </label>
-          </div>
-          <div>
-            <p className="muted">Also trade somewhere else?</p>
-            <div className="row">
-              {OTHER_PLATFORMS.map((p) => (
-                <label key={p.id} className="check">
-                  <input type="checkbox" checked={d.platforms.includes(p.id)} onChange={(e) => set({ platforms: e.target.checked ? [...d.platforms, p.id] : d.platforms.filter((x) => x !== p.id) })} /> {p.label}
-                </label>
-              ))}
-            </div>
-            {OTHER_PLATFORMS.filter((p) => d.platforms.includes(p.id)).map((p) => <p key={p.id} className="small muted">{p.label}: {p.note}</p>)}
+            {betsOnly ? (
+              <label className="field">
+                Usual bet ($)
+                <input type="number" min={1} step={1} value={usualSize} onChange={(e) => set({ usualBet: Number(e.target.value), rules: null, defaults: null })} />
+              </label>
+            ) : (
+              <label className="field">
+                Usual position size (lots)
+                <input type="number" min={0.01} step={0.01} value={d.usualSize} onChange={(e) => set({ usualSize: Number(e.target.value), rules: null, defaults: null })} />
+              </label>
+            )}
           </div>
         </section>
       )}
 
-      {d.step === 1 && (
+      {d.step === RULES_STEP && (
         <section className="stack">
           <h1>What costs you the most?</h1>
           <p className="muted">Tick all that apply. Each one opens its rules.</p>
@@ -389,16 +474,16 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
             )}
           </div>
           <details className="card">
-            <summary>Your day resets at {d.reset === 'firm' && FIRMS[d.firm] ? `${d.firm}'s reset (midnight Prague time)` : RESETS[d.reset]} · {d.tz}</summary>
+            <summary>Your day resets at {reset === 'firm' && FIRMS[d.firm] ? `${d.firm}'s reset (midnight Prague time)` : RESETS[reset]} · {d.tz}</summary>
             <div className="stack" style={{ marginTop: 10 }}>
               <label className="field">Timezone <input value={d.tz} onChange={(e) => set({ tz: e.target.value })} /></label>
               <label className="field">
                 Day reset
-                <select value={d.reset} onChange={(e) => set({ reset: e.target.value as Draft['reset'] })}>
+                <select value={reset} onChange={(e) => set({ reset: e.target.value as Draft['reset'] })}>
                   {(Object.keys(RESETS) as Draft['reset'][]).filter((k) => k !== 'firm' || isProp).map((k) => <option key={k} value={k}>{RESETS[k]}</option>)}
                 </select>
               </label>
-              {d.reset === 'custom' && <label className="field">Reset time <input type="time" value={d.customAt} onChange={(e) => set({ customAt: e.target.value })} /></label>}
+              {reset === 'custom' && <label className="field">Reset time <input type="time" value={d.customAt} onChange={(e) => set({ customAt: e.target.value })} /></label>}
               <p className="small muted">Daily limits start again at each reset.</p>
             </div>
           </details>
@@ -409,16 +494,37 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
         </section>
       )}
 
-      {d.step === 2 && (
+      {d.step === CONNECT_STEP && (
         <section className="stack">
-          <h1>{phone ? 'Finish on your computer' : 'Connect MT5'}</h1>
-          {phone ? (
+          <h1>{MOBILE ? 'Finish on your computer' : 'Connect'}</h1>
+          {MOBILE ? (
             <>
               <p className="muted">Open this on your computer:</p>
               <p className="code" style={{ fontSize: 18 }}>{location.host}/devices</p>
             </>
           ) : (
-            me && <ConnectMt5 me={me} />
+            me && (
+              <>
+                {d.platforms.includes('mt5') && (
+                  <div className="card">
+                    <div className="card-head"><h2><Icon name="window" /> MetaTrader 5 · Windows app</h2></div>
+                    <ConnectMt5 me={me} />
+                  </div>
+                )}
+                {sites.length > 0 && (
+                  <div className="card">
+                    <div className="card-head"><h2><Icon name="globe" /> {siteList(sites, 'and')} · Chrome or Edge</h2></div>
+                    <ConnectBrowser me={me} sites={sites} />
+                  </div>
+                )}
+                {!d.platforms.includes('mt5') && sites.length === 0 && <p className="muted">Nothing to connect yet.</p>}
+              </>
+            )
+          )}
+          {cantConnect.length > 0 && (
+            <ul className="limits small muted">
+              {cantConnect.map((l) => <li key={l}><Icon name="info" size={15} /> {l}</li>)}
+            </ul>
           )}
           <div className="card stack">
             <p className="small">
@@ -435,9 +541,9 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
 
       <div className="wizard-nav">
         {!d.applied && <button onClick={() => set({ step: Math.max(0, d.step - 1) })} disabled={d.step === 0}>Back</button>}
-        {d.step < 2 && (
+        {d.step < CONNECT_STEP && (
           <button className="primary" disabled={!canNext || busy} onClick={next}>
-            {d.step === 1 ? 'Save my rules' : 'Next'}
+            {d.step === RULES_STEP ? 'Save my rules' : 'Next'}
           </button>
         )}
       </div>

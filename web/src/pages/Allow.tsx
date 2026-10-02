@@ -45,7 +45,7 @@ export function Allow({ me }: { me: Me }) {
           <>
             <span className="tile accent"><Icon name="check" size={26} strokeWidth={2.2} /></span>
             <h1>Allowed</h1>
-            <p className="muted">{toExtension ? 'Open a TradingView chart.' : 'Go back to the DisciplineGuard app.'}</p>
+            <p className="muted">{toExtension ? 'Open TradingView, Polymarket or Kalshi.' : 'Go back to the DisciplineGuard app.'}</p>
           </>
         ) : state === 'cancelled' ? (
           <p>Nothing was allowed. You can close this tab.</p>

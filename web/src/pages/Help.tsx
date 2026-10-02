@@ -12,19 +12,20 @@ interface Article {
 const SETUP: Article[] = [
   {
     slug: 'tradingview',
-    title: 'Install the TradingView extension',
+    title: 'Install the browser extension (TradingView, Polymarket, Kalshi)',
     body: [
       '1. Download disciplineguard.leowqiheng.workers.dev/downloads/DisciplineGuard-TradingView.zip and unzip it.',
       '2. Open chrome://extensions (in Edge: edge://extensions) and turn on Developer mode.',
       '3. Click Load unpacked and pick the unzipped folder.',
-      '4. Click the DisciplineGuard button in the toolbar, Sign in, then Allow. Open a TradingView chart with your broker connected.',
+      '4. On the tab that opens, click Sign in, then Allow. No tab? Click the DisciplineGuard button in the toolbar.',
+      '5. Open Polymarket, Kalshi, or a TradingView chart with your broker connected. Phone apps and the TradingView desktop app can\'t be paused.',
     ],
   },
   {
     slug: 'install',
     title: 'Install DisciplineGuard for Windows',
     body: [
-      'Download it from Devices → Add MT5, and run the installer.',
+      'Download it from Devices → Add MT5, and run the installer. It\'s for MetaTrader 5 on Windows. MetaTrader on a Mac isn\'t supported yet.',
       'The app sets up MetaTrader for you. You never copy files or type a code.',
     ],
   },

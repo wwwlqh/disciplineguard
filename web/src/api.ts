@@ -121,6 +121,8 @@ export interface Me {
   time: ResolvedTime;
   accounts: Account[];
   connections: Connection[];
+  /** Where DisciplineGuard was allowed: the Windows app (the computer's name) or the browser extension ("Chrome", "Edge"). */
+  apps: { id: string; name: string; browser: boolean; lastSeen: number | null }[];
 }
 
 export type Verdict = { direction: 'same' | 'stricter' | 'looser'; appliesAt: 'now' | number };

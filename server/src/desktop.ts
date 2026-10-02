@@ -74,7 +74,7 @@ export async function registerTerminal(req: Request, env: Env, ctx: Ctx): Promis
   const b = await body(req);
   const terminalId = str(b.terminalId, 64);
   if (!/^[0-9A-Za-z_-]{4,64}$/.test(terminalId)) throw new HttpError(400, 'bad_terminal');
-  // The Windows app registers MT terminals; the browser extension registers TradingView broker accounts.
+  // The Windows app registers MT terminals; the browser extension registers TradingView, Polymarket and Kalshi accounts.
   const kind = b.kind === 'mt4' ? 'mt4' : b.kind === 'tv' ? 'tv' : 'mt5';
   const server = str(b.server ?? '', 80);
   const login = str(typeof b.login === 'number' ? String(b.login) : b.login, 32);
@@ -98,7 +98,8 @@ export async function registerTerminal(req: Request, env: Env, ctx: Ctx): Promis
   const deviceToken = token(32);
   const existing = await env.DB.prepare('SELECT id FROM connections WHERE desktop_id = ? AND install_id = ? AND removed_at IS NULL').bind(d.id, terminalId).first<{ id: string }>();
   const connId = existing?.id ?? randomId('c_');
-  const name = `${kind === 'tv' ? 'TradingView' : kind.toUpperCase()} · ${server} …${hashes.last3}`;
+  // Polymarket and Kalshi come through the extension as 'tv', with the site as the server.
+  const name = kind === 'tv' && (server === 'Polymarket' || server === 'Kalshi') ? `${server} …${hashes.last3}` : `${kind === 'tv' ? 'TradingView' : kind.toUpperCase()} · ${server} …${hashes.last3}`;
   if (existing) {
     await env.DB.prepare('UPDATE connections SET token_hash = ?, version = ?, build_hash = ? WHERE id = ?').bind(await sha256(deviceToken), version, build, connId).run();
   } else {

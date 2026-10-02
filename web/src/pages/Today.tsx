@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { placedWhere, RULE_NAMES, type TitleId } from '@dg/core';
 import { api, type Connection, type Me } from '../api.ts';
-import { ago, money, plural, time } from '../fmt.ts';
+import { ago, money, platformName, plural, time } from '../fmt.ts';
 import { onLink } from '../router.ts';
 import { DeletionBanner, Dot, PracticePause, Sheet, useToast, type StatusKind } from '../ui/kit.tsx';
 import { Icon, type IconName } from '../ui/Icon.tsx';
@@ -200,7 +200,7 @@ export function Today({ me, reload }: PageProps) {
       )}
       {r5Missing.map((a) => (
         <div key={a.id} className="banner amber">
-          <span><Icon name="layers" /> Max size not set for {a.platform.toUpperCase()} …{a.last3}.</span>
+          <span><Icon name="layers" /> Max size not set for {platformName(a.platform, a.server)} …{a.last3}.</span>
           <a className="btn" href="/rules#accounts" onClick={onLink}>Set it</a>
         </div>
       ))}
@@ -335,7 +335,7 @@ function HeroStatus({ d, onBreak, onDone }: { d: TodayData; onBreak(): void; onD
       <div>
         <h2>{title}</h2>
         {st.length === 0 ? (
-          <p className="small muted" style={{ margin: 0 }}>Your rules apply once MetaTrader 5 or TradingView is connected. <a href="/devices" onClick={onLink}>Connect now</a></p>
+          <p className="small muted" style={{ margin: 0 }}>Your rules apply once your platform is connected. <a href="/devices" onClick={onLink}>Connect now</a></p>
         ) : (
           <div className="devices">
             {st.map(({ c, s }) => (
@@ -355,7 +355,7 @@ function HeroStatus({ d, onBreak, onDone }: { d: TodayData; onBreak(): void; onD
 /** Loss today against the daily limit, for one account. */
 function LossMeter({ a, now }: { a: TodayData['accounts'][number]; now: number }) {
   const cur = a.currency ?? 'USD';
-  const name = a.nickname ?? `${a.platform.toUpperCase()} …${a.last3}`;
+  const name = a.nickname ?? `${platformName(a.platform, a.server)} …${a.last3}`;
   if (a.loss === null || a.limit === null) {
     return (
       <div className="card meter-card">

@@ -5,7 +5,7 @@ import type { Cache, Status } from './messages.ts';
 const LINES: Record<Status, string> = {
   on: '● On',
   offline: '● On (offline). Rules from your last sync apply.',
-  setting_up: '● Setting up. Open a TradingView chart with your broker connected.',
+  setting_up: '● Setting up. Open Polymarket, Kalshi, or a TradingView chart with your broker connected.',
   attention: '● Needs attention. Sign in again. Your saved rules still apply.',
   off: '● Off. Orders go through normally.',
   signed_out: '● Off. Signed out.',
