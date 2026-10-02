@@ -18,7 +18,7 @@ if (process.env.DG_TEST) define.__DG_TEST__ = 'true';
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out);
-for (const name of ['background', 'content', 'content-pm', 'popup', 'welcome']) {
+for (const name of ['background', 'content', 'content-pm', 'content-kalshi', 'popup', 'welcome']) {
   await build({
     input: join(here, 'src', `${name}.ts`),
     output: { file: join(out, `${name}.js`), format: 'iife', minify: false },
@@ -32,8 +32,8 @@ const origin = new URL(api).origin;
 const manifest = {
   manifest_version: 3,
   name: 'DisciplineGuard',
-  version: '0.1.2',
-  description: 'Pauses new TradingView trades and Polymarket bets that break your own rules. Closing is never paused.',
+  version: '0.1.3',
+  description: 'Pauses new TradingView trades and Polymarket and Kalshi bets that break your own rules. Closing is never paused.',
   icons: { 16: 'icon16.png', 48: 'icon48.png', 128: 'icon128.png' },
   action: { default_popup: 'popup.html', default_icon: { 16: 'icon16.png', 48: 'icon48.png' } },
   background: { service_worker: 'background.js' },
@@ -42,6 +42,7 @@ const manifest = {
   content_scripts: [
     { matches: ['https://www.tradingview.com/chart/*'], js: ['content.js'], run_at: 'document_start', all_frames: false },
     { matches: ['https://polymarket.com/*'], js: ['content-pm.js'], run_at: 'document_start', all_frames: false },
+    { matches: ['https://kalshi.com/*'], js: ['content-kalshi.js'], run_at: 'document_start', all_frames: false },
   ],
   externally_connectable: { matches: [`${origin}/*`] },
 };

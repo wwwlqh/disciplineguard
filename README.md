@@ -8,7 +8,7 @@
 
 You wrote the rules when you were calm. DisciplineGuard holds you to them when you're not.
 
-**[Start free →](https://disciplineguard.leowqiheng.workers.dev)** &nbsp;·&nbsp; MetaTrader 5 &nbsp;·&nbsp; TradingView &nbsp;·&nbsp; Polymarket &nbsp;·&nbsp; Free for 1 trading account
+**[Start free →](https://disciplineguard.leowqiheng.workers.dev)** &nbsp;·&nbsp; MetaTrader 5 &nbsp;·&nbsp; TradingView &nbsp;·&nbsp; Polymarket &nbsp;·&nbsp; Kalshi &nbsp;·&nbsp; Free for 1 trading account
 
 <br>
 
@@ -64,6 +64,7 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 | **MetaTrader 5** (Windows) | The Windows app sets MT5 up for you. No files to copy, nothing to type. Works with prop firm and broker accounts. | ✅ Live |
 | **TradingView** (Chrome, Edge) | Browser extension. Pauses the order panel and one-click Buy/Sell. | ✅ Live |
 | **Polymarket** (Chrome, Edge) | The same browser extension. Pauses Buy in the trade box (market orders). Sell is never paused. | ✅ New |
+| **Kalshi** (Chrome, Edge) | The same browser extension. Pauses Submit Buy and Buy with 1-Click (dollars or shares). Sell is never paused. | ✅ New |
 | MT4, cTrader, NinjaTrader, web prop platforms | | Planned |
 
 ## What it never does
@@ -77,7 +78,7 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 1. Sign in at **[disciplineguard.leowqiheng.workers.dev](https://disciplineguard.leowqiheng.workers.dev)** with Google and set your rules.
 2. Connect your platform:
    - **MT5:** download the [Windows app](https://disciplineguard.leowqiheng.workers.dev/downloads/DisciplineGuard-Setup.exe), click **Allow**, tick your MetaTrader, then **Protect**.
-   - **TradingView or Polymarket:** follow [Install the TradingView extension](https://disciplineguard.leowqiheng.workers.dev/help/tradingview) (download, unzip, *Load unpacked*).
+   - **TradingView, Polymarket or Kalshi:** follow [Install the TradingView extension](https://disciplineguard.leowqiheng.workers.dev/help/tradingview) (download, unzip, *Load unpacked*).
 3. Trade.
 
 **Free for everyone: every rule, on 1 trading account.** TradingView Paper Trading doesn't count toward it. Plans for more accounts are coming.

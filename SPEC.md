@@ -583,7 +583,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 | Kind | One install covers | How a new platform is added |
 |---|---|---|
-| Websites (TradingView; later Kalshi, Polymarket, crypto exchanges, web broker platforms) | The Chrome and Edge extension | A new **adapter** inside the extension: a signed page config (§9.1) plus a small bundled module. Users get it through a normal extension update |
+| Websites (TradingView, Polymarket, Kalshi; later crypto exchanges, web broker platforms) | The Chrome and Edge extension | A new **adapter** inside the extension: a signed page config (§9.1) plus a small bundled module. Users get it through a normal extension update |
 | Desktop platforms with a plugin system (MT5, MT4; later cTrader, NinjaTrader) | The DisciplineGuard Windows app (§9.5) | A plugin for that platform, which the Windows app installs and keeps updated. The trader only ticks "Protect" |
 | Any other website **[P3]** | The extension | **Guard any button**: the trader clicks a site's Buy button once to guard it. Only count and time rules apply, because size and P/L can't be read |
 | Other Windows apps **[P4 bet]** | The Windows app | The same "guard any button" idea for desktop windows. Fragile, so only for apps users ask for |

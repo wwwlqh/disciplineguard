@@ -1,0 +1,59 @@
+<!doctype html>
+<!-- A stand-in Kalshi market page for test/e2e-kalshi.ts: the order panel's structure as on kalshi.com, 2 Oct 2026. -->
+<html>
+<head><meta charset="utf-8"><title>Stand-in market | Kalshi</title></head>
+<body>
+  <nav><a href="/portfolio" id="portfolio"><div><span id="pv">$12.35K</span></div><span>Portfolio</span></a></nav>
+  <div id="panel" tabindex="-1">
+    <div>
+      <div role="tablist">
+        <button role="tab" type="button" id="buy" aria-selected="true">Buy</button>
+        <button role="tab" type="button" id="sell" aria-selected="false">Sell</button>
+      </div>
+      <button type="button" id="units" aria-haspopup="menu"><span>Dollars</span></button>
+    </div>
+    <div>
+      <div id="form">
+        <span>Will it rain in New York today?</span>
+        <h3>New York</h3>
+        <div role="group">
+          <button aria-pressed="true" type="button" id="yes"><span>YES 40¢</span></button>
+          <button aria-pressed="false" type="button" id="no"><span>NO 61¢</span></button>
+        </div>
+        <div data-slot="text-input"><label><span id="unit-label">Dollars</span><span>$</span><input id="amount" type="text" inputmode="decimal" value="10"></label></div>
+      </div>
+      <div id="main"><button type="button" id="advance" data-order-panel-enter-advance>Review Buy</button></div>
+      <div id="review" hidden><button type="button" aria-label="Back" id="back">&lt;</button><button type="button" id="submit">Submit Buy</button></div>
+    </div>
+  </div>
+  <script>
+    window.sent = 0;
+    let side = 'Buy', oneClick = false;
+    const $ = (id) => document.getElementById(id);
+    const reviewing = (on) => { $('form').hidden = on; $('main').hidden = on; $('review').hidden = !on; };
+    const label = () => ($('advance').textContent = oneClick ? `${side} with 1-Click` : `Review ${side}`);
+    $('advance').addEventListener('click', () => {
+      if (oneClick) window.sent++;
+      else { $('submit').textContent = `Submit ${side}`; reviewing(true); }
+    });
+    $('submit').addEventListener('click', () => { window.sent++; reviewing(false); });
+    $('back').addEventListener('click', () => reviewing(false));
+    // Enter in the panel clicks its main button, like Kalshi's handleOrderPanelEnterAdvance.
+    $('panel').addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      document.querySelector('[data-order-panel-enter-advance]').click();
+    });
+    const pick = (s) => { side = s; $('buy').setAttribute('aria-selected', String(s === 'Buy')); $('sell').setAttribute('aria-selected', String(s === 'Sell')); label(); };
+    $('buy').addEventListener('click', () => pick('Buy'));
+    $('sell').addEventListener('click', () => pick('Sell'));
+    const outcome = (yes) => { $('yes').setAttribute('aria-pressed', String(yes)); $('no').setAttribute('aria-pressed', String(!yes)); };
+    $('yes').addEventListener('click', () => outcome(true));
+    $('no').addEventListener('click', () => outcome(false));
+    window.setOneClick = (on) => { oneClick = on; label(); };
+    window.setUnits = (u, amount) => { $('units').firstChild.textContent = u; $('unit-label').textContent = u; $('amount').value = amount; };
+    window.setPortfolio = (text) => ($('pv').textContent = text);
+    localStorage.setItem('userId', 'a1b2c3d4-0000-4000-8000-00000000c0de');
+  </script>
+</body>
+</html>

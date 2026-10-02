@@ -93,7 +93,3 @@ export function readOrder(submit: Element, account: string): Omit<Order, 'kind'>
   if (!market || !outcome || !(size > 0)) return undefined;
   return { platform: 'tv', account, symbol: `${market}:${outcome}`, side: 'buy', size, type: 'market' };
 }
-
-export function orderKey(o: Omit<Order, 'kind'>): string {
-  return [o.account, o.symbol, o.side, o.size].join('|');
-}

@@ -68,7 +68,7 @@ Independent bets, in the order the founder picks.
 | One account on TradingView and MT | Matching the same trade across platforms |
 | Web platforms | DXtrade, Match-Trader, TradeLocker, cTrader web, Tradovate web, TopstepX web, as extension adapters |
 | Native platforms | NinjaTrader, cTrader desktop, as adapters the Windows app installs (SPEC §9.0) |
-| Prediction markets and crypto | Kalshi, Polymarket, Binance, Bybit, Hyperliquid on the web. Needs its own daily-loss definition |
+| Crypto | Binance, Bybit, Hyperliquid on the web. Needs its own daily-loss definition. Polymarket and Kalshi are done |
 | Guard any button (web) | The trader clicks a site's Buy button once to guard it. Count and time rules only |
 | Mobile shield | When a limit is reached, the phone shields the MT and TradingView mobile apps |
 | Coach and community licenses | Group plans with an owner view of totals only, opt-in per member |
