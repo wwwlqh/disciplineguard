@@ -32,7 +32,7 @@ const origin = new URL(api).origin;
 const manifest = {
   manifest_version: 3,
   name: 'DisciplineGuard',
-  version: '0.1.3',
+  version: '0.1.4',
   description: 'Pauses new TradingView trades and Polymarket and Kalshi bets that break your own rules. Closing is never paused.',
   icons: { 16: 'icon16.png', 32: 'icon32.png', 48: 'icon48.png', 128: 'icon128.png' },
   action: { default_popup: 'popup.html', default_icon: { 16: 'icon16.png', 32: 'icon32.png', 48: 'icon48.png' } },
