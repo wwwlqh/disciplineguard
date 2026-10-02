@@ -27,7 +27,7 @@ const ERRORS: Record<string, string> = {
   link_invalid: 'This link expired or was already used. Ask for a new one.',
 };
 
-export function SignIn({ onDone }: { onDone(): void }) {
+export function SignIn({ onDone, title = 'Sign in or create your account' }: { onDone(): void; title?: string }) {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState('');
@@ -114,7 +114,7 @@ export function SignIn({ onDone }: { onDone(): void }) {
           <div className="auth-mobile-brand"><Brand /></div>
           {!sent ? (
             <form onSubmit={(e) => { e.preventDefault(); void run(async () => { await api('POST', '/v1/auth/email', { email, nonce: nonce() }); setSent(true); }); }}>
-              <h1>Sign in or create your account</h1>
+              <h1>{title}</h1>
               <p className="muted">Free for 1 trading account. No card needed.</p>
               {google && (
                 <>

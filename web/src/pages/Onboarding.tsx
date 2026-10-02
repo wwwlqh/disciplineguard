@@ -1,10 +1,13 @@
 // Onboarding (EXPERIENCE §5.2): three screens, nothing to type, Back always available, resumable.
 // 1 About you · 2 Your rules (each ticked cost opens its rules; trading day) · 3 Connect MT5.
+// Signed out (Start free, at /start), the first two run without an account: the draft stays in this browser,
+// Save my rules asks to sign in, and the rules are saved to the account right after.
 import { useEffect, useMemo, useState } from 'react';
 import { buildTemplate, DEFAULT_POPUP, type Choice, type Rules } from '@dg/core';
 import { api, type Me } from '../api.ts';
 import { browserTz } from '../fmt.ts';
 import { navigate } from '../router.ts';
+import { SignIn } from './SignIn.tsx';
 import { ConnectMt5 } from '../ui/Connect.tsx';
 import { PracticePause, Switch } from '../ui/kit.tsx';
 import { Brand } from '../ui/Brand.tsx';
@@ -59,6 +62,31 @@ const FIRMS: Record<string, { pct: number; reset: { at: string; tz: string }; ba
 
 const STEPS = ['About you', 'Your rules', 'Connect MT5'];
 
+/** A signed-out draft, kept in this browser until the trader signs in. */
+const GUEST_KEY = 'dg:onboarding';
+type Stored = Draft & { pending?: boolean };
+function readGuest(): Stored | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(GUEST_KEY) ?? 'null');
+    return v && typeof v === 'object' && typeof v.step === 'number' ? v : null;
+  } catch {
+    return null;
+  }
+}
+function writeGuest(d: Stored | null): void {
+  try {
+    if (d) localStorage.setItem(GUEST_KEY, JSON.stringify(d));
+    else localStorage.removeItem(GUEST_KEY);
+  } catch {}
+}
+
+/** Next local midnight, so a guest's practice pause can say when a daily limit clears. */
+function nextMidnight(): number {
+  const t = new Date();
+  t.setHours(24, 0, 0, 0);
+  return t.getTime();
+}
+
 const RESETS: Record<Draft['reset'], string> = {
   midnight: 'midnight in your timezone',
   forex_close: 'forex close, 17:00 New York',
@@ -67,8 +95,11 @@ const RESETS: Record<Draft['reset'], string> = {
   custom: 'a custom time',
 };
 
-function initial(me: Me): Draft {
-  const saved = me.user.onboarding;
+function initial(me: Me | null): Draft {
+  const guest = readGuest();
+  // Rules set before signing in win: Save my rules was pressed for them.
+  if (guest && (!me || guest.pending)) return { ...guest, step: Math.min(guest.step, 1), applied: false };
+  const saved = me?.user.onboarding;
   if (saved && typeof saved === 'object' && saved.step !== undefined && !saved.done && saved.step < STEPS.length) return { ...(saved as Draft), step: saved.applied ? saved.step : Math.min(saved.step, 1) };
   return {
     step: 0, platforms: ['mt5'], accountType: 'own', firm: 'FTMO', firmDailyPct: 5, style: 'day', choices: [], session: 'london', usualSize: 0.5,
@@ -77,21 +108,29 @@ function initial(me: Me): Draft {
   };
 }
 
-export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) {
+export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<void> }) {
   const [d, setD] = useState<Draft>(() => initial(me));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [practiceOpen, setPracticeOpen] = useState(false);
+  const [signIn, setSignIn] = useState(false);
+  const [pending] = useState(() => !!me && !!readGuest()?.pending);
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }));
   const isProp = d.accountType === 'prop_challenge' || d.accountType === 'prop_funded';
   const phone = typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches;
 
   // Save progress so onboarding can be resumed (EXPERIENCE §5.2).
   useEffect(() => {
-    if (d.applied) return;
+    if (d.applied || pending) return;
+    if (!me) return writeGuest(d);
     const id = setTimeout(() => void api('PUT', '/api/onboarding', { state: d }).catch(() => {}), 600);
     return () => clearTimeout(id);
   }, [d]);
+
+  // Just signed in after Save my rules: save them to the account.
+  useEffect(() => {
+    if (pending) void apply();
+  }, []);
 
   const template = useMemo(() => buildTemplate({
     choices: isProp && !d.choices.includes('bad_days') ? [...d.choices, 'bad_days'] : d.choices,
@@ -199,6 +238,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
         popup: DEFAULT_POPUP, choices: d.choices, style: d.style,
         platforms: d.platforms, accountTypes: d.accountType, tellMe: d.platforms.filter((p) => p !== 'mt5'),
       });
+      writeGuest(null);
       set({ applied: true, step: 2 });
     } catch (e: any) {
       setErr(e.message === e.code ? 'Something is missing. Check the earlier screens.' : e.message);
@@ -215,6 +255,10 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
   })();
 
   function next() {
+    if (d.step === 1 && !me) {
+      writeGuest({ ...d, pending: true });
+      return setSignIn(true);
+    }
     if (d.step === 1) return void apply();
     set({ step: Math.min(STEPS.length - 1, d.step + 1) });
   }
@@ -224,13 +268,16 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
     await reload();
   }
 
-  const draftMe: Me = { ...me, rules, notes: [], plan: '', popup: DEFAULT_POPUP };
+  const draftMe = { ...(me ?? { time: { userResets: [nextMidnight()] } }), rules, notes: [], plan: '', popup: DEFAULT_POPUP } as Me;
+
+  if (signIn && !me) return <SignIn title="Save your rules" onDone={() => window.dispatchEvent(new Event('dg:reload'))} />;
+  if (pending && !d.applied && !err) return <div className="center-page muted">{err || 'Saving your rules…'}</div>;
 
   return (
     <div className="wizard">
       <div className="wizard-top">
         <Brand />
-        <span className="small faint">{me.user.email}</span>
+        {me ? <span className="small faint">{me.user.email}</span> : <a className="small" href="/signin" onClick={(e) => { e.preventDefault(); navigate('/signin'); }}>Sign in</a>}
       </div>
       <ol className="stepper" aria-label={`Step ${d.step + 1} of ${STEPS.length}`}>
         {STEPS.map((s, i) => (
@@ -356,6 +403,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
             </div>
           </details>
 
+          {rulesOn.length > 0 && <button onClick={() => setPracticeOpen(true)}><Icon name="pause" size={16} /> Try a pause with these rules</button>}
           <p className="small muted">Tightening applies now. Loosening waits until your next day reset (at least 12 hours).</p>
           {err && <p role="alert">{err}</p>}
         </section>
@@ -370,7 +418,7 @@ export function Onboarding({ me, reload }: { me: Me; reload(): Promise<void> }) 
               <p className="code" style={{ fontSize: 18 }}>{location.host}/devices</p>
             </>
           ) : (
-            <ConnectMt5 me={me} />
+            me && <ConnectMt5 me={me} />
           )}
           <div className="card stack">
             <p className="small">

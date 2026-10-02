@@ -134,11 +134,13 @@ function App() {
   if (path.startsWith('/help')) return <Help path={path} signedIn={state === 'ready'} />;
   if (path === '/' && state !== 'ready') return <Site />;
   if (path === '/status') return <Status />;
+  // Start free: set rules first, sign in to save them.
+  if (path === '/start' && state !== 'ready') return state === 'loading' ? <div className="center-page muted">Loading…</div> : <Onboarding key="guest" me={null} reload={reload} />;
   // After signing in, return to the page that asked (the Windows app's Allow page keeps its query).
   if (path === '/signin' || state === 'signed_out') return <SignIn onDone={() => { navigate(path === '/signin' ? '/today' : location.pathname + location.search, true); void reload(); }} />;
   if (state === 'loading' || !me) return <div className="center-page muted">{state === 'error' ? "Can't reach DisciplineGuard. Try again in a moment." : 'Loading…'}</div>;
   if (path === '/allow') return <Allow me={me} />;
-  if (!me.user.onboarding?.done && me.user.setupMode) return <Onboarding me={me} reload={reload} />;
+  if (!me.user.onboarding?.done && me.user.setupMode) return <Onboarding key="user" me={me} reload={reload} />;
   return <Shell me={me} reload={reload} path={path} />;
 }
 

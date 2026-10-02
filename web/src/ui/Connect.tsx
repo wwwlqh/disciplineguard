@@ -30,11 +30,13 @@ export function ConnectMt5({ me, onConnected }: { me: Me; onConnected?(): void }
     <div className="stack">
       <ol className="steps">
         <li>
-          <a className="btn primary" href={APP_FILE} download>Download DisciplineGuard for Windows</a>
-          <div className="small muted">It sets up MetaTrader for you.</div>
+          <div>
+            <a className="btn primary" href={APP_FILE} download>Download DisciplineGuard for Windows</a>
+            <div className="small muted">It sets up MetaTrader for you.</div>
+          </div>
         </li>
-        <li>Open it and click <strong>Allow</strong>.</li>
-        <li>Tick your MetaTrader and press <strong>Protect</strong>.</li>
+        <li><span>Open it and click <strong>Allow</strong>.</span></li>
+        <li><span>Tick your MetaTrader and press <strong>Protect</strong>.</span></li>
       </ol>
       <p className={conn ? 'banner' : 'small muted'} role="status">
         {conn ? <><strong>{conn.name}</strong> · On</> : 'Waiting for your computer…'}

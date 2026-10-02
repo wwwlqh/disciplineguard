@@ -61,7 +61,7 @@ export function Site() {
   }, []);
 
   const start = (cls = 'btn primary big') => (
-    <a href="/signin" onClick={onLink} className={cls}>
+    <a href="/start" onClick={onLink} className={cls}>
       Start free <Icon name="arrowRight" size={16} />
     </a>
   );

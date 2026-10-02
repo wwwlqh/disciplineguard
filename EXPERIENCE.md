@@ -134,10 +134,10 @@ These rules apply to product copy about the trader or their trades.
 
 **Onboarding: three screens, nothing to type**
 
-Back is always available until the rules are saved, and progress is saved so it can be resumed.
+Start free opens it signed out: screens 1 and 2 need no account and the draft stays in the browser. [Save my rules] then asks to sign in ("Save your rules") and saves them to the account right after. Back is always available until the rules are saved, and progress is saved so it can be resumed.
 
 1. **About your trading**: account type (prop challenge · funded prop · own money · demo; for prop, the firm and its daily loss limit), how you trade, usual position size, and "Also trade somewhere else?" chips that record "tell me when it's ready".
-2. **Your rules**: "What costs you the most?", tick all that apply (§5.3). Each ticked choice opens its rules right under it, ready to adjust; a rule shows once. Below: the day reset (folded), "Tightening applies now. Loosening waits until your next day reset", and [Save my rules].
+2. **Your rules**: "What costs you the most?", tick all that apply (§5.3). Each ticked choice opens its rules right under it, ready to adjust; a rule shows once. Below: the day reset (folded), "Tightening applies now. Loosening waits until your next day reset", [Try a pause with these rules], and [Save my rules].
 3. **Connect MT5**: the three steps of §5.7 with the live "Waiting for your computer…" state. On a phone: "Finish on your computer". Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
 
 ### 5.3 Starting templates
