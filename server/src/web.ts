@@ -466,7 +466,7 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
     }
   }
   if (b.defaults && typeof b.defaults === 'object') {
-    for (const k of ['r5', 'r6', 'r8', 'r7ignore']) {
+    for (const k of ['r5', 'r5bet', 'r6', 'r8', 'r7ignore']) {
       if (b.defaults[k] !== undefined && b.defaults[k] !== null) writes.push([`default:${k}`, validateSetting(`default:${k}`, b.defaults[k], () => undefined)]);
     }
   }

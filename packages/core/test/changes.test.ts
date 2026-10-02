@@ -51,6 +51,10 @@ describe('SPEC §15.5 setup mode and rule changes', () => {
   it('CHG-14: a higher override is looser', () => expect(compareChange('acct:A:r5', { r5Max: 0.5 }, { r5Max: 0.5, r5Overrides: [{ prefix: 'EURUSD', max: 2 }] })).toBe('looser'));
   it('CHG-15: a lower override is stricter', () => expect(compareChange('acct:A:r5', { r5Max: 0.5 }, { r5Max: 0.5, r5Overrides: [{ prefix: 'XAUUSD', max: 0.1 }] })).toBe('stricter'));
   it('R5 first value applies now', () => expect(compareChange('acct:A:r5', undefined, { r5Max: 0.5 })).toBe('stricter'));
+  it('a lower max bet (Polymarket, Kalshi) is stricter, a higher one looser', () => {
+    expect(compareChange('default:r5bet', { r5Max: 50 }, { r5Max: 25 })).toBe('stricter');
+    expect(compareChange('default:r5bet', { r5Max: 25 }, { r5Max: 50 })).toBe('looser');
+  });
 
   it('CHG-16: adding a note is stricter', () => expect(compareChange('note:2', null, { text: 'x', tag: 'any' })).toBe('stricter'));
   it('CHG-17: editing a note is looser', () => expect(compareChange('note:1', { text: 'x', tag: 'any' }, { text: 'y', tag: 'any' })).toBe('looser'));

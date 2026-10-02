@@ -110,6 +110,21 @@ describe('Windows app connect (SPEC §9.5)', () => {
     expect((await web.get('/api/me')).data.connections[0].name).toBe('Polymarket …234');
   });
 
+  it('keeps a max size in lots off Polymarket and Kalshi bets, which get the max bet in dollars', async () => {
+    const w = new World();
+    const web = await w.signIn('a@b.co');
+    await web.onboard({ rules: { R5: { on: true } }, defaults: { r5: { r5Max: 0.5 }, r5bet: { r5Max: 25 } } });
+    w.db.db.prepare("UPDATE users SET plan_state = 'active', paid_until = ?").run(w.t + 365 * DAY);
+    const ea = await web.connect('100');
+    await ea.sync();
+    const pm = await w.call('POST', '/v1/desktop/terminals', { terminalId: 'tvpm1', kind: 'tv', server: 'Polymarket', login: 'abcdef1234' }, { authorization: `Bearer ${await web.allowDesktop('Chrome')}` });
+    expect(pm.status).toBe(200);
+    const me = (await web.get('/api/me')).data;
+    const max = (server: string) => me.rules.accounts[me.accounts.find((a: any) => a.server === server).id].r5Max;
+    expect(max('FTMO-Demo')).toBe(0.5);
+    expect(max('Polymarket')).toBe(25);
+  });
+
   it('rejects terminal registration without a valid app token', async () => {
     const w = new World();
     const r = await w.call('POST', '/v1/desktop/terminals', { terminalId: 'TERM1', server: 's', login: '1' }, { authorization: 'Bearer ' + 'a'.repeat(40) });

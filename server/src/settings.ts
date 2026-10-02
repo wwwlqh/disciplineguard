@@ -100,7 +100,8 @@ export interface Assembled {
   removedConnections: Set<string>;
   pending: { key: string; value: any; effectiveAt: number }[];
   lockedValues: Record<string, number>;
-  defaults: { r5?: any; r6?: any; r8?: any; r7ignore?: number };
+  /** r5 is in lots; r5bet, the same in dollars, is for Polymarket and Kalshi accounts. */
+  defaults: { r5?: any; r5bet?: any; r6?: any; r8?: any; r7ignore?: number };
 }
 
 export function resetSpec(v: any, tz: string): ResetSpec {
@@ -158,14 +159,21 @@ export function assemble(settings: Map<string, StoredSetting>): Assembled {
   return { rules, popup, tz, reset: resetSpec(resetRaw, tz), accountResets, notes, plan, removedAccounts, removedConnections, pending, lockedValues, defaults };
 }
 
+/** The extension files Polymarket and Kalshi accounts under 'tv', with the site as the server. */
+export function isBetAccount(a: { platform: string; server_name?: string | null }): boolean {
+  return a.platform === 'tv' && (a.server_name === 'Polymarket' || a.server_name === 'Kalshi');
+}
+
 /** Fills per-account values from the user's defaults where an account has none of its own. */
-export function applyDefaults(asm: Assembled, accounts: { id: string; platform: string }[]): void {
+export function applyDefaults(asm: Assembled, accounts: { id: string; platform: string; server_name?: string | null }[]): void {
   const d = asm.defaults;
   for (const a of accounts) {
     const r = (asm.rules.accounts[a.id] ??= {});
-    if (r.r5Max === undefined && d.r5) {
-      r.r5Max = d.r5.r5Max;
-      r.r5Overrides = d.r5.r5Overrides ?? [];
+    // Polymarket and Kalshi sizes are dollars: a size in lots never applies to them.
+    const r5 = isBetAccount(a) ? d.r5bet : d.r5;
+    if (r.r5Max === undefined && r5) {
+      r.r5Max = r5.r5Max;
+      r.r5Overrides = r5.r5Overrides ?? [];
     }
     if (r.r6 === undefined && d.r6 && a.platform !== 'tv') r.r6 = d.r6;
     // A % daily loss limit needs MT's day-start balance; TradingView accounts need their own amount.

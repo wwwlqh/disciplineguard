@@ -93,8 +93,8 @@ export function validateSetting(key: string, value: unknown, account: AccountLoo
     }
   }
   if (kind === 'default') {
-    if (!['r5', 'r6', 'r8', 'r7ignore'].includes(id)) bad('default');
-    return validateSetting(`acct:*:${id}`, value, () => ({ platform: 'mt5' }));
+    if (!['r5', 'r5bet', 'r6', 'r8', 'r7ignore'].includes(id)) bad('default');
+    return validateSetting(`acct:*:${id === 'r5bet' ? 'r5' : id}`, value, () => ({ platform: 'mt5' }));
   }
   if (kind === 'acct') {
     const a = account(id);

@@ -225,7 +225,7 @@ All rules are off until the user enables them, usually through a starter templat
 | R2 | Max trades per hour | `max` 1–50 | User | entries in (now − 60 min, now] ≥ `max` |
 | R3 | Too fast | `count` 2–10, `seconds` 10–600 | User | entries in (now − `seconds`, now] ≥ `count` − 1 |
 | R4 | Trading hours | 1–3 windows `start`–`end`, weekdays | User | now is outside every window, or today is not an allowed weekday |
-| R5 | Max position size | `max_size` per trading account, up to 20 symbol overrides | Account | resulting position in that symbol and direction > effective limit |
+| R5 | Max position size | `max_size` per trading account, up to 20 symbol overrides. The default is in lots; Polymarket and Kalshi accounts take a separate default in dollars (max bet), never the lots one | Account | resulting position in that symbol and direction > effective limit |
 | R6 | Max risk per trade (MT) | amount in account currency, or 0.1–10% of day-start balance | Account | no SL, or computed risk > limit |
 | R7 | Cooldown after a loss | `minutes` 1–240; `ignore_below` amount (optional); `double_after_2` (optional) | User | now < latest qualifying losing close + cooldown |
 | R8 | Daily loss limit | amount in account currency, or 0.1–20% of day-start balance (TradingView: amount only); `rest_hours` 0–24 (default 12); `all_accounts` (optional) | Account | this account is in its limit state (§5.2) |

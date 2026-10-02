@@ -10,7 +10,8 @@ export type Direction = 'same' | 'stricter' | 'looser';
  * - `rule:R1` … `rule:R10`: the rule's global fields (see Rules in types.ts)
  * - `acct:<id>:r5` {r5Max, r5Overrides} · `acct:<id>:r6` / `acct:<id>:r8` {unit, value} | null
  * - `acct:<id>:r7ignore` number | null · `acct:<id>:copies` number[] · `acct:<id>:reset` ResetSpec
- * - `default:r5` / `default:r6` / `default:r8` / `default:r7ignore`: used by accounts without their own value
+ * - `default:r5` / `default:r6` / `default:r8` / `default:r7ignore`: used by accounts without their own value;
+ *   `default:r5bet` is the max size in dollars for Polymarket and Kalshi accounts
  * - `popup` PopupSettings · `countOnce` boolean · `closeOutside` boolean · `tz` string · `reset` ResetSpec
  * - `note:<id>` {text, tag} | null · `plan` string
  */
@@ -158,7 +159,7 @@ export function compareChange(key: SettingKey, active: any, proposed: any): Dire
     }
   }
   // Defaults apply to every account without its own value, so they compare like account values.
-  if (kind === 'default') return compareChange(`acct:*:${id}`, active, proposed);
+  if (kind === 'default') return compareChange(`acct:*:${id === 'r5bet' ? 'r5' : id}`, active, proposed);
   if (kind === 'popup') return comparePopup(active, proposed);
   if (kind === 'countOnce') return proposed ? 'looser' : 'stricter';
   if (kind === 'closeOutside') return proposed ? 'stricter' : 'looser';

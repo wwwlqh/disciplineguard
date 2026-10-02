@@ -57,7 +57,7 @@ export function pendingLabel(key: string, value: any): string {
   if (kind === 'plan') return 'Your plan';
   if (kind === 'tz') return `Timezone: ${value}`;
   if (kind === 'reset') return 'Day reset';
-  if (kind === 'default' || kind === 'acct') return `Account limit (${sub ?? id})`;
+  if (kind === 'default' || kind === 'acct') return ({ r5: 'Max position size', r5bet: 'Max bet', r6: 'Max risk per trade', r8: 'Daily loss limit' } as Record<string, string>)[sub ?? id] ?? `Account limit (${sub ?? id})`;
   return key;
 }
 

@@ -16,7 +16,7 @@ import { Icon, type IconName } from '../ui/Icon.tsx';
 import { RULE_INFO, RULE_ORDER, RuleFields, validRule } from '../ui/RuleFields.tsx';
 
 type AccountType = 'prop_challenge' | 'prop_funded' | 'own' | 'demo';
-type Defaults = { r5?: { r5Max: number }; r6?: { unit: 'pct'; value: number }; r8?: { unit: 'pct' | 'amount'; value: number }; r7ignore?: number };
+type Defaults = { r5?: { r5Max: number }; r5bet?: { r5Max: number }; r6?: { unit: 'pct'; value: number }; r8?: { unit: 'pct' | 'amount'; value: number }; r7ignore?: number };
 
 interface Draft {
   /** 2 since "Where you trade" became the first screen. */
@@ -51,9 +51,11 @@ const PLACES: { id: string; label: string; icon: IconName; line: string; items: 
 /** Picks DisciplineGuard protects today. The others are kept as "tell me when it's ready". */
 const LIVE = ['mt5', 'tv', 'pm', 'kalshi'];
 const SITE_IDS: Site[] = ['tv', 'pm', 'kalshi'];
-/** Only Polymarket or Kalshi: sizes are in dollars, and prop accounts don't apply. */
+/** Polymarket or Kalshi: their sizes are in dollars. */
+const hasBets = (p: string[]) => p.some((x) => ['pm', 'kalshi', 'pm_phone', 'kalshi_phone'].includes(x));
+/** Only Polymarket or Kalshi: no sizes in lots, and prop accounts don't apply. */
 function onlyBets(p: string[]): boolean {
-  return !p.some((x) => ['mt5', 'mt4', 'mt5_mac', 'mt_phone', 'tv', 'tv_phone'].includes(x)) && p.some((x) => ['pm', 'kalshi', 'pm_phone', 'kalshi_phone'].includes(x));
+  return hasBets(p) && !p.some((x) => ['mt5', 'mt4', 'mt5_mac', 'mt_phone', 'tv', 'tv_phone'].includes(x));
 }
 
 const hasMt = (p: string[]) => p.some((x) => x.startsWith('mt'));
@@ -153,16 +155,17 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
   const [pending] = useState(() => !!me && !!readGuest()?.pending);
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }));
   const betsOnly = onlyBets(d.platforms);
+  const bets = hasBets(d.platforms);
   /** Max risk per trade works on MetaTrader only. */
   const mt = hasMt(d.platforms);
-  const usualSize = betsOnly ? (d.usualBet ?? 20) : d.usualSize;
   const accountType: AccountType = betsOnly && d.accountType.startsWith('prop') ? 'own' : d.accountType;
   const isProp = accountType === 'prop_challenge' || accountType === 'prop_funded';
   const reset: Draft['reset'] = d.reset === 'firm' && !isProp ? 'midnight' : d.reset;
-  // The starting rules follow a switch between lots and dollars, or to and from MetaTrader.
+  // The starting rules follow a switch to or from lots, dollars or MetaTrader.
   const togglePlatform = (id: string, on: boolean) => {
     const platforms = on ? [...d.platforms, id] : d.platforms.filter((x) => x !== id);
-    set(onlyBets(platforms) === betsOnly && hasMt(platforms) === mt ? { platforms } : { platforms, rules: null, defaults: null });
+    const same = onlyBets(platforms) === betsOnly && hasBets(platforms) === bets && hasMt(platforms) === mt;
+    set(same ? { platforms } : { platforms, rules: null, defaults: null });
   };
 
   // Save progress so onboarding can be resumed (EXPERIENCE §5.2).
@@ -184,16 +187,18 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
       style: d.style,
       userTz: d.tz,
       session: d.session,
-      accounts: [{ id: 'default', platform: 'mt5', type: accountType, usualSize, prop: isProp ? { dailyLimitPct: d.firmDailyPct } : undefined }],
+      accounts: [{ id: 'default', platform: 'mt5', type: accountType, usualSize: d.usualSize, prop: isProp ? { dailyLimitPct: d.firmDailyPct } : undefined }],
     });
     if (!mt) t.rules.R6 = { on: false };
     return t;
-  }, [d.choices, d.style, d.tz, d.session, accountType, usualSize, d.firmDailyPct, mt]);
+  }, [d.choices, d.style, d.tz, d.session, accountType, d.usualSize, d.firmDailyPct, mt]);
 
   const tplAcc = template.rules.accounts.default ?? {};
   const rules = d.rules ?? template.rules;
   const defaults: Defaults = d.defaults ?? {
-    r5: tplAcc.r5Max !== undefined ? { r5Max: tplAcc.r5Max } : undefined,
+    // Lots for MetaTrader and TradingView, dollars for Polymarket and Kalshi: the server keeps them apart.
+    r5: !betsOnly && tplAcc.r5Max !== undefined ? { r5Max: tplAcc.r5Max } : undefined,
+    r5bet: bets && template.rules.R5.on ? { r5Max: d.usualBet ?? 20 } : undefined,
     r6: tplAcc.r6 as Defaults['r6'],
     r8: tplAcc.r8,
     r7ignore: tplAcc.r7IgnoreBelow,
@@ -206,11 +211,11 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
   const choiceRules = useMemo(() => {
     const out: Partial<Record<Choice, string[]>> = {};
     for (const c of COSTS) {
-      const t = buildTemplate({ choices: [c.id], style: d.style, userTz: d.tz, session: d.session, accounts: [{ id: 'default', platform: 'mt5', type: accountType, usualSize }] });
+      const t = buildTemplate({ choices: [c.id], style: d.style, userTz: d.tz, session: d.session, accounts: [{ id: 'default', platform: 'mt5', type: accountType, usualSize: d.usualSize }] });
       out[c.id] = RULE_ORDER.filter((id) => (t.rules as any)[id]?.on && (mt || id !== 'R6'));
     }
     return out;
-  }, [d.style, d.tz, d.session, accountType, usualSize, mt]);
+  }, [d.style, d.tz, d.session, accountType, d.usualSize, mt]);
   /** Rules already shown under an earlier ticked choice: each rule shows once. */
   const shownBefore = (c: Choice) => {
     const seen = new Set<string>();
@@ -237,9 +242,18 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
         {v.on && (
           <div style={{ marginTop: 8 }}>
             {id === 'R5' ? (
-              <label className="field">{betsOnly ? 'Max bet ($)' : 'Max size (lots)'}
-                <input type="number" className="narrow" min={betsOnly ? 1 : 0.01} step={betsOnly ? 1 : 0.01} value={defaults.r5?.r5Max ?? ''} onChange={(e) => editDefaults({ r5: { r5Max: Number(e.target.value) } })} />
-              </label>
+              <div className="row">
+                {!betsOnly && (
+                  <label className="field">Max size (lots)
+                    <input type="number" className="narrow" min={0.01} step={0.01} value={defaults.r5?.r5Max ?? ''} onChange={(e) => editDefaults({ r5: { r5Max: Number(e.target.value) } })} />
+                  </label>
+                )}
+                {bets && (
+                  <label className="field">Max bet ($)
+                    <input type="number" className="narrow" min={1} step={1} value={defaults.r5bet?.r5Max ?? ''} onChange={(e) => editDefaults({ r5bet: { r5Max: Number(e.target.value) } })} />
+                  </label>
+                )}
+              </div>
             ) : id === 'R6' ? (
               <label className="field">Max risk per trade (% of the day's starting balance)
                 <input type="number" className="narrow" min={0.1} max={10} step={0.1} value={defaults.r6?.value ?? 1} onChange={(e) => editDefaults({ r6: { unit: 'pct', value: Number(e.target.value) } })} />
@@ -283,6 +297,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
         tz: d.tz, reset: resetSpec, rules: payloadRules,
         defaults: {
           r5: defaults.r5 ? { r5Max: defaults.r5.r5Max, r5Overrides: [] } : undefined,
+          r5bet: defaults.r5bet ? { r5Max: defaults.r5bet.r5Max, r5Overrides: [] } : undefined,
           r6: defaults.r6, r8: defaults.r8, r7ignore: defaults.r7ignore,
         },
         popup: DEFAULT_POPUP, choices: d.choices, style: d.style,
@@ -415,15 +430,16 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
                 <option value="swing">Swing (held for days)</option>
               </select>
             </label>
-            {betsOnly ? (
-              <label className="field">
-                Usual bet ($)
-                <input type="number" min={1} step={1} value={usualSize} onChange={(e) => set({ usualBet: Number(e.target.value), rules: null, defaults: null })} />
-              </label>
-            ) : (
+            {!betsOnly && (
               <label className="field">
                 Usual position size (lots)
                 <input type="number" min={0.01} step={0.01} value={d.usualSize} onChange={(e) => set({ usualSize: Number(e.target.value), rules: null, defaults: null })} />
+              </label>
+            )}
+            {bets && (
+              <label className="field">
+                Usual bet ($)
+                <input type="number" min={1} step={1} value={d.usualBet ?? 20} onChange={(e) => set({ usualBet: Number(e.target.value), rules: null, defaults: null })} />
               </label>
             )}
           </div>

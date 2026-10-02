@@ -242,7 +242,8 @@ function LimitEditor({ me, k, label, pctMax, allowPct, reload }: { me: Me; k: st
   );
 }
 
-function SizeEditor({ me, k, reload }: { me: Me; k: string; reload(): Promise<void> }) {
+/** Max position size in lots, or with `bet` the max bet in dollars (Polymarket, Kalshi), which has no symbol overrides. */
+function SizeEditor({ me, k, reload, bet = false }: { me: Me; k: string; reload(): Promise<void>; bet?: boolean }) {
   const cur = me.settings[k]?.active ?? null;
   const [max, setMax] = useState<number>(cur?.r5Max ?? NaN);
   const [ov, setOv] = useState<{ prefix: string; max: number }[]>(cur?.r5Overrides ?? []);
@@ -253,8 +254,8 @@ function SizeEditor({ me, k, reload }: { me: Me; k: string; reload(): Promise<vo
   return (
     <div className="stack">
       <div className="row small">
-        Max position size <input type="number" className="narrow" min={0.01} step={0.01} value={Number.isFinite(max) ? max : ''} onChange={(e) => setMax(e.target.value === '' ? NaN : Number(e.target.value))} /> lots
-        <button className="link" onClick={() => setOv([...ov, { prefix: '', max: 0.1 }])}>Add a symbol override</button>
+        {bet ? 'Max bet $' : 'Max position size'} <input type="number" className="narrow" min={bet ? 1 : 0.01} step={bet ? 1 : 0.01} value={Number.isFinite(max) ? max : ''} onChange={(e) => setMax(e.target.value === '' ? NaN : Number(e.target.value))} /> {bet ? '' : 'lots'}
+        {!bet && <button className="link" onClick={() => setOv([...ov, { prefix: '', max: 0.1 }])}>Add a symbol override</button>}
       </div>
       {ov.map((o, i) => (
         <div key={i} className="row small">
@@ -289,7 +290,7 @@ function AccountSheet({ me, a, reload }: { me: Me; a: Account; reload(): Promise
       </div>
       <div className="stack">
         <LimitEditor me={me} k={`acct:${a.id}:r8`} label="Daily loss limit for this account" pctMax={20} allowPct={a.platform !== 'tv'} reload={reload} />
-        <SizeEditor me={me} k={`acct:${a.id}:r5`} reload={reload} />
+        <SizeEditor me={me} k={`acct:${a.id}:r5`} bet={a.platform === 'tv' && (a.server === 'Polymarket' || a.server === 'Kalshi')} reload={reload} />
         {a.platform !== 'tv' && <LimitEditor me={me} k={`acct:${a.id}:r6`} label="Max risk per trade" pctMax={10} allowPct reload={reload} />}
       </div>
       <p className="small faint" style={{ marginTop: 8 }}>Values not set here come from your defaults below.</p>
@@ -399,6 +400,7 @@ export function RulesPage({ me, reload }: PageProps) {
         <div className="stack">
           <LimitEditor me={me} k="default:r8" label="Daily loss limit" pctMax={20} allowPct reload={reload} />
           <SizeEditor me={me} k="default:r5" reload={reload} />
+          {(me.settings['default:r5bet'] || me.accounts.some((a) => a.server === 'Polymarket' || a.server === 'Kalshi')) && <SizeEditor me={me} k="default:r5bet" bet reload={reload} />}
           <LimitEditor me={me} k="default:r6" label="Max risk per trade (MT)" pctMax={10} allowPct reload={reload} />
         </div>
       </div>
