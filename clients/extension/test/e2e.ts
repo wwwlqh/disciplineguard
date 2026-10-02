@@ -97,7 +97,7 @@ try {
   await chart.goto('https://www.tradingview.com/chart/');
   await until(async () => (await cache())?.status === 'on', 'extension On');
   const me = (await call('GET', '/api/me', undefined, cookie)).data;
-  check(me.accounts.length === 1 && me.accounts[0].platform === 'tv' && me.accounts[0].last3 === 'eng', 'the Paper Trading account is protected (last 3 only)');
+  check(me.accounts.length === 1 && me.accounts[0].platform === 'tv' && me.accounts[0].last3 === 'der', 'the Paper Trading account is protected (last 3 only)');
 
   const pillText = () => chart.locator('dg-pill .text').textContent();
   await until(async () => (await pillText())?.startsWith('On · 0 of 1 trades'), 'the pill shows On and the trade meter');
