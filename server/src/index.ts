@@ -8,7 +8,7 @@ import type { Env } from './env.ts';
 import { HttpError, json } from './http.ts';
 import { runScheduled } from './jobs.ts';
 import { downloadExport } from './data.ts';
-import { baseline, sync } from './sync.ts';
+import { sync } from './sync.ts';
 import { webApi } from './web.ts';
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -32,7 +32,6 @@ const API: Record<string, Route> = {
   'POST /v1/desktop/terminals': registerTerminal,
   'POST /v1/desktop/alerts': desktopAlerts,
   'POST /v1/sync': sync,
-  'POST /v1/baseline': baseline,
   'POST /v1/webhooks/lemonsqueezy': lemonWebhook,
   'GET /v1/pubkey': async (_r, env) => json({ ed25519: env.SIGNING_PUB }),
   'GET /v1/health': async () => json({ ok: true }),

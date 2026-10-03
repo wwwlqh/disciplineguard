@@ -5,7 +5,7 @@ import { tzOffset } from './resolve.ts';
 import { splitWindow } from './changes.ts';
 import type { AccountRules, Platform, PopupSettings, Rules, TimeWindow } from './types.ts';
 
-export type Choice = 'too_many' | 'win_back' | 'size_up' | 'hours' | 'skip_sl' | 'bad_days' | 'give_back';
+export type Choice = 'too_many' | 'win_back' | 'size_up' | 'hours' | 'skip_sl' | 'bad_days';
 export type Style = 'scalping' | 'day' | 'swing';
 export type AccountType = 'prop_challenge' | 'prop_funded' | 'own' | 'demo';
 

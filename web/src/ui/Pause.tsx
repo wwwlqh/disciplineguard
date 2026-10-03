@@ -7,8 +7,6 @@ import { Mark } from './Brand.tsx';
 export interface PauseProps {
   plan: PausePlan;
   order: Order;
-  note: { text: string; setAt: number } | undefined;
-  planText: string;
   fmt: Fmt;
   practice?: boolean;
   keyboardPlace?: boolean;
@@ -66,20 +64,13 @@ export function Pause(p: PauseProps) {
 
   return (
     <div className="pause-backdrop" onKeyDown={onKey}>
-      <div className="pause" role="alertdialog" aria-modal="true" aria-labelledby="pause-h" aria-describedby="pause-note">
+      <div className="pause" role="alertdialog" aria-modal="true" aria-labelledby="pause-h">
         <div className="label">
           <Mark size={18} /> PAUSE · YOUR RULE {p.practice && <span className="practice-tag">PRACTICE</span>}
         </div>
         <div id="pause-h" className="headline">{title}</div>
         {others.length > 0 && <div className="others">Also: {others.join(' · ')}</div>}
-        {p.note && (
-          <>
-            <blockquote id="pause-note">“{p.note.text}”</blockquote>
-            <div className="attrib">you, {new Date(p.note.setAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>
-          </>
-        )}
         <div className="lines">
-          {p.planText && <div>Your plan: {p.planText}.</div>}
           {out && <div>{out}</div>}
           {p.plan.reattemptAgoSec !== undefined && <div>You skipped this trade {p.plan.reattemptAgoSec} s ago.</div>}
           {p.lines?.map((l) => <div key={l}>{l}</div>)}

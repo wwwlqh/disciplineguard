@@ -13,7 +13,6 @@
 
 #define DG_PAUSE_TIMEOUT_MS 120000
 
-string DGMonths[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 string DGChips[] = {"Afraid to miss it", "Winning back a loss", "Frustrated", "Bored", "On a roll", "In my plan"};
 string DGChipIds[] = {"fomo", "win_back", "frustrated", "bored", "on_a_roll", "in_plan"};
 
@@ -28,7 +27,7 @@ ulong    pzStartTick = 0, pzUnlockTick = 0;
 int      pzWait = 0, pzTc = -1, pzReattempt = -1, pzPlaced = 0, pzTradeNo = 0, pzLastSec = -1;
 int      pzChip = -1;
 string   pzRules[];
-string   pzTitle = "", pzHeadline = "", pzOthers = "", pzNote = "", pzNoteAttr = "", pzPlan = "", pzWayOut = "";
+string   pzTitle = "", pzHeadline = "", pzOthers = "", pzWayOut = "";
 string   pzKept = "", pzSituation = "", pzToday = "", pzOrderLine = "", pzGrow = "", pzHint = "";
 bool     pzFixSize = false, pzFixSl = false;
 double   pzFixLots = 0;
@@ -53,33 +52,6 @@ string OrderLine(const string sym, const int side, const double size, const stri
    if(type != "market" && price > 0) s += " at " + PriceStr(sym, price);
    s += sl > 0 ? " · SL " + PriceStr(sym, sl) : " · No stop loss";
    return s;
-  }
-
-string NoteDate(const long t)
-  {
-   MqlDateTime s;
-   TimeToStruct((datetime)(t / 1000 + gM.OffsetAt(t)), s);
-   return IntegerToString(s.day) + " " + DGMonths[s.mon - 1];
-  }
-
-/// The note for this pause: tagged for the situation first, then any note.
-void PickNote(const string title)
-  {
-   pzNote = ""; pzNoteAttr = "";
-   string want = (title == "R7" || title == "R8" || title == "R10") ? "after_loss" : ((title == "R1" || title == "R2" || title == "R3") ? "too_many" : "any");
-   int notes = gPJ.Get(gPJ.Root(), "notes");
-   int pick = -1, any = -1;
-   for(int c = gPJ.First(notes); c >= 0; c = gPJ.Next(c))
-     {
-      string tag = gPJ.Str(gPJ.Get(c, "tag"), "any");
-      if(tag == want && pick < 0) pick = c;
-      if(tag == "any" && any < 0) any = c;
-     }
-   if(pick < 0) pick = any >= 0 ? any : gPJ.First(notes);
-   if(pick < 0) return;
-   pzNote = "“" + gPJ.Str(gPJ.Get(pick, "text")) + "”";
-   long at = gPJ.Long(gPJ.Get(pick, "setAt"), 0);
-   pzNoteAttr = at > 0 ? "you, " + NoteDate(at) : "you";
   }
 
 string TodayLine(const long now)
@@ -141,9 +113,6 @@ void PauseTexts(const long now)
    pzOthers = "";
    for(int i = 1; i < nv && i <= 2; i++) pzOthers += (pzOthers == "" ? "Also: " : " · ") + DGRuleName(gM.vRule[i]);
    if(nv > 3) pzOthers += " · +" + IntegerToString(nv - 3) + " more";
-   PickNote(pzTitle);
-   string plan = PStr("plan");
-   pzPlan = plan != "" ? "Your plan: " + plan : "";
    pzWayOut = DGWayOut(gM, nv > 0 ? 0 : -1, now);
    long t = gM.SafeNow(now);
    pzKept = gM.PlacedAnywayCount(t) == 0 ? "Today is a kept day so far." : "";
@@ -177,10 +146,10 @@ void PauseTexts(const long now)
   }
 
 //--- drawing -------------------------------------------------------------
-int Para(DGSurface &c, const bool draw, const int y, const string text, const double px, const bool bold, const bool serif, const uint clr, const int pad)
+int Para(DGSurface &c, const bool draw, const int y, const string text, const double px, const bool bold, const uint clr, const int pad)
   {
    if(text == "") return y;
-   c.Font(px, bold, serif);
+   c.Font(px, bold);
    int w = gCardW - 2 * pad;
    return y + (draw ? c.Wrap(pad, y, w, text, clr) : c.WrapHeight(w, text));
   }
@@ -205,13 +174,8 @@ int CardLayout(const bool draw)
    string label = pzPractice ? "PRACTICE · NOTHING IS SENT" : (pzTitle == "CHECK" ? "PAUSE · YOUR PLAN" : "PAUSE · YOUR RULE");
    if(draw) c.Text(pad + DGPx(14), y, label, DGPal.muted);
    y += c.LineH() + gap;
-   y = Para(gCard, draw, y, pzHeadline, 17, true, false, DGPal.text, pad) + gap;
-   if(!pzCompact && pzOthers != "") y = Para(gCard, draw, y, pzOthers, 12, false, false, DGPal.muted, pad) + gap;
-   if(pzNote != "")
-     {
-      y = Para(gCard, draw, y, pzNote, 20, false, true, DGPal.text, pad);
-      y = Para(gCard, draw, y + DGPx(2), pzNoteAttr, 11, false, false, DGPal.faint, pad) + gap;
-     }
+   y = Para(gCard, draw, y, pzHeadline, 17, true, DGPal.text, pad) + gap;
+   if(!pzCompact && pzOthers != "") y = Para(gCard, draw, y, pzOthers, 12, false, DGPal.muted, pad) + gap;
    int left = PauseSecondsLeft();
    if(pzWait > 0 && left > 0)
      {
@@ -226,12 +190,11 @@ int CardLayout(const bool draw)
      }
    if(!pzCompact)
      {
-      y = Para(gCard, draw, y, pzPlan, 13, false, false, DGPal.text, pad);
-      y = Para(gCard, draw, y, pzWayOut, 13, false, false, DGPal.text, pad);
-      if(pzPlan != "" || pzWayOut != "") y += gap;
-      y = Para(gCard, draw, y, pzKept, 12, false, false, DGPal.muted, pad);
-      y = Para(gCard, draw, y, pzSituation, 12, false, false, DGPal.muted, pad);
-      y = Para(gCard, draw, y, pzToday, 12, false, false, DGPal.faint, pad) + gap / 2;
+      y = Para(gCard, draw, y, pzWayOut, 13, false, DGPal.text, pad);
+      if(pzWayOut != "") y += gap;
+      y = Para(gCard, draw, y, pzKept, 12, false, DGPal.muted, pad);
+      y = Para(gCard, draw, y, pzSituation, 12, false, DGPal.muted, pad);
+      y = Para(gCard, draw, y, pzToday, 12, false, DGPal.faint, pad) + gap / 2;
       c.Font(12, true);
       int ow = MathMin(gCardW - 2 * pad, c.TextW(pzOrderLine) + DGPx(16));
       if(draw)
@@ -240,7 +203,7 @@ int CardLayout(const bool draw)
          c.Text(pad + DGPx(8), y + DGPx(4), pzOrderLine, DGPal.text);
         }
       y += c.LineH() + DGPx(8) + gap;
-      y = Para(gCard, draw, y, pzGrow, 11, false, false, DGPal.muted, pad);
+      y = Para(gCard, draw, y, pzGrow, 11, false, DGPal.muted, pad);
       if(!pzPractice) { pzYChips = y; y += 2 * DGPx(28) + DGPx(6) + gap; }
      }
    if(pzTc > 0)
@@ -250,12 +213,12 @@ int CardLayout(const bool draw)
       if(draw) c.Text(pad, y + DGPx(7), "Type " + IntegerToString(pzTc) + " to place trade " + IntegerToString(pzTc) + " today", DGPal.text);
       y += DGPx(30) + gap;
      }
-   y = Para(gCard, draw, y, pzHint, 12, true, false, DGPal.amber, pad);
+   y = Para(gCard, draw, y, pzHint, 12, true, DGPal.amber, pad);
    if(pzHint != "") y += gap / 2;
    if(pzFixSize || pzFixSl) { pzYFix = y; y += DGPx(36) + gap / 2; }
    pzYButtons = y;
    y += DGPx(44) + gap;
-   if(!pzCompact) y = Para(gCard, draw, y, DG_FOOTER, 11, false, false, DGPal.faint, pad);
+   if(!pzCompact) y = Para(gCard, draw, y, DG_FOOTER, 11, false, DGPal.faint, pad);
    return y + DGPx(16);
   }
 
@@ -376,21 +339,15 @@ void OpenSkipCard(const bool kept)
    gSkipCard.Close();
    gSkipCard.Open("SK_CARD", 0, 0, w, 50, 30);
    string l1 = kept ? "Trade skipped. Today is still a kept day." : "Trade skipped.";
-   string plan = PStr("plan");
-   string l2 = plan != "" ? "Your plan: " + plan : "";
    gSkipCard.Font(15, true);
    int h = pad + gSkipCard.WrapHeight(w - 2 * pad, l1);
-   gSkipCard.Font(13);
-   if(l2 != "") h += DGPx(6) + gSkipCard.WrapHeight(w - 2 * pad, l2);
    int yb = h + DGPx(14);
    h = yb + DGPx(36) * 2 + DGPx(8) + pad;
    int x = (cw - w) / 2, y = MathMax(DGPx(8), (ch - h) / 2);
    gSkipCard.Open("SK_CARD", x, y, w, h, 30);
    gSkipCard.Rect(0, 0, w, h, DGPal.surface, DGPal.border);
    gSkipCard.Font(15, true);
-   int yy = pad + gSkipCard.Wrap(pad, pad, w - 2 * pad, l1, DGPal.text);
-   gSkipCard.Font(13);
-   if(l2 != "") gSkipCard.Wrap(pad, yy + DGPx(6), w - 2 * pad, l2, DGPal.text);
+   gSkipCard.Wrap(pad, pad, w - 2 * pad, l1, DGPal.text);
    gSkipCard.Flush();
    int bw = (w - 2 * pad - DGPx(8)) / 2;
    DGButton("SK_BREAK", "Take a 15-minute break", x + pad, y + yb, bw, DGPx(36), false, true, 40);
@@ -577,7 +534,7 @@ void DecidePause(const string decision)
    PauseEvent(decision, false, "");
    bool card = decision == "skip" && gM.pSkipCard;
    ClosePause();
-   if(decision == "timeout") gResult = "Pause closed after 2 minutes. Trade not placed." + (pzPlan != "" ? " " + pzPlan : "");
+   if(decision == "timeout") gResult = "Pause closed after 2 minutes. Trade not placed.";
    else if(decision == "skip") gResult = "Trade skipped.";
    if(card) OpenSkipCard(kept);
   }

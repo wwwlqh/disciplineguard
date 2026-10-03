@@ -81,21 +81,12 @@ export async function saveSetting(
   ]);
 }
 
-export interface Note {
-  id: string;
-  text: string;
-  tag: 'after_loss' | 'too_many' | 'any';
-  setAt: number;
-}
-
 export interface Assembled {
   rules: Rules;
   popup: PopupSettings;
   tz: string;
   reset: ResetSpec;
   accountResets: Record<string, ResetSpec>;
-  notes: Note[];
-  plan: string;
   removedAccounts: Set<string>;
   removedConnections: Set<string>;
   pending: { key: string; value: any; effectiveAt: number }[];
@@ -117,8 +108,6 @@ export function assemble(settings: Map<string, StoredSetting>): Assembled {
   let tz = 'UTC';
   let resetRaw: any;
   const accountResetRaw: Record<string, any> = {};
-  const notes: Note[] = [];
-  let plan = '';
   const removedAccounts = new Set<string>();
   const removedConnections = new Set<string>();
   const pending: Assembled['pending'] = [];
@@ -150,13 +139,10 @@ export function assemble(settings: Map<string, StoredSetting>): Assembled {
     else if (kind === 'closeOutside') rules.closeOutside = !!v;
     else if (kind === 'tz') tz = v;
     else if (kind === 'reset') resetRaw = v;
-    else if (kind === 'note') notes.push({ id, text: v.text, tag: v.tag ?? 'any', setAt: s.setAt });
-    else if (kind === 'plan') plan = v;
   }
-  notes.sort((a, b) => a.id.localeCompare(b.id));
   const accountResets: Record<string, ResetSpec> = {};
   for (const [id, v] of Object.entries(accountResetRaw)) accountResets[id] = resetSpec(v, tz);
-  return { rules, popup, tz, reset: resetSpec(resetRaw, tz), accountResets, notes, plan, removedAccounts, removedConnections, pending, lockedValues, defaults };
+  return { rules, popup, tz, reset: resetSpec(resetRaw, tz), accountResets, removedAccounts, removedConnections, pending, lockedValues, defaults };
 }
 
 /** The extension files Polymarket and Kalshi accounts under 'tv', with the site as the server. */

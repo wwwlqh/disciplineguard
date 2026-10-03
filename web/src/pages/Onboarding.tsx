@@ -79,7 +79,6 @@ const COSTS: { id: Choice; label: string; icon: IconName }[] = [
   { id: 'hours', label: 'I trade outside my plan hours', icon: 'sun' },
   { id: 'skip_sl', label: 'I skip my stop loss', icon: 'stop' },
   { id: 'bad_days', label: 'I keep going on a bad day', icon: 'trendDown' },
-  { id: 'give_back', label: 'I give back profits after a good start', icon: 'refresh' },
 ];
 
 /** Firm presets: daily loss limit and reset. Check your firm's current rules. */
@@ -346,7 +345,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
     if (d.applied) void reload();
   };
 
-  const draftMe = { ...(me ?? { time: { userResets: [nextMidnight()] } }), rules, notes: [], plan: '', popup: DEFAULT_POPUP } as Me;
+  const draftMe = { ...(me ?? { time: { userResets: [nextMidnight()] } }), rules, popup: DEFAULT_POPUP } as Me;
 
   if (signIn && !me) return <SignIn title="Save your rules" onDone={() => window.dispatchEvent(new Event('dg:reload'))} />;
   if (pending && !d.applied && !err) return <div className="center-page muted">{err || 'Saving your rules…'}</div>;
@@ -459,10 +458,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
                       onChange={(e) => set({ choices: e.target.checked ? [...d.choices, c.id] : d.choices.filter((x) => x !== c.id), rules: null, defaults: null })}
                     />
                     <span className={`tile${on ? ' accent' : ''}`}><Icon name={c.icon} /></span>
-                    <span>
-                      <strong>{c.label}</strong>
-                      {c.id === 'give_back' && <div className="small muted">Coming later.</div>}
-                    </span>
+                    <strong>{c.label}</strong>
                   </label>
                   {on && (c.id === 'hours' || ids.length > 0) && (
                     <div className="cost-rules">

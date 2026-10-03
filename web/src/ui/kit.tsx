@@ -96,7 +96,7 @@ export function applyLabel(v: Verdict | null): string {
   return v && v.appliesAt !== 'now' ? 'Schedule change' : 'Apply now';
 }
 
-/** A practice pause from the real notes, plan and rule wording, with an example order (SPEC §7.6). */
+/** A practice pause with the trader's own rules and wording, and an example order (SPEC §7.6). */
 export function practice(me: Me): { plan: PausePlan; order: Order } {
   const r = me.rules;
   const now = Date.now();
@@ -120,14 +120,11 @@ export function practice(me: Me): { plan: PausePlan; order: Order } {
 
 export function PracticePause({ me, onClose }: { me: Me; onClose(): void }) {
   const [p] = useState(() => practice(me));
-  const note = me.notes[0];
   return (
     <Pause
       practice
       plan={p.plan}
       order={p.order}
-      note={note}
-      planText={me.plan}
       fmt={coreFmt()}
       r3Seconds={me.rules.R3.seconds}
       keyboardPlace={me.popup.keyboardPlace}

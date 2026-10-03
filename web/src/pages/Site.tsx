@@ -258,8 +258,6 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
           practice
           plan={d.plan}
           order={d.order}
-          note={{ text: 'The market will be here tomorrow.', setAt: Date.now() - 3 * 86_400_000 }}
-          planText="2 trades a day, only at the London open"
           fmt={coreFmt()}
           onDecision={(x) => {
             setD(null);

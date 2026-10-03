@@ -65,9 +65,7 @@ impl Web {
         assert_eq!(s, 200, "verify");
         let web = Web { api: api.into(), cookie: cookie.unwrap() };
         let onboard = json!({
-            "tz": "UTC", "reset": { "preset": "midnight" }, "riskNotice": true, "analyticsConsent": false,
-            "rules": { "R1": { "on": true, "max": 5 } }, "notes": [{ "text": "Stand up and breathe.", "tag": "any" }],
-            "plan": "close the chart for 10 minutes",
+            "tz": "UTC", "reset": { "preset": "midnight" }, "rules": { "R1": { "on": true, "max": 5 } },
         });
         assert_eq!(web.send("POST", "/api/onboarding/apply", onboard).0, 200, "onboarding");
         web
@@ -193,10 +191,13 @@ fn an_unticked_terminal_is_told_to_be_ticked_and_never_forwarded() {
 }
 
 #[test]
-fn refuses_paths_other_than_sync_and_baseline() {
+fn refuses_paths_other_than_sync() {
     let Some(t) = Setup::new("paths@test.dev") else { return };
     t.request("TERMA", 3, "/api/me", "{}");
     assert_eq!(t.reply_head("TERMA"), "3 400");
+    // The 90-day upload of EAs up to 0.1.6: refused, which ends their upload.
+    t.request("TERMA", 4, "/v1/baseline", "{}");
+    assert_eq!(t.reply_head("TERMA"), "4 400");
 }
 
 #[test]
@@ -251,11 +252,9 @@ fn signing_in_as_another_person_turns_off_the_old_connections_first() {
     assert_eq!(signin::apply(&Api::new(&t.api), &mut stale, signed_b.clone()), Err(SignInError::SwitchNeedsInternet));
 
     let mut s = t.state.lock().unwrap();
-    s.baseline = true;
     signin::apply(&Api::new(&t.api), &mut s, signed_b).unwrap();
     assert!(s.links.is_empty());
     assert!(s.is_protected("TERMA"));
-    assert!(!s.baseline, "the old person's 90-day consent doesn't carry over");
     drop(s);
     let conn = &t.web.me()["connections"][0];
     assert_eq!(conn["status"], "off");

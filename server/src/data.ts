@@ -54,8 +54,6 @@ export async function downloadExport(env: Env, tok: string): Promise<Response> {
     plan: { state: uc.license.state, kind: u.plan_kind, validUntil: iso(uc.license.validUntil) },
     rules: uc.asm.rules,
     popup: uc.asm.popup,
-    notes: uc.asm.notes,
-    planText: uc.asm.plan,
     timezone: uc.asm.tz,
     pendingChanges: uc.asm.pending,
     ruleChanges: changes.map((c) => ({ key: c.key, from: c.from_json && JSON.parse(c.from_json), to: c.to_json && JSON.parse(c.to_json), direction: c.direction, appliesAt: iso(c.applies_at), at: iso(c.created_at), by: c.actor })),
@@ -128,15 +126,15 @@ export async function cancelDeletion(env: Env, s: Session): Promise<Response> {
 }
 
 /**
- * The deletion job. Keeps only what SPEC §13.3 keeps: trial marks (12 months), payments (the provider has the
- * receipts), problem reports (12 months), and a tombstone user row so devices get `account_deleted`.
+ * The deletion job. Keeps only what SPEC §13.3 keeps: payments (the provider has the receipts), problem reports
+ * (12 months), and a tombstone user row so devices get `account_deleted`.
  */
 export async function runDeletion(env: Env, p: { userId: string; at: number }, ctx: Ctx): Promise<void> {
   const u = await env.DB.prepare('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL').bind(p.userId).first<UserRow>();
   if (!u || u.deletion_at !== p.at) return;
   const t = clock(env);
   const id = u.id;
-  const byUser = ['settings', 'setting_changes', 'events', 'user_state', 'baseline', 'alerts', 'alert_state', 'export_tokens', 'sessions'];
+  const byUser = ['settings', 'setting_changes', 'events', 'user_state', 'baseline', 'alerts', 'alert_state', 'export_tokens', 'sessions', 'tell_me'];
   const accounts = "(SELECT id FROM trading_accounts WHERE user_id = ?)";
   await env.DB.batch([
     ...byUser.map((tbl) => env.DB.prepare(`DELETE FROM ${tbl} WHERE user_id = ?`).bind(id)),

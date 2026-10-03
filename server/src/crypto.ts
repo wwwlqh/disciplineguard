@@ -85,19 +85,6 @@ export async function verify(pubHex: string, msg: string, sigHex: string): Promi
   return crypto.subtle.verify({ name: 'Ed25519' }, key, sig, enc.encode(msg));
 }
 
-/** Normalizes an email for trial checks (SPEC §12.5). */
-export function normalizeEmail(email: string): string {
-  const e = email.trim().toLowerCase();
-  const at = e.lastIndexOf('@');
-  if (at < 0) return e;
-  let local = e.slice(0, at);
-  const domain = e.slice(at + 1);
-  const plus = local.indexOf('+');
-  if (plus >= 0) local = local.slice(0, plus);
-  if (domain === 'gmail.com' || domain === 'googlemail.com') return `${local.replace(/\./g, '')}@gmail.com`;
-  return `${local}@${domain}`;
-}
-
 export function maskEmail(email: string): string {
   const [local, domain] = email.split('@');
   return `${local.slice(0, 1)}***@${domain}`;

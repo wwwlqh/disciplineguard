@@ -153,14 +153,6 @@ const STATUS: Article[] = [
     ],
   },
   {
-    slug: 'plan-ended',
-    title: 'Plan ended',
-    body: [
-      'Protection is off and orders go through normally. The panel keeps working with the lot calculator.',
-      'Subscribe on Plans. Protection comes back at once with your last rules.',
-    ],
-  },
-  {
     slug: 'cant-confirm-plan',
     title: "Can't confirm your plan",
     body: ['No contact with our server for 7 days past your plan end. Open the app and check your internet. It turns back on at the next sync.'],

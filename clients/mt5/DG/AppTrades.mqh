@@ -3,9 +3,8 @@
 //| What the primary instance reports from the account (SPEC §4.4,   |
 //| §5.2, §9.2): outside entries, closes, voided pending orders,     |
 //| stop changes, the day-start balance, the loss limit being        |
-//| reached, offline heartbeats, and the baseline upload. With       |
-//| "Close outside trades" on, it also closes an outside trade that  |
-//| goes past a rule.                                                |
+//| reached, and offline heartbeats. With "Close outside trades" on, |
+//| it also closes an outside trade that goes past a rule.           |
 //+------------------------------------------------------------------+
 #ifndef DG_APPTRADES_MQH
 #define DG_APPTRADES_MQH
@@ -549,88 +548,6 @@ void OfflineHeartbeat()
    DGJsonWriter w;
    EvBegin(w, "hb", NowMs());
    Enqueue(w, false);
-  }
-
-//--- baseline (SPEC §14): last 90 days, once, with consent ---------------
-string   gBase[];
-int      gBaseIdx = -1;
-int      gBaseEnd = 0;
-
-void BuildBaseline()
-  {
-   ArrayResize(gBase, 0);
-   long off = BrokerOffsetSec();
-   long now = NowMs();
-   long magic = Magic();
-   if(!HistorySelect((datetime)((now - 90 * (long)DG_DAY) / 1000 + off), TimeTradeServer() + 86400)) return;
-   int n = HistoryDealsTotal();
-   for(int i = 0; i < n; i++)
-     {
-      ulong d = HistoryDealGetTicket(i);
-      if(d == 0) continue;
-      long type = HistoryDealGetInteger(d, DEAL_TYPE);
-      if(type != DEAL_TYPE_BUY && type != DEAL_TYPE_SELL) continue;
-      long entry = HistoryDealGetInteger(d, DEAL_ENTRY);
-      long tms = HistoryDealGetInteger(d, DEAL_TIME_MSC) - off * 1000;
-      DGJsonWriter w;
-      w.BeginObj();
-      w.Str("ticket", "d" + IntegerToString((long)d));
-      w.Long("t", tms);
-      if(entry == DEAL_ENTRY_IN)
-        {
-         w.Str("kind", "entry");
-         w.Str("symbol", HistoryDealGetString(d, DEAL_SYMBOL));
-         w.Str("side", type == DEAL_TYPE_BUY ? "buy" : "sell");
-         w.Num("size", HistoryDealGetDouble(d, DEAL_VOLUME));
-         w.Str("source", magic != 0 && HistoryDealGetInteger(d, DEAL_MAGIC) == magic ? "panel" : DealLabel(HistoryDealGetInteger(d, DEAL_REASON)));
-        }
-      else
-        {
-         w.Str("kind", "close");
-         w.Num("net", DGRound8(HistoryDealGetDouble(d, DEAL_PROFIT) + HistoryDealGetDouble(d, DEAL_COMMISSION) + HistoryDealGetDouble(d, DEAL_SWAP) + HistoryDealGetDouble(d, DEAL_FEE)));
-         w.Num("size", HistoryDealGetDouble(d, DEAL_VOLUME));
-        }
-      w.EndObj();
-      int k = ArraySize(gBase); ArrayResize(gBase, k + 1); gBase[k] = w.Text();
-     }
-   gBaseIdx = 0;
-  }
-
-/// Sends one chunk. Returns true when a request went to the app.
-bool BaselineTick()
-  {
-   if(!gPrimary || !Linked() || gAcctState != "active" || !gBridge.baseline) return false;
-   string done = "baseline_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + ".done";
-   if(DGExists(done)) return false;
-   if(!gBridge.MayCall()) return false;
-   if(gBaseIdx < 0) BuildBaseline();
-   int end = MathMin(ArraySize(gBase), gBaseIdx + 500);
-   DGJsonWriter w;
-   w.BeginObj();
-   w.BeginObj("account");
-   w.Str("platform", "mt5");
-   w.Str("server", AccountInfoString(ACCOUNT_SERVER));
-   w.Str("login", IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)));
-   w.EndObj();
-   w.BeginArr("items");
-   for(int i = gBaseIdx; i < end; i++) w.Raw("", gBase[i]);
-   w.EndArr();
-   w.Bool("done", end >= ArraySize(gBase));
-   w.EndObj();
-   if(!gBridge.Send("/v1/baseline", w.Text())) return false;
-   gBaseEnd = end;
-   return true;
-  }
-
-void OnBaselineReply(const int code)
-  {
-   string done = "baseline_" + IntegerToString(AccountInfoInteger(ACCOUNT_LOGIN)) + ".done";
-   if(code == 200)
-     {
-      gBaseIdx = gBaseEnd;
-      if(gBaseIdx >= ArraySize(gBase)) { DGWrite(done, "1"); ArrayResize(gBase, 0); gBaseIdx = -1; }
-     }
-   else if(code == 404 || code == 400) DGWrite(done, "1");
   }
 
 #endif

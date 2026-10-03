@@ -205,11 +205,7 @@ string OffLine(const long now)
   {
    if(gOffReason == "account_deleted") return "Off · Account deleted · Orders go through normally";
    if(gOffReason != "") return "Off · Signed out · Orders go through normally";
-   if(gCacheOk && !PBool("license.enforcing"))
-     {
-      string st = PStr("license.state");
-      return "Off · Orders go through normally · Plans: " + DG_SITE + "/plans";
-     }
+   if(gCacheOk && !PBool("license.enforcing")) return "Off · Orders go through normally";
    if(PlanExpired(now)) return "Off · Can't confirm your plan · Orders go through normally";
    if(gAcctState == "cap") return "Off · The free plan covers 1 account · Orders go through normally";
    if(gAcctState == "taken") return "Off · This account is on another DisciplineGuard login · Orders go through normally";

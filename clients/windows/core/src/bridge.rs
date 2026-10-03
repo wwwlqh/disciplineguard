@@ -1,7 +1,7 @@
 //! The app's side of the EA bridge (SPEC §9.5), in `Common\Files\DisciplineGuard\<terminal id>\`:
-//! - `out.txt`: one request from the EA, `<seq> <path>` then the JSON body. Only sync and baseline are forwarded.
+//! - `out.txt`: one request from the EA, `<seq> <path>` then the JSON body. Only sync is forwarded.
 //! - `in.txt`: the reply, `<seq> <HTTP status>` then the body. The signed rules inside are checked by the EA.
-//! - `app.txt`: the app heartbeat (time, state, connection id, masked email, "baseline" when consented).
+//! - `app.txt`: the app heartbeat (time, state, connection id, masked email).
 //! - `ea.txt`: the EA heartbeat (time, then optionally `algo_on` or `algo_off`).
 
 use crate::api::{self, Api, NetError, Reply};
@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 /// Paths the EA may ask for. Anything else is refused, so a bad file can't reach other endpoints.
-const ALLOWED: [&str; 2] = ["/v1/sync", "/v1/baseline"];
+const ALLOWED: [&str; 1] = ["/v1/sync"];
 /// An EA heartbeat older than this means the EA isn't running on that terminal.
 pub const EA_STALE_SECS: u64 = 60;
 
@@ -104,7 +104,6 @@ impl Bridge {
             status.to_string(),
             conn.to_string(),
             s.email.clone().unwrap_or_default(),
-            if s.baseline { "baseline".into() } else { String::new() },
         ];
         let _ = write_bytes(&dir.join("app.txt"), lines.join("\n").as_bytes());
     }

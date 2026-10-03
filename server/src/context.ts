@@ -8,14 +8,12 @@ import { applyDefaults, assemble, loadSettings, type Assembled, type StoredSetti
 export interface UserRow {
   id: string;
   email: string;
-  email_norm: string;
   first_name: string | null;
   created_at: number;
   setup_mode: number;
   locked_at: number | null;
   locked_by: string | null;
   first_on_at: number | null;
-  lock_notice_sent: number;
   last_real_pause_at: number | null;
   plan_state: string;
   plan_kind: string | null;
@@ -27,8 +25,6 @@ export interface UserRow {
   cancel_at_period_end: number;
   is_beta: number;
   magic: number;
-  analytics_consent: number | null;
-  analytics_id: string;
   reason_consent: number | null;
   reason_asked_at: number | null;
   alerts_json: string | null;
@@ -37,13 +33,9 @@ export interface UserRow {
   update_card_url: string | null;
   deletion_at: number | null;
   hide_amounts: number;
-  country: string | null;
-  risk_notice_version: string | null;
-  risk_notice_at: number | null;
   onboarding_json: string | null;
   deletion_requested_at: number | null;
   deleted_at: number | null;
-  trial_eligible: number;
 }
 
 export interface AccountRow {

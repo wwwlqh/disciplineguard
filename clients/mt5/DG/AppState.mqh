@@ -218,7 +218,7 @@ void SaveCache()
 void ForgetConnection(const string reason)
   {
    DGDelete("conn.txt"); DGDelete("cache.payload"); DGDelete("cache.sig"); DGDelete("last_sync.json");
-   DGDelete("accounts.json"); DGDelete("baseline_todo.txt");
+   DGDelete("accounts.json");
    gConn = ""; gCacheOk = false; gSyncOk = false; gHash = "";
    gAcctId = ""; gAcctState = ""; gCursorLoaded = false;
    ArrayResize(gQueue, 0);
@@ -386,7 +386,6 @@ bool SyncSend()
    w.Str("role", gPrimary ? "primary" : "secondary");
    w.Str("version", DG_VERSION);
    w.Str("state", gStatusCode);
-   w.Bool("pushReady", false);
    w.Str("signedHash", gCacheOk ? gHash : "");
    w.BeginArr("accounts"); WriteAccount(w); w.EndArr();
    w.BeginArr("events");

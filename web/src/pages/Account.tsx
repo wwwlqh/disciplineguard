@@ -1,4 +1,4 @@
-// Account (EXPERIENCE §5.10): plan, privacy, security, report a problem, sign out.
+// Account (EXPERIENCE §5.9): plan, privacy, security, report a problem, sign out.
 import { useEffect, useState } from 'react';
 import { api, ApiError, type AlertKind } from '../api.ts';
 import { onLink } from '../router.ts';
@@ -245,7 +245,7 @@ export function AccountPage({ me, reload }: PageProps) {
             {REPORT_TYPES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
           </select>
           <textarea placeholder="What happened?" value={report.text} onChange={(e) => setReport({ ...report, text: e.target.value })} />
-          <p className="small muted">We attach your devices' version and status. Never your notes.</p>
+          <p className="small muted">We attach your devices' version and status.</p>
           <button
             className="primary"
             disabled={!report.text.trim()}
@@ -275,7 +275,7 @@ export function AccountPage({ me, reload }: PageProps) {
               ? 'Deleted now.'
               : `Deleted at ${time(deleting.at)}. DisciplineGuard is a commitment tool, so deletion waits like a loosening. Your plan is cancelled now, and you won't be charged again.`}
           </p>
-          <p className="small muted">Deleted: your rules, notes, trades, pauses and devices. Kept: receipts at the payment provider.</p>
+          <p className="small muted">Deleted: your rules, trades, pauses and devices. Kept: receipts at the payment provider.</p>
           <p className="small">Before you go: export your data, then uninstall DisciplineGuard for Windows.</p>
           <label className="field">
             Type DELETE to confirm

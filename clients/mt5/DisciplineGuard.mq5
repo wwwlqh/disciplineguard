@@ -124,7 +124,6 @@ void OnTimer()
       gBridge.Tick();
       AdoptConn(gBridge.conn);
       if(rpath == "/v1/sync") OnSyncReply(rcode, rbody);
-      else if(rpath == "/v1/baseline") OnBaselineReply(rcode);
       if(rpath == "/v1/sync") gNextSync = GetTickCount64() + (gOffline ? 30000 : SyncDelay());
       now = NowMs();
      }
@@ -140,24 +139,8 @@ void OnTimer()
    // One request to the app at a time (SPEC §9.5).
    // A ticked terminal syncs before it has a connection id: that first request is what connects it.
    if((Linked() || gBridge.appState == "on") && tick >= gNextSync && gBridge.MayCall()) SyncSend();
-   else if(gBridge.MayCall()) BaselineTick();
 
    ComputeStatus(now);
-   // One setup report per session when a check still fails after a minute (owner metrics).
-   if(!gSetupSent && Linked() && PanelMode() == "setup")
-     {
-      if(gSetupShownTick == 0) gSetupShownTick = tick;
-      if(tick - gSetupShownTick > 60000 && !RunChecks())
-        {
-         DGJsonWriter w;
-         EvBegin(w, "setup", NowMs(), false);
-         w.BeginArr("failed");
-         for(int i = 0; i < DG_CHECKS; i++) if(!gCheckOk[i]) w.Str("", gCheckName[i]);
-         w.EndArr();
-         Enqueue(w);
-         gSetupSent = true;
-        }
-     }
    if(gOutsideCard != "" && GetTickCount64() - gOutsideCardTick > 120000) gOutsideCard = "";
    if(!pzOpen) RenderPanel(false);
   }
@@ -199,17 +182,7 @@ void OnChartEvent(const int id, const long &lparam, const double &dparam, const 
      {
       // Place anyway reacts only to this mouse click event on its own button.
       if(n == "PZ_SKIP") DecidePause("skip");
-      else if(n == "PZ_PLACE")
-        {
-         if(gBridge.ClickPossiblyDelayed())
-           {
-            DGJsonWriter w;
-            EvBegin(w, "delayed_click", NowMs(), false);
-            w.Long("ms", 0);
-            Enqueue(w, false);
-           }
-         DecidePause("place");
-        }
+      else if(n == "PZ_PLACE") DecidePause("place");
       else if(n == "PZ_FIX") DecidePause("fix");
       else if(StringFind(n, "PZ_CHIP") == 0)
         {

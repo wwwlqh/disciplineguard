@@ -44,7 +44,6 @@ const routes: [string, RegExp, Handler][] = [
   ['GET', /^\/api\/sessions$/, sessions],
   ['POST', /^\/api\/sessions\/signout-all$/, signOutAll],
   ['POST', /^\/api\/report$/, report],
-  ['POST', /^\/api\/tell-me$/, tellMe],
   ['POST', /^\/api\/checkout$/, async (r, e, s) => checkoutUrl(r, e, s.user)],
   ['GET', /^\/api\/plans$/, async (_r, e, s) => plans(e, s.user)],
   ['POST', /^\/api\/export$/, async (_r, e, s, c) => requestExport(e, s, c)],
@@ -69,10 +68,6 @@ export async function webApi(req: Request, env: Env, ctx: Ctx): Promise<Response
     }
   }
   throw new HttpError(404, 'not_found');
-}
-
-function planPaid(uc: UserCtx): boolean {
-  return uc.license.state === 'active' || uc.license.state === 'past_due';
 }
 
 function accountView(a: AccountRow, uc: UserCtx) {
@@ -112,10 +107,10 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
     user: {
       email: u.email, firstName: u.first_name, setupMode: !!u.setup_mode, lockedAt: u.locked_at, lockedBy: u.locked_by,
       lockAt: u.setup_mode && u.first_on_at ? autoLockAt(uc.userResets, u.first_on_at) : null, firstOnAt: u.first_on_at,
-      lastRealPauseAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts, analyticsConsent: u.analytics_consent, reasonConsent: u.reason_consent, reasonAsked: u.reason_asked_at !== null,
+      lastRealPauseAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts, reasonConsent: u.reason_consent, reasonAsked: u.reason_asked_at !== null,
       onboarding: u.onboarding_json ? JSON.parse(u.onboarding_json) : null,
       alerts: alertPrefs(u.alerts_json), hasApp: apps.length > 0,
-      isBeta: !!u.is_beta, owner: isOwner(env, u), country: u.country, planKind: u.plan_kind, cancelAtPeriodEnd: !!u.cancel_at_period_end,
+      owner: isOwner(env, u), planKind: u.plan_kind, cancelAtPeriodEnd: !!u.cancel_at_period_end,
       portalUrl: u.portal_url, updateCardUrl: u.update_card_url, deletionAt: u.deletion_at,
       refundable: u.first_paid_at !== null && uc.now - u.first_paid_at <= REFUND_DAYS * DAY,
     },
@@ -123,8 +118,6 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
     rules: uc.asm.rules,
     popup: uc.asm.popup,
     tz: uc.asm.tz,
-    notes: uc.asm.notes,
-    plan: uc.asm.plan,
     settings: raw,
     pending: uc.asm.pending,
     time: resolvedTime(uc),
@@ -144,8 +137,6 @@ function describeKey(key: string): string {
   if (kind === 'rule') return `Rule "${PROTECTED_LABEL[id] ?? id}"`;
   if (kind === 'acct') return `Account setting (${sub})`;
   if (kind === 'popup') return 'Popup settings';
-  if (kind === 'note') return 'A note';
-  if (kind === 'plan') return 'Your plan';
   if (kind === 'tz') return 'Timezone';
   if (kind === 'reset') return 'Day reset';
   return key;
@@ -204,7 +195,6 @@ async function lockRules(req: Request, env: Env, s: Session, ctx: Ctx): Promise<
   return json({ ok: true, lockedAt: t });
 }
 
-/** Take a break (15 min) or done for today: stricter, immediate, never shortened (SPEC §6.5). */
 /** Take a break (15 minutes, or {days: 1 | 7 | 30} from Account), Done for today. Never shortened (SPEC §6.5). */
 async function tighten(req: Request, env: Env, s: Session, ctx: Ctx, kind: 'break' | 'done'): Promise<Response> {
   const t = clock(env);
@@ -418,14 +408,7 @@ async function stats(req: Request, env: Env, s: Session): Promise<Response> {
       stopChanges: await count('stop_change'),
       offEvents: await count('protection_off'),
     },
-    baseline: await baselineSummary(env, uc),
   });
-}
-
-async function baselineSummary(env: Env, uc: UserCtx) {
-  const row = await env.DB.prepare("SELECT COUNT(*) AS n, MIN(t) AS a, MAX(t) AS b FROM baseline WHERE user_id = ? AND kind = 'entry'").bind(uc.user.id).first<{ n: number; a: number; b: number }>();
-  if (!row || !row.n) return null;
-  return { entries: row.n, from: row.a, to: row.b };
 }
 
 async function saveOnboarding(req: Request, env: Env, s: Session): Promise<Response> {
@@ -437,12 +420,9 @@ async function saveOnboarding(req: Request, env: Env, s: Session): Promise<Respo
   return json({ ok: true });
 }
 
-const CHOICES: Choice[] = ['too_many', 'win_back', 'size_up', 'hours', 'skip_sl', 'bad_days', 'give_back'];
+const CHOICES: Choice[] = ['too_many', 'win_back', 'size_up', 'hours', 'skip_sl', 'bad_days'];
 
-/**
- * POST /api/onboarding/apply: writes the starting rules and trading day (notes and plan are optional).
- * Only in setup mode, where every change applies at once.
- */
+/** POST /api/onboarding/apply: writes the starting rules and trading day. Only in setup mode, where every change applies at once. */
 async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Promise<Response> {
   const b = await body(req, 64 * 1024);
   const t = clock(env);
@@ -470,19 +450,14 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
       if (b.defaults[k] !== undefined && b.defaults[k] !== null) writes.push([`default:${k}`, validateSetting(`default:${k}`, b.defaults[k], () => undefined)]);
     }
   }
-  // Notes and plan are optional: onboarding asks the trader to type nothing.
-  const notes = Array.isArray(b.notes) ? b.notes.slice(0, 3) : [];
-  notes.forEach((n: unknown, i: number) => writes.push([`note:${i + 1}`, validateSetting(`note:${i + 1}`, n, () => undefined)]));
-  if (typeof b.plan === 'string' && b.plan.trim()) writes.push(['plan', validateSetting('plan', b.plan, () => undefined)]);
   if (b.popup) writes.push(['popup', validateSetting('popup', b.popup, () => undefined)]);
 
   for (const [key, value] of writes) {
     const cur = uc.settings.get(key);
     await saveSetting(env.DB, s.user.id, key, { active: value }, cur?.active, 'setup', 'now', t);
   }
-  const consent = b.analyticsConsent === true ? 1 : b.analyticsConsent === false ? 0 : null;
-  await env.DB.prepare('UPDATE users SET analytics_consent = COALESCE(?, analytics_consent), onboarding_json = ? WHERE id = ?')
-    .bind(consent, JSON.stringify({ done: true, choices, style: b.style ?? null, platforms: b.platforms ?? [], accountTypes: b.accountTypes ?? null }), s.user.id)
+  await env.DB.prepare('UPDATE users SET onboarding_json = ? WHERE id = ?')
+    .bind(JSON.stringify({ done: true, choices, style: b.style ?? null, platforms: b.platforms ?? [], accountTypes: b.accountTypes ?? null }), s.user.id)
     .run();
   if (Array.isArray(b.tellMe)) {
     for (const p of b.tellMe.slice(0, 10)) {
@@ -490,7 +465,7 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
     }
   }
   await audit(env, s.user.id, 'user', 'onboarding_applied', { choices });
-  await securityEmail(env, s.user.email, 'Your starting rules, notes and plan were saved.', req, ctx);
+  await securityEmail(env, s.user.email, 'Your starting rules were saved.', req, ctx);
   return json({ ok: true });
 }
 
@@ -499,7 +474,6 @@ async function prefs(req: Request, env: Env, s: Session): Promise<Response> {
   const b = await body(req);
   const sets: string[] = [];
   const vals: unknown[] = [];
-  if (typeof b.analyticsConsent === 'boolean') (sets.push('analytics_consent = ?'), vals.push(b.analyticsConsent ? 1 : 0));
   if (typeof b.reasonConsent === 'boolean') (sets.push('reason_consent = ?'), vals.push(b.reasonConsent ? 1 : 0));
   if (typeof b.hideAmounts === 'boolean') (sets.push('hide_amounts = ?'), vals.push(b.hideAmounts ? 1 : 0));
   if (typeof b.firstName === 'string') (sets.push('first_name = ?'), vals.push(b.firstName.trim().slice(0, 60) || null));
@@ -628,11 +602,5 @@ async function report(req: Request, env: Env, s: Session, ctx: Ctx): Promise<Res
     .run();
   const owners = (env.OWNER_EMAILS ?? '').split(',').map((x) => x.trim()).filter(Boolean);
   for (const o of owners) await sendEmail(env, o, `Problem report (${type})`, `From ${s.user.email}\n\n${text}`, ctx);
-  return json({ ok: true });
-}
-
-async function tellMe(req: Request, env: Env, s: Session): Promise<Response> {
-  const b = await body(req);
-  await env.DB.prepare('INSERT OR IGNORE INTO tell_me (user_id, platform, created_at) VALUES (?, ?, ?)').bind(s.user.id, str(b.platform, 30), clock(env)).run();
   return json({ ok: true });
 }

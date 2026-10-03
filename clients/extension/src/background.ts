@@ -242,7 +242,7 @@ async function syncAll(): Promise<void> {
     next.syncedAt = Date.now();
     if (d.signed) {
       const p = await verified(d.signed);
-      if (p) next.signed = { rules: p.rules, popup: p.popup, notes: p.notes, plan: p.plan, time: p.time, hideAmounts: p.hideAmounts, license: p.license };
+      if (p) next.signed = { rules: p.rules, popup: p.popup, time: p.time, hideAmounts: p.hideAmounts, license: p.license };
     }
     next.snapshot = d.snapshot;
     const a = (d.accounts ?? []).find((x: any) => x.key === k);

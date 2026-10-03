@@ -168,10 +168,9 @@ function decide(e: Event, g: Guarded): Gesture {
 
 function showPause(account: TvAccount, order: Order, plan: NonNullable<ReturnType<typeof planPause>>, c: Cache, el: Element, key: string) {
   const s = c.signed!;
-  const note = s.notes[0];
   const pauseId = `tvp_${rid()}`;
   ui.show(
-    { plan, order, note, planText: s.plan, fmt: makeFmt(s.time, account.currency, s.hideAmounts), r3Seconds: s.rules.R3.seconds },
+    { plan, order, fmt: makeFmt(s.time, account.currency, s.hideAmounts), r3Seconds: s.rules.R3.seconds },
     (decision, info) => {
       const t = now();
       send(account, [{
@@ -351,7 +350,7 @@ function pillView(): PillView | undefined {
   const where = `${account.broker} …${acct.last3}`;
   if (c.status === 'attention') return { tone: 'attention', text: 'Needs attention', lines: ['Sign in again. Your saved rules still apply.', where], actions: false };
   if (!acct.enforced) return { tone: 'off', text: 'Off', lines: ['This account isn’t protected. Orders go through normally.'], actions: false };
-  if (!c.signed.license.enforcing) return { tone: 'off', text: 'Off · Plan ended', lines: ['Trades are no longer paused. Orders go through normally.'], actions: false };
+  if (!c.signed.license.enforcing) return { tone: 'off', text: 'Off', lines: ['Trades are no longer paused. Orders go through normally.'], actions: false };
 
   const s = c.signed;
   const t = now();

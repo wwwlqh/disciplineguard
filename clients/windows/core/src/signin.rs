@@ -103,10 +103,8 @@ pub fn apply(api: &Api, s: &mut AppState, signed: SignedIn) -> Result<(), SignIn
                 return Err(SignInError::SwitchNeedsInternet);
             }
         }
-        // The terminals stay ticked; they connect again under the new person on their next sync. The 90-day upload
-        // was the old person's consent, not the new one's.
+        // The terminals stay ticked; they connect again under the new person on their next sync.
         s.links.clear();
-        s.baseline = false;
         s.alerts_after = None;
     }
     s.app_token = Some(signed.token);

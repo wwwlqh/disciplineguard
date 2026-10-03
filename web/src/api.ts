@@ -67,13 +67,6 @@ export interface Pending {
   effectiveAt: number;
 }
 
-export interface Note {
-  id: string;
-  text: string;
-  tag: 'any' | 'after_loss' | 'too_many';
-  setAt: number;
-}
-
 export type AlertKind = 'limit' | 'after_limit' | 'off' | 'moved' | 'outside' | 'closed' | 'unchecked' | 'summary' | 'placed' | 'stop';
 
 export interface AlertPrefs {
@@ -94,15 +87,12 @@ export interface Me {
     firstOnAt: number | null;
     lastRealPauseAt: number | null;
     hideAmounts: boolean;
-    analyticsConsent: number | null;
     reasonConsent: number | null;
     reasonAsked: boolean;
     alerts: AlertPrefs;
     hasApp: boolean;
     onboarding: any;
-    isBeta: boolean;
     owner: boolean;
-    country: string | null;
     planKind: string | null;
     cancelAtPeriodEnd: boolean;
     portalUrl: string | null;
@@ -114,8 +104,6 @@ export interface Me {
   rules: Rules;
   popup: PopupSettings;
   tz: string;
-  notes: Note[];
-  plan: string;
   settings: Record<string, { active: any; pending: { value: any; effectiveAt: number } | null; setAt: number }>;
   pending: Pending[];
   time: ResolvedTime;

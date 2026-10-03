@@ -56,9 +56,6 @@ describe('SPEC §15.5 setup mode and rule changes', () => {
     expect(compareChange('default:r5bet', { r5Max: 25 }, { r5Max: 50 })).toBe('looser');
   });
 
-  it('CHG-16: adding a note is stricter', () => expect(compareChange('note:2', null, { text: 'x', tag: 'any' })).toBe('stricter'));
-  it('CHG-17: editing a note is looser', () => expect(compareChange('note:1', { text: 'x', tag: 'any' }, { text: 'y', tag: 'any' })).toBe('looser'));
-
   it('SET-01 (popup): wait 10 → 3 when locked is scheduled', () => {
     const r = requestChange('popup', { active: { ...DEFAULT_POPUP, wait: 10 } }, { ...DEFAULT_POPUP, wait: 3 }, locked(at(10)));
     expect(r.appliesAt).toBe(at(0, 0, 1));

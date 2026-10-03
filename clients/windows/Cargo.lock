@@ -854,7 +854,7 @@ dependencies = [
 
 [[package]]
 name = "dg-core"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "ed25519-dalek",
  "getrandom 0.4.3",
@@ -939,7 +939,7 @@ dependencies = [
 
 [[package]]
 name = "disciplineguard"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "dg-core",
  "serde",

@@ -18,7 +18,6 @@ async function runJob(env: Env, job: { id: number; kind: string; payload: string
       const u = await env.DB.prepare('SELECT email, setup_mode FROM users WHERE id = ? AND deleted_at IS NULL').bind(p.userId).first<any>();
       if (!u || !u.setup_mode) return;
       await sendEmail(env, u.email, 'DisciplineGuard: your rules lock tomorrow', `Your rules lock at ${fmtUtc(p.lockAt)}. Review them now: ${env.APP_URL}/rules\n\nAfter that, tightening a rule applies at once and loosening waits until your next day reset.\n\nDisciplineGuard`, ctx);
-      await env.DB.prepare('UPDATE users SET lock_notice_sent = 1 WHERE id = ?').bind(p.userId).run();
       return;
     }
     case 'auto_lock': {
@@ -59,6 +58,7 @@ export async function runScheduled(env: Env, ctx: Ctx): Promise<{ ran: number }>
     env.DB.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(t - 2 * HOUR),
     env.DB.prepare('DELETE FROM desktop_codes WHERE expires_at < ?').bind(t - DAY),
     env.DB.prepare('DELETE FROM jobs WHERE done_at IS NOT NULL AND done_at < ?').bind(t - 30 * DAY),
+    env.DB.prepare('DELETE FROM problem_reports WHERE created_at < ?').bind(t - 365 * DAY),
   ]);
   return { ran: results.length };
 }

@@ -1,4 +1,4 @@
-// Devices and accounts (EXPERIENCE §5.7).
+// Devices and accounts (EXPERIENCE §5.6).
 import { useState } from 'react';
 import { api } from '../api.ts';
 import { ago, date, platformName, time } from '../fmt.ts';

@@ -1,4 +1,4 @@
-// Connect a platform (EXPERIENCE §5.7, SPEC §9.1, §9.5): MetaTrader 5 through the Windows app; TradingView, Polymarket
+// Connect a platform (EXPERIENCE §5.6, SPEC §9.1, §9.5): MetaTrader 5 through the Windows app; TradingView, Polymarket
 // and Kalshi through the browser extension. Each card follows along live: allowed, then each account as it reports in.
 import { useEffect, useRef, useState } from 'react';
 import { api, type Connection, type Me } from '../api.ts';

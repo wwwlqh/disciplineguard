@@ -71,8 +71,7 @@ export class Web {
   }
   async onboard(extra: Record<string, unknown> = {}) {
     const r = await this.send('POST', '/api/onboarding/apply', {
-      tz: 'UTC', reset: { preset: 'midnight' }, analyticsConsent: false,
-      rules: { R1: { on: true, max: 5 } }, notes: [{ text: 'Stand up and breathe.', tag: 'any' }], plan: 'close the chart for 10 minutes', ...extra,
+      tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 5 } }, ...extra,
     });
     if (r.status !== 200) throw new Error(`onboard ${r.status} ${JSON.stringify(r.data)}`);
   }

@@ -9,8 +9,7 @@
 //|                                          then the response body  |
 //|   DisciplineGuard\<terminal id>\app.txt  app heartbeat: unix s,  |
 //|                                          state, connection id,   |
-//|                                          masked email, and       |
-//|                                          "baseline" if consented |
+//|                                          masked email            |
 //|   DisciplineGuard\<terminal id>\ea.txt   EA heartbeat: unix s,   |
 //|                                          then algo_on/algo_off   |
 //| Files are touched only from the timer: never in a click handler  |
@@ -74,7 +73,6 @@ public:
    string            appState;       // "on" | "signed_out" | "not_protected"
    string            conn;           // connection id the app registered for this terminal
    string            email;          // masked, for display only
-   bool              baseline;       // the trader agreed to upload the last 90 days (SPEC §14)
    // the one outstanding request
    bool              waiting;
    long              seq;
@@ -84,9 +82,8 @@ public:
    bool              pauseOpen;
    ulong             lastInteraction;
    ulong             lastBeat;
-   ulong             lastReplyTick;  // when the last reply was handled (SPEC §14 "possibly delayed")
 
-                     DGBridge() { dir = ""; baseline = false; appAlive = false; appState = ""; conn = ""; email = ""; waiting = false; seq = 0; waitPath = ""; sentTick = 0; pauseOpen = false; lastInteraction = 0; lastBeat = 0; lastReplyTick = 0; }
+                     DGBridge() { dir = ""; appAlive = false; appState = ""; conn = ""; email = ""; waiting = false; seq = 0; waitPath = ""; sentTick = 0; pauseOpen = false; lastInteraction = 0; lastBeat = 0; }
 
    void              Init() { dir = DG_BRIDGE_ROOT + DGTerminalId() + "\\"; seq = (long)GetTickCount64(); }
 
@@ -102,7 +99,6 @@ public:
       appState = n > 1 ? DGBridgeTrim(lines[1]) : "";
       conn = n > 2 ? DGBridgeTrim(lines[2]) : "";
       email = n > 3 ? DGBridgeTrim(lines[3]) : "";
-      baseline = n > 4 && DGBridgeTrim(lines[4]) == "baseline";
       if(GetTickCount64() - lastBeat >= DG_EA_BEAT_MS)
         {
          lastBeat = GetTickCount64();
@@ -155,7 +151,6 @@ public:
             code = (int)StringToInteger(parts[1]);
             resp = nl >= 0 ? StringSubstr(txt, nl + 1) : "";
             waiting = false;
-            lastReplyTick = GetTickCount64();
             return true;
            }
         }
@@ -170,9 +165,6 @@ public:
         }
       return false;
      }
-
-   /// A click handled within 50 ms after a reply was processed may have waited for it (SPEC §14).
-   bool              ClickPossiblyDelayed() { return lastReplyTick > 0 && GetTickCount64() - lastReplyTick <= 50; }
   };
 
 #endif

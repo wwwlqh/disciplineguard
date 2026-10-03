@@ -31,6 +31,10 @@ Remove-Item -Recurse -Force $dst -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $dst | Out-Null
 Copy-Item "$PSScriptRoot\DisciplineGuard.mq5" $dst
 Copy-Item "$PSScriptRoot\DG" $dst -Recurse
+# The EA reports the release version, the one in clients/windows/Cargo.toml.
+$version = (Select-String -Path "$PSScriptRoot\..\windows\Cargo.toml" -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+$config = "$dst\DG\Config.mqh"
+(Get-Content $config) -replace '#define DG_VERSION\s+"[^"]*"', "#define DG_VERSION  `"$version`"" | Set-Content -Encoding ascii $config
 $log = "$Work\compile.log"
 Remove-Item $log -ErrorAction SilentlyContinue
 Start-Process "$Work\MetaEditor64.exe" -ArgumentList '/portable', "/compile:`"$dst\DisciplineGuard.mq5`"", "/log:`"$log`"" -Wait

@@ -101,7 +101,6 @@ pub struct Row {
 pub struct View {
     pub signed_in: bool,
     pub email: Option<String>,
-    pub baseline: bool,
     pub rows: Vec<Row>,
     /// This build can Protect (it carries a signed EA).
     pub can_protect: bool,
@@ -227,7 +226,7 @@ impl Core {
                 }
             })
             .collect();
-        View { signed_in: s.signed_in(), email: s.email.clone(), baseline: s.baseline, rows, can_protect: ea_sha.is_some() }
+        View { signed_in: s.signed_in(), email: s.email.clone(), rows, can_protect: ea_sha.is_some() }
     }
 
     /// Sign-in with Allow in the browser. Blocks until the trader answers or it times out.
@@ -252,12 +251,11 @@ impl Core {
     }
 
     /// Protect for the ticked terminals; the others are remembered as not wanted. Returns an error line, if any.
-    pub fn protect(&self, ticked: &[String], baseline: bool) -> Result<(), String> {
+    pub fn protect(&self, ticked: &[String]) -> Result<(), String> {
         let (ex5, _) = self.ea().ok_or("This copy of DisciplineGuard has no signed EA. Download it again from the website.")?;
         let all = self.terminals();
         let mut failed = Vec::new();
         let mut s = self.state.lock().unwrap();
-        s.baseline = baseline;
         for t in &all {
             if s.is_protected(&t.id) {
                 continue;

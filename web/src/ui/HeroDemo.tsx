@@ -167,8 +167,7 @@ export function HeroDemo() {
         <div className={`demo-pause${showPause ? ' on' : ''}`}>
           <div className="dp-label"><Mark size={15} /> PAUSE · YOUR RULE</div>
           <div className="dp-head">{head}</div>
-          <blockquote className="dp-quote">“The market will be here tomorrow.”</blockquote>
-          <div className="dp-attrib">you, 29 Sep</div>
+          <div className="dp-line">Your limit resets 00:00.</div>
           <div className="dp-chip">Buy 0.50 EURUSD</div>
           <div className="dp-wait"><i className={showPause && !still ? 'run' : ''} /></div>
           <div className="dp-buttons">

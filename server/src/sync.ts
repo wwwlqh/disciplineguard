@@ -144,10 +144,10 @@ export async function sync(req: Request, env: Env, ctx: Ctx): Promise<Response> 
     }
   }
 
-  // First connection On: the trial starts and the auto-lock is scheduled (SPEC §6.1, §12.1).
+  // First connection On: the auto-lock is scheduled (SPEC §6.1).
   const updates = [
-    env.DB.prepare('UPDATE connections SET last_seen = ?, acked_seq = MAX(acked_seq, ?), role = ?, version = COALESCE(?, version), push_ready = ?, status = ? WHERE id = ?')
-      .bind(t, maxSeq, role, clean(b.version, 20) ?? null, b.pushReady ? 1 : 0, clean(b.state, 30) ?? null, conn.id),
+    env.DB.prepare('UPDATE connections SET last_seen = ?, acked_seq = MAX(acked_seq, ?), role = ?, version = COALESCE(?, version), status = ? WHERE id = ?')
+      .bind(t, maxSeq, role, clean(b.version, 20) ?? null, clean(b.state, 30) ?? null, conn.id),
   ];
   if (!conn.first_on_at && uc.license.enforcing && keyToAccount.size > 0) {
     updates.push(env.DB.prepare('UPDATE connections SET first_on_at = ? WHERE id = ? AND first_on_at IS NULL').bind(t, conn.id));
@@ -185,43 +185,6 @@ export async function sync(req: Request, env: Env, ctx: Ctx): Promise<Response> 
     accounts: accountOut,
     cursors,
   });
-}
-
-export const BASELINE_MAX = 500;
-export const BASELINE_DAYS = 90;
-
-/**
- * POST /v1/baseline: past entries and closes, uploaded once at pairing with the user's consent (SPEC §14 "Baseline").
- * Used only for the user's own before/after comparison. Idempotent by ticket.
- */
-export async function baseline(req: Request, env: Env): Promise<Response> {
-  const conn = await authDevice(req, env);
-  if (conn.removed_at) return json({ status: 'connection_removed' }, 410);
-  const t = clock(env);
-  await rateLimit(env, `baseline:${conn.id}`, 60, 3600_000);
-  const b = await body(req, 256 * 1024);
-  const uc = await userCtx(env, conn.user_id, t);
-  const a = b.account ?? {};
-  const login = typeof a.login === 'number' ? String(a.login) : a.login;
-  if (typeof login !== 'string' || typeof a.server !== 'string' || a.platform !== 'mt5') throw new HttpError(400, 'bad_account');
-  const acct = await findAccount(env, uc, 'mt5', a.server, login);
-  if (!acct) throw new HttpError(404, 'unknown_account');
-  const items: any[] = Array.isArray(b.items) ? b.items.slice(0, BASELINE_MAX) : [];
-  const stmts = [];
-  for (const it of items) {
-    const kind = it?.kind === 'close' ? 'close' : it?.kind === 'entry' ? 'entry' : null;
-    const when = finite(it?.t);
-    if (!kind || when === undefined || when > t || when < t - (BASELINE_DAYS + 1) * DAY || it.ticket === undefined) continue;
-    const payload = kind === 'entry'
-      ? { symbol: clean(it.symbol, 30), side: it.side === 'sell' ? 'sell' : 'buy', size: finite(it.size) ?? 0, source: clean(it.source, 12) }
-      : { net: finite(it.net) ?? 0, size: finite(it.size) ?? 0 };
-    stmts.push(
-      env.DB.prepare('INSERT OR IGNORE INTO baseline (user_id, account_id, kind, ticket, t, payload) VALUES (?, ?, ?, ?, ?, ?)')
-        .bind(uc.user.id, acct.id, kind, String(it.ticket).slice(0, 40), when, JSON.stringify(payload)),
-    );
-  }
-  if (stmts.length) await env.DB.batch(stmts);
-  return json({ ok: true, stored: stmts.length, done: !!b.done });
 }
 
 async function findAccount(env: Env, uc: UserCtx, platform: string, server: string, login: string): Promise<AccountRow | undefined> {
@@ -381,18 +344,6 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
       if (r.meta.changes) await alerts.stopChanged(env, uc, acct, kind);
       return;
     }
-    case 'exit': {
-      // A guarded exit that went straight through: the safety criterion counts these (PHASES.md Phase 1).
-      if (!acct) return;
-      await insert(ticket ? await eventId(acct.id, 'exit', ticket) : clientId, 'exit', { kind: clean(e.kind, 12) }).run();
-      return;
-    }
-    case 'delayed_click':
-      await insert(clientId, 'delayed_click', { ms: finite(e.ms), netMs: finite(e.netMs) }, t, null).run();
-      return;
-    case 'setup':
-      await insert(clientId, 'setup', { failed: Array.isArray(e.failed) ? (e.failed as unknown[]).map((x) => clean(x, 30)).slice(0, 10) : [] }, t, null).run();
-      return;
     case 'unclassified':
       if ((await insert(clientId, 'unclassified', {}, t).run()).meta.changes) await alerts.unchecked(env, uc, t);
       return;
@@ -420,8 +371,9 @@ export async function signedBlock(env: Env, uc: UserCtx, connectionId: string): 
     lockAt,
     rules: enforcedRules(uc),
     popup: uc.asm.popup,
-    notes: uc.asm.notes,
-    plan: uc.asm.plan,
+    // Always empty: the EA and extension up to 0.1.6 read them in every pause.
+    notes: [],
+    plan: '',
     time: resolvedTime(uc),
     accounts,
     license: { state: uc.license.state, validUntil: uc.license.validUntil, enforcing: uc.license.enforcing },

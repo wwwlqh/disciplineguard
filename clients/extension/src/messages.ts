@@ -28,8 +28,6 @@ export interface Cache {
   signed?: {
     rules: Rules;
     popup: PopupSettings;
-    notes: { text: string; setAt: number }[];
-    plan: string;
     time: ResolvedTime;
     hideAmounts: boolean;
     license: { state: string; validUntil: number; enforcing: boolean };

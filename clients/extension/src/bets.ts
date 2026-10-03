@@ -151,7 +151,7 @@ export function guardBets(site: BetSite): void {
     const pauseId = `${site.prefix}p_${rid()}`;
     const button = textOf(el) || 'Buy';
     ui.show(
-      { plan, order, note: s.notes[0], planText: s.plan, fmt: makeFmt(s.time, 'USD', s.hideAmounts), r3Seconds: s.rules.R3.seconds },
+      { plan, order, fmt: makeFmt(s.time, 'USD', s.hideAmounts), r3Seconds: s.rules.R3.seconds },
       (decision, info) => {
         const t = now();
         send(account, [{
@@ -269,7 +269,7 @@ export function guardBets(site: BetSite): void {
     const where = `${site.name} …${acct.last3}`;
     if (c.status === 'attention') return { tone: 'attention', text: 'Needs attention', lines: ['Sign in again. Your saved rules still apply.', where], actions: false };
     if (!acct.enforced) return { tone: 'off', text: 'Off', lines: [`This ${site.accountWord} isn’t protected. Bets go through normally.`], actions: false };
-    if (!c.signed.license.enforcing) return { tone: 'off', text: 'Off · Plan ended', lines: ['Bets are no longer paused.'], actions: false };
+    if (!c.signed.license.enforcing) return { tone: 'off', text: 'Off', lines: ['Bets are no longer paused.'], actions: false };
 
     const s = c.signed;
     const t = now();

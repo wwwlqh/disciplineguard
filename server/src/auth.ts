@@ -1,5 +1,5 @@
 // Email sign-in with a link and a 6-digit code (SPEC §10.9), and web sessions.
-import { digits6, maskEmail, normalizeEmail, randomBytes, randomId, sha256, token } from './crypto.ts';
+import { digits6, maskEmail, randomBytes, randomId, sha256, token } from './crypto.ts';
 import { audit, rateLimit, sendEmail, type Ctx } from './common.ts';
 import type { UserRow } from './context.ts';
 import { now as clock, type Env } from './env.ts';
@@ -60,16 +60,15 @@ export async function linkInfo(req: Request, env: Env): Promise<Response> {
   return json({ email: maskEmail(row.email), sameBrowser: same });
 }
 
-async function createUser(env: Env, email: string, country: string | null): Promise<UserRow> {
-  const norm = normalizeEmail(email);
-  const prior = await env.DB.prepare('SELECT 1 FROM users WHERE email_norm = ? LIMIT 1').bind(norm).first();
+async function createUser(env: Env, email: string): Promise<UserRow> {
   const b = randomBytes(4);
   const magic = 700_000_000 + ((((b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3]) >>> 0) % 100_000_000);
   const id = randomId('u_');
   const t = clock(env);
-  await env.DB.prepare(
-    'INSERT INTO users (id, email, email_norm, created_at, magic, analytics_id, country, trial_eligible) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-  ).bind(id, email, norm, t, magic, randomId('an_'), country, prior ? 0 : 1).run();
+  // email_norm and analytics_id are no longer read, but the schema still requires them.
+  await env.DB.prepare('INSERT INTO users (id, email, email_norm, created_at, magic, analytics_id) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(id, email, email, t, magic, randomId('an_'))
+    .run();
   await audit(env, id, 'user', 'signup');
   return (await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>())!;
 }
@@ -110,7 +109,7 @@ export async function signInAs(req: Request, env: Env, email: string): Promise<{
   const t = clock(env);
   let user = await env.DB.prepare('SELECT * FROM users WHERE email = ? AND deleted_at IS NULL').bind(email).first<UserRow>();
   const isNew = !user;
-  if (!user) user = await createUser(env, email, req.headers.get('cf-ipcountry'));
+  if (!user) user = await createUser(env, email);
   const session = token(32);
   await env.DB.prepare('INSERT INTO sessions (id, user_id, token_hash, created_at, last_seen, user_agent) VALUES (?, ?, ?, ?, ?, ?)')
     .bind(randomId('s_'), user.id, await sha256(session), t, t, (req.headers.get('user-agent') ?? '').slice(0, 200))

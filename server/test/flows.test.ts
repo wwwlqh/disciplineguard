@@ -1,6 +1,6 @@
 import { createHash, createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { DAY, HOUR, MIN } from '@dg/core';
+import { DAY, MIN } from '@dg/core';
 import { verify } from '../src/crypto.ts';
 import { SIGNING_PUB, World } from './harness.ts';
 
@@ -147,7 +147,9 @@ describe('sync (SPEC §10.3)', () => {
     expect(p.rules.closeOutside).toBe(false);
     expect(p.license.state).toBe('free');
     expect(p.time.userResets.some((x: number) => x > w.t)).toBe(true);
-    expect(p.notes[0].text).toBe('Stand up and breathe.');
+    // Kept empty for the EA and extension up to 0.1.6, which read them in every pause.
+    expect(p.notes).toEqual([]);
+    expect(p.plan).toBe('');
     expect(p.magic).toBeGreaterThanOrEqual(700_000_000);
     const again = await ea.sync();
     expect(again.data.signed).toBeNull();
@@ -365,13 +367,13 @@ describe('rule changes through the API (SPEC §6)', () => {
     expect((await web.send('PUT', '/api/settings', { key: 'tz', value: 'Mars/Base' })).status).toBe(400);
   });
 
-  it('onboards with no note or plan typed', async () => {
+  it('onboards from the choices alone, with nothing typed', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
-    expect((await web.send('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, analyticsConsent: false, choices: ['too_many'] })).status).toBe(200);
+    expect((await web.send('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, choices: ['too_many'] })).status).toBe(200);
     const me = (await web.get('/api/me')).data;
-    expect(me.notes).toEqual([]);
-    expect(me.plan).toBe('');
+    expect(me.rules.R1).toEqual({ on: true, max: 5 });
+    expect(me.user.onboarding.done).toBe(true);
   });
 });
 
@@ -497,7 +499,8 @@ describe('accounts, coverage and plans', () => {
     const owner = await w.signIn('owner@test.dev');
     const m = await owner.get('/api/owner/metrics');
     expect(m.status).toBe(200);
-    expect(m.data.funnel.signups).toBe(2);
+    expect(m.data.users).toMatchObject({ total: 2, new7d: 2, connected: 0, active7d: 0 });
+    expect(m.data.accounts).toEqual([]);
   });
 });
 

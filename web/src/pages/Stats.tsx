@@ -1,8 +1,8 @@
-// Stats, Phase 1 (EXPERIENCE §5.8). Counts and facts only. Never money saved.
+// Stats, Phase 1 (EXPERIENCE §5.7). Counts and facts only. Never money saved.
 import { useEffect, useState } from 'react';
 import { REASONS, RULE_NAMES, type RuleId, type TitleId } from '@dg/core';
 import { api } from '../api.ts';
-import { date, platformName } from '../fmt.ts';
+import { platformName } from '../fmt.ts';
 import { Icon, RULE_ICON, type IconName } from '../ui/Icon.tsx';
 import { Calendar, Columns, HBars, Ring, Stat, StackedBar, type DayCell } from '../ui/viz.tsx';
 import type { PageProps } from '../main.tsx';
@@ -19,7 +19,6 @@ interface StatsData {
   cameBackDays: number;
   daily?: (DayCell & { entries: number; pauses: number })[];
   coverage: { outside: number; unprotected: number; unclassified: number; stopChanges: number; offEvents: number };
-  baseline: { entries: number; from: number; to: number } | null;
 }
 
 const COVERAGE: [keyof StatsData['coverage'], string, IconName][] = [
@@ -151,13 +150,6 @@ export function Stats({ me }: PageProps) {
               </ul>
             </div>
           </div>
-
-          {s.baseline && (
-            <div className="card">
-              <div className="card-head"><h2><Icon name="file" /> Your baseline (MT5)</h2></div>
-              <p className="muted" style={{ margin: 0 }}>{s.baseline.entries} trades loaded ({date(s.baseline.from)} – {date(s.baseline.to)}). The comparison shows 3 weeks after you lock.</p>
-            </div>
-          )}
         </>
       )}
     </div>

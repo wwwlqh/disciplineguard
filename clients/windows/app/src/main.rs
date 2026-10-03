@@ -63,9 +63,9 @@ async fn sign_in(app: AppHandle, core: State<'_, Shared>) -> Result<(), String> 
 }
 
 #[tauri::command]
-async fn protect(core: State<'_, Shared>, ticked: Vec<String>, baseline: bool) -> Result<(), String> {
+async fn protect(core: State<'_, Shared>, ticked: Vec<String>) -> Result<(), String> {
     let c = core.inner().clone();
-    blocking(move || c.protect(&ticked, baseline)).await
+    blocking(move || c.protect(&ticked)).await
 }
 
 /// Only ever called from the "Restart MetaTrader" button.

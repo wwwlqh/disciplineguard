@@ -9,8 +9,6 @@ export type Decision = 'skip' | 'place' | 'timeout';
 export interface PauseInput {
   plan: PausePlan;
   order: Order;
-  note?: { text: string; setAt: number };
-  planText: string;
   fmt: Fmt;
   r3Seconds: number;
   facts?: string;
@@ -26,8 +24,6 @@ dialog::backdrop { background: rgba(0,0,0,.5); }
 .label b { width: 14px; height: 14px; border-radius: 4px; background: #0f766e; display: inline-block; }
 .head { font-size: 18px; font-weight: 650; margin: 8px 0 6px; }
 .others, .facts, .foot { font-size: 12px; opacity: .7; }
-blockquote { font-size: 17px; margin: 10px 0 2px; }
-.attrib { font-size: 12px; opacity: .6; margin-bottom: 6px; }
 .lines div { margin: 4px 0; }
 .chip { display: inline-block; font-size: 13px; border: 1px solid rgba(127,127,127,.4); border-radius: 999px; padding: 3px 10px; margin: 8px 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
@@ -57,7 +53,7 @@ export class PauseUI {
   constructor() {
     // Closed in real builds; the end-to-end test build opens it so the test can press the buttons.
     this.root = this.host.attachShadow({ mode: typeof __DG_TEST__ === 'boolean' && __DG_TEST__ ? 'open' : 'closed' });
-    this.root.innerHTML = `<style>${CSS}</style><dialog aria-labelledby="h" aria-describedby="n"></dialog><div class="card" role="status"></div>`;
+    this.root.innerHTML = `<style>${CSS}</style><dialog aria-labelledby="h"></dialog><div class="card" role="status"></div>`;
     this.dlg = this.root.querySelector('dialog')!;
     this.card = this.root.querySelector('.card')!;
     // TradingView's hotkeys never see keys typed in the pause.
@@ -90,9 +86,7 @@ export class PauseUI {
       <div class="label"><b></b>PAUSE · YOUR RULE</div>
       <div class="head" id="h">${esc(headline(v, p.order, p.fmt, Date.now(), p.r3Seconds))}</div>
       ${others.length ? `<div class="others">Also: ${esc(others.join(' · '))}</div>` : ''}
-      ${p.note ? `<blockquote id="n">“${esc(p.note.text)}”</blockquote><div class="attrib">you, ${new Date(p.note.setAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</div>` : ''}
       <div class="lines">
-        ${p.planText ? `<div>Your plan: ${esc(p.planText)}.</div>` : ''}
         ${out ? `<div>${esc(out)}</div>` : ''}
         ${p.plan.reattemptAgoSec !== undefined ? `<div>You skipped this trade ${p.plan.reattemptAgoSec} s ago.</div>` : ''}
         <div>After Place anyway, click ${side} once more.</div>

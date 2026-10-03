@@ -18,8 +18,6 @@ int      gTheme = 0;
 bool     gMenu = false;
 string   gInfo = "";
 string   gLastMode = "";
-bool     gSetupSent = false;
-ulong    gSetupShownTick = 0;
 
 DGSurface gPanel;
 int      gPX = 0, gPY = 0, gPW = 0, gPH = 0;
@@ -409,13 +407,6 @@ void TradeClick(const int side)
   {
    SaveEdits();
    SavePrefs();
-   if(gBridge.ClickPossiblyDelayed())
-     {
-      DGJsonWriter w;
-      EvBegin(w, "delayed_click", NowMs(), false);
-      w.Long("ms", 0);
-      Enqueue(w, false);
-     }
    string sym = _Symbol;
    double size = StringToDouble(gLots);
    double price = gType == "market" ? 0 : StringToDouble(gPrice);
@@ -451,31 +442,23 @@ void TradeClick(const int side)
    gResult = result;
   }
 
-/// Exits are never paused (SPEC §1.3). Logged so the safety check can count them.
+/// Exits are never paused (SPEC §1.3).
 void CloseAll()
   {
    string sym = _Symbol;
    int closed = 0, failed = 0;
-   string first = "", why = "";
+   string why = "";
    gTrade.SetExpertMagicNumber((ulong)Magic());
    for(int i = PositionsTotal() - 1; i >= 0; i--)
      {
       ulong tk = PositionGetTicket(i);
       if(tk == 0 || PositionGetString(POSITION_SYMBOL) != sym) continue;
-      if(gTrade.PositionClose(tk)) { closed++; if(first == "") first = IntegerToString((long)tk); }
+      if(gTrade.PositionClose(tk)) closed++;
       else { failed++; why = gTrade.ResultRetcodeDescription(); }
      }
    if(closed == 0 && failed == 0) { gResult = "No open positions on " + sym + "."; return; }
    gResult = failed == 0 ? StringFormat("Closed %d position%s on %s.", closed, closed == 1 ? "" : "s", sym)
              : StringFormat("Closed %d, not closed %d: %s", closed, failed, why);
-   if(closed > 0 && Linked())
-     {
-      DGJsonWriter w;
-      EvBegin(w, "exit", NowMs());
-      w.Str("ticket", "x" + first);
-      w.Str("kind", "close_all");
-      Enqueue(w);
-     }
   }
 
 void HideQuickTradeAll()
@@ -500,7 +483,6 @@ string HelpSlug()
    if(gStatusCode == "off")
      {
       if(gOffReason != "") return "signed-out";
-      if(gCacheOk && !PBool("license.enforcing")) return "plan-ended";
       if(PlanExpired(NowMs())) return "cant-confirm-plan";
       if(gAcctState == "taken") return "account-taken";
       if(gAcctState == "cap" || gAcctState == "new") return "new-account";

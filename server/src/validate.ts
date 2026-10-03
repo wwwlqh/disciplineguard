@@ -158,18 +158,6 @@ export function validateSetting(key: string, value: unknown, account: AccountLoo
       return tz(value);
     case 'reset':
       return resetValue(value);
-    case 'note': {
-      if (!['1', '2', '3'].includes(id)) bad('note id');
-      if (value === null) return null;
-      const o = obj(value, 'note');
-      if (typeof o.text !== 'string' || o.text.trim().length < 1 || o.text.length > 200) bad('note text');
-      const tag = o.tag ?? 'any';
-      if (tag !== 'any' && tag !== 'after_loss' && tag !== 'too_many') bad('note tag');
-      return { text: (o.text as string).trim(), tag };
-    }
-    case 'plan':
-      if (typeof value !== 'string' || value.trim().length < 1 || value.length > 120) bad('plan');
-      return (value as string).trim();
     default:
       return bad('setting');
   }

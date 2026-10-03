@@ -39,7 +39,7 @@ cd clients\windows && cargo run -p disciplineguard
 
 ## Releasing
 
-1. Bump `version` in `clients/windows/Cargo.toml`.
+1. Bump `version` in `clients/windows/Cargo.toml` (the EA reports this version too), and in `clients/extension/package.json` when the extension changed.
 2. Run the `Windows app` workflow with **release** ticked. It compiles the EA with MetaEditor on the runner (`clients/mt5/compile.ps1`), signs the EA manifest, builds and code-signs the installer, and publishes `DisciplineGuard-Setup.exe` and `latest.json` to the releases of `wwwlqh/disciplineguard`. `/downloads/…` on the site redirects there (`web/public/_redirects`), so the web app's download button and the updater always get the latest release. Installed apps update themselves within 6 hours.
 
 Repository secrets for the release:

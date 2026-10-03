@@ -163,9 +163,9 @@ public:
       if(border != 0) cv.Rectangle(rx, ry, rx + rw - 1, ry + rh - 1, border);
      }
 
-   void              Font(const double px, const bool bold = false, const bool serif = false)
+   void              Font(const double px, const bool bold = false)
      {
-      string face = serif ? "Georgia" : (bold ? "Segoe UI Semibold" : "Segoe UI");
+      string face = bold ? "Segoe UI Semibold" : "Segoe UI";
       // Positive size = pixels, independent of the OS font setting. DGScale already includes DPI.
       cv.FontSet(face, (int)MathRound(px * DGScale), bold ? FW_SEMIBOLD : FW_NORMAL);
      }

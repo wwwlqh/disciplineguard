@@ -92,8 +92,6 @@ function found(v, error = '') {
     ${prot.length ? `<p class="label">Protected</p><div class="list">${prot.map(protRow).join('')}</div>
       <p class="muted small">To remove protection, use <button class="link" id="devices">Devices</button> on the website.</p>` : ''}
     ${none ? '' : `<p class="muted small">Don't see it? <button class="link" id="browse">Browse</button></p>`}
-    ${open.length ? `<label class="consent"><input type="checkbox" id="baseline" ${v.baseline || !prot.length ? 'checked' : ''}>
-      <span>Include my last 90 days, for your before/after stats. Only you see it.</span></label>` : ''}
     ${!v.canProtect ? '<p class="warn">This copy can\'t set up MetaTrader. Download it again.</p>' : ''}
     ${error ? `<p class="warn">${esc(error)}</p>` : ''}
     <div class="actions">
@@ -116,7 +114,7 @@ function found(v, error = '') {
     e.currentTarget.disabled = true;
     const ticked = [...el.querySelectorAll('input[type=checkbox][value]')].filter((c) => c.checked).map((c) => c.value);
     try {
-      await invoke('protect', { ticked, baseline: document.getElementById('baseline').checked });
+      await invoke('protect', { ticked });
       show(ticked.length ? 'result' : 'found');
     } catch (err) {
       found(await invoke('view'), err);
