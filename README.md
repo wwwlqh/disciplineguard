@@ -1,71 +1,51 @@
 <div align="center">
 
-<img src="web/public/mark.svg" width="72" alt="DisciplineGuard">
+<img src="web/public/mark.svg" width="64" alt="DisciplineGuard">
 
 # DisciplineGuard
 
-### A pause at the click, before the trade that breaks your rules.
+<a href="https://disciplineguard.leowqiheng.workers.dev"><img src="docs/hero.gif" width="880" alt="Lockout tools act after your limit. DisciplineGuard pauses you at the click. A Buy past the day's trade limit gets a pause: 'This would be trade 4 today. Your limit is 3.' The trader skips it and nothing is placed."></a>
 
-You wrote the rules when you were calm. DisciplineGuard holds you to them when you're not.
+<p>
+<a href="https://disciplineguard.leowqiheng.workers.dev/start"><img src="https://img.shields.io/badge/Start_free_→-5EEAD4?style=for-the-badge" alt="Start free" height="36"></a>&nbsp;&nbsp;<a href="https://disciplineguard.leowqiheng.workers.dev/downloads/DisciplineGuard-Setup.exe"><img src="https://img.shields.io/badge/Windows_app-E2E8F0?style=for-the-badge" alt="Download the Windows app" height="36"></a>&nbsp;&nbsp;<a href="https://disciplineguard.leowqiheng.workers.dev/help/tradingview"><img src="https://img.shields.io/badge/Browser_extension-E2E8F0?style=for-the-badge" alt="Browser extension" height="36"></a>
+</p>
 
-**[Start free →](https://disciplineguard.leowqiheng.workers.dev)** &nbsp;·&nbsp; MetaTrader 5 &nbsp;·&nbsp; TradingView &nbsp;·&nbsp; Polymarket &nbsp;·&nbsp; Kalshi &nbsp;·&nbsp; Free for 1 trading account
+**Works with** &nbsp; MetaTrader 5 <sub>Windows app</sub> &nbsp;·&nbsp; TradingView <sub>website</sub> &nbsp;·&nbsp; Polymarket <sub>website</sub> &nbsp;·&nbsp; Kalshi <sub>website</sub>
+
+</div>
 
 <br>
 
-<img src="docs/pause.png" width="820" alt="A TradingView Buy past the day's trade limit gets a pause: 'This would be trade 3 today. Your limit is 1.'">
+## The moment that matters is the click
 
-</div>
+<img src="docs/moment.png" width="880" alt="A timeline: rule broken, the click, order sent, limit hit, review. DisciplineGuard pauses at the click; lockout tools act at the limit; journals at the review.">
 
----
+Journals act after the trade. Lockout tools act after the limit and lock you out. **DisciplineGuard acts at the click, before the order, and you still decide.**
 
-## The problem
+## Three steps. Then you trade.
 
-Every trader knows the rules. Max 3 trades. Stop after 2 losses. No revenge trades.
+<img src="docs/how.gif" width="880" alt="Set your rules by ticking what costs you, connect your platform with one click on Allow, then trade as usual: trades within your rules go straight through, and one that breaks a rule gets a pause.">
 
-Then a loss hits, the chart moves, and the rules are gone before the order is.
+## Ten rules. Your numbers.
 
-Journals only tell you afterwards. Lockout tools lock you out after the damage is done. **DisciplineGuard acts at the click, before the order.**
+<img src="docs/rules.png" width="880" alt="The ten rules: max trades per day, max trades per hour, too fast, trading hours, max position size, max risk per trade, cooldown after a loss, daily loss limit, stop loss required, no bigger after a loss.">
 
-| | Acts | You decide? |
-|---|---|---|
-| Journals | After the trade | Too late for this one |
-| Lockout tools | After the limit | No, you're locked out |
-| **DisciplineGuard** | **At the click, before the order** | **Yes, every time** |
-
-## How it works
-
-1. **Set your rules.** Pick a starting template in two minutes, then tune it.
-2. **Trade as usual.** Trades that keep your rules go straight through, with no delay.
-3. **Break a rule, get a pause.** It names the rule and the number: *"This would be trade 3 today. Your limit is 1."* Skip it, or place it anyway after a short wait. Your call, every time.
-
-Tightening a rule applies now. **Loosening one waits until your next day reset**, so a bad moment can't switch it off.
-
-## 10 rules, in your own words
-
-| | | |
-|---|---|---|
-| Max trades per day | Max trades per hour | Too fast |
-| Trading hours | Max position size | Max risk per trade |
-| Cooldown after a loss | Daily loss limit | Stop loss required |
-| No bigger after a loss | | |
-
-Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morning check-in to tighten today's limits only.
+Tightening a rule applies now. **Loosening one waits until your next day reset**, so a bad moment can't switch it off. Plus **Take a break** (15 minutes to 30 days), **Done for today**, and a morning check-in to tighten today's limits only.
 
 **Close outside trades** (MT5, off until you turn it on): a trade placed on your phone, the web terminal or MetaTrader's own order window can't be paused, so DisciplineGuard closes it within seconds if it goes past a rule. A missing stop loss alone gets 60 seconds to be added. Trades from other EAs are never closed.
 
-<div align="center">
-<img src="docs/pill.png" width="820" alt="The status pill on TradingView: 'On · 2 of 1 trades', today's trades and loss, Take a 15 min break, Done for today">
-</div>
+## Your platform, on your computer
 
-## Platforms
+<img src="docs/platforms.png" width="880" alt="MetaTrader 5 works with the Windows app; phone app and web terminal trades count only; Mac app not yet. TradingView, Polymarket and Kalshi work on the website in Chrome or Edge; their phone apps aren't supported. MetaTrader 4 is coming later.">
 
-| Platform | Works | Not paused | Status |
-|---|---|---|---|
-| **MetaTrader 5** | **Windows app.** The DisciplineGuard app sets MT5 up for you: no files to copy, nothing to type. Prop firm and broker accounts. | Phone app and web terminal: those trades count while MT5 runs with DisciplineGuard on a computer or VPS. Mac app: not yet. | ✅ Live |
-| **TradingView** | **Website** in Chrome or Edge, on Windows or Mac, with the browser extension. Pauses the order panel and one-click Buy/Sell. | Desktop app, phone app | ✅ Live |
-| **Polymarket** | **Website** in Chrome or Edge, same extension. Pauses Buy in the trade box (market orders). Sell is never paused. | Phone app | ✅ New |
-| **Kalshi** | **Website** in Chrome or Edge, same extension. Pauses Submit Buy and Buy with 1-Click (dollars or shares). Sell is never paused. | Phone app | ✅ New |
-| MT4, cTrader, NinjaTrader, web prop platforms | | | Planned |
+- **MetaTrader 5:** the Windows app sets MT5 up for you: no files to copy, nothing to type. Prop firm and broker accounts.
+- **TradingView:** pauses the order panel and one-click Buy/Sell.
+- **Polymarket:** pauses Buy in the trade box (market orders). Sell is never paused.
+- **Kalshi:** pauses Submit Buy and Buy with 1-Click (dollars or shares). Sell is never paused.
+
+## On a real chart
+
+<img src="docs/pause.png" width="880" alt="A TradingView Buy past the day's trade limit gets a pause: 'This would be trade 3 today. Your limit is 1.'">
 
 ## What it never does
 
@@ -75,7 +55,7 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 
 ## Get started
 
-1. Click **[Start free](https://disciplineguard.leowqiheng.workers.dev/start)**, tick where you trade (each platform, and how you trade on it) and set your rules. Sign in with Google or email to save them.
+1. Click **[Start free](https://disciplineguard.leowqiheng.workers.dev/start)**, tick where you trade and set your rules. Sign in with Google or email to save them.
 2. Connect your platform. The last step shows each one live as it connects:
    - **MT5:** download the [Windows app](https://disciplineguard.leowqiheng.workers.dev/downloads/DisciplineGuard-Setup.exe), click **Allow**, tick your MetaTrader, then **Protect**.
    - **TradingView, Polymarket or Kalshi:** [install the browser extension](https://disciplineguard.leowqiheng.workers.dev/help/tradingview) (download, unzip, *Load unpacked*), then **Sign in** and **Allow**.
@@ -84,6 +64,13 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 **Free for everyone: every rule, on 1 trading account.** TradingView Paper Trading doesn't count toward it. Plans for more accounts are coming.
 
 > The Windows app isn't code-signed yet, so Windows may say *"Windows protected your PC"* the first time. Click **More info → Run anyway**.
+
+<div align="center">
+<br>
+<a href="https://disciplineguard.leowqiheng.workers.dev/start"><img src="https://img.shields.io/badge/Start_free_→-5EEAD4?style=for-the-badge" alt="Start free" height="36"></a>
+<br><br>
+<sub>A pause before the trade that costs you. Your rules. Your call. Every time.</sub>
+</div>
 
 ---
 
