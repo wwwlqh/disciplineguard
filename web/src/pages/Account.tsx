@@ -221,7 +221,7 @@ export function AccountPage({ me, reload }: PageProps) {
 
       <div className="card">
         <div className="card-head"><h2><Icon name="key" /> Security</h2></div>
-        <p className="small muted">Signed in as {me.user.email}.</p>
+        <p className="small muted break-anywhere">Signed in as {me.user.email}.</p>
         {sessions && (
           <ul className="list">
             {sessions.sessions.map((s) => (

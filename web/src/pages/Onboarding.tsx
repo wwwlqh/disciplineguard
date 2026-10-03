@@ -338,12 +338,12 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
     await reload();
   }
 
-  /** The logo: the website's first page, or Today once the rules are saved. */
+  /** The logo: the website's first page. Once the rules are saved, the account reloads so the page opens the dashboard. */
   const home = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
     e.preventDefault();
-    if (d.applied) void finish(false);
-    else navigate('/');
+    navigate('/');
+    if (d.applied) void reload();
   };
 
   const draftMe = { ...(me ?? { time: { userResets: [nextMidnight()] } }), rules, notes: [], plan: '', popup: DEFAULT_POPUP } as Me;
@@ -354,7 +354,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
   return (
     <div className="wizard">
       <div className="wizard-top">
-        <Brand href={d.applied ? '/today' : '/'} onClick={home} />
+        <Brand onClick={home} />
         {me ? <span className="small faint">{me.user.email}</span> : <a className="small" href="/signin" onClick={(e) => { e.preventDefault(); navigate('/signin'); }}>Sign in</a>}
       </div>
       <ol className="stepper" aria-label={`Step ${d.step + 1} of ${STEPS.length}`}>

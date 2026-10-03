@@ -1,4 +1,4 @@
-// The public website (EXPERIENCE §4): one page at `/` for signed-out visitors and during setup; then `/` is Today.
+// The public website (EXPERIENCE §4): one page at `/`, where the logo leads. Signed in, its buttons open the dashboard.
 // Home, how it works (played), when each tool acts, the rules, where it works, what it never does, a real recording and pricing
 // (free, 1 account), with a live demo pause.
 import { useEffect, useState } from 'react';
@@ -43,7 +43,8 @@ function useReveal() {
   }, []);
 }
 
-export function Site({ signedIn = false }: { signedIn?: boolean }) {
+/** Signed in: "setup" until the rules are saved, then "ready". */
+export function Site({ account }: { account?: 'setup' | 'ready' }) {
   const [d, setD] = useState<ReturnType<typeof demo> | null>(null);
   const [after, setAfter] = useState('');
   const [scrolled, setScrolled] = useState(false);
@@ -55,9 +56,10 @@ export function Site({ signedIn = false }: { signedIn?: boolean }) {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const [href, label] = account === 'ready' ? ['/today', 'Open dashboard'] : account === 'setup' ? ['/start', 'Continue setup'] : ['/start', 'Start free'];
   const start = (cls = 'btn primary big') => (
-    <a href="/start" onClick={onLink} className={cls}>
-      Start free <Icon name="arrowRight" size={16} />
+    <a href={href} onClick={onLink} className={cls}>
+      {label} <Icon name="arrowRight" size={16} />
     </a>
   );
 
@@ -71,7 +73,7 @@ export function Site({ signedIn = false }: { signedIn?: boolean }) {
             <a href="#rules">Rules</a>
             <a href="#platforms">Platforms</a>
             <a href="#pricing">Pricing</a>
-            {!signedIn && <a href="/signin" onClick={onLink} className="btn ghost">Sign in</a>}
+            {!account && <a href="/signin" onClick={onLink} className="btn ghost">Sign in</a>}
             {start('btn primary')}
           </nav>
         </div>
@@ -198,7 +200,7 @@ export function Site({ signedIn = false }: { signedIn?: boolean }) {
               <span className="demo-dots"><i /><i /><i /></span>
               <span className="url">tradingview.com/chart</span>
             </div>
-            <video src="/demo-tradingview.webm" autoPlay muted loop playsInline aria-label="A Buy on TradingView past the day's trade limit gets a pause and is skipped" />
+            <video src="/demo-tradingview.mp4" autoPlay muted loop playsInline aria-label="A Buy on TradingView past the day's trade limit gets a pause and is skipped" />
           </div>
           <p className="caption">Trade 3 on a day capped at 1. Paused, skipped, nothing placed.</p>
         </div>

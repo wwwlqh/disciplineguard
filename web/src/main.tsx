@@ -56,12 +56,12 @@ function Shell({ me, reload, path }: PageProps & { path: string }) {
     if (path.startsWith('/owner') && me.user.owner) return <Owner />;
     return <Today me={me} reload={reload} />;
   })();
-  const active = (href: string) => (path.startsWith(href) || (href === '/today' && path === '/') ? 'active' : '');
+  const active = (href: string) => (path.startsWith(href) ? 'active' : '');
   const p = protection(me);
   return (
     <div className="shell">
       <aside className="side">
-        <Brand href="/today" />
+        <Brand />
         <nav className="nav" aria-label="Main">
           {NAV.map(([href, label, icon]) => (
             <a key={href} href={href} onClick={onLink} className={active(href)} aria-current={active(href) ? 'page' : undefined}>
@@ -89,7 +89,7 @@ function Shell({ me, reload, path }: PageProps & { path: string }) {
         </div>
       </aside>
       <header className="topbar">
-        <Brand href="/today" size={26} />
+        <Brand size={26} />
         <a className="chip" href="/devices" onClick={onLink}><Dot kind={p.kind} live={p.kind === 'on'} /> {p.title}</a>
       </header>
       <main>{page}</main>
@@ -132,9 +132,8 @@ function App() {
   }, [reload]);
 
   if (path.startsWith('/help')) return <Help path={path} signedIn={state === 'ready'} />;
-  // The website's first page. Signed in, `/` is Today, except during setup, where the logo leads back here.
-  const inSetup = state === 'ready' && !!me && !me.user.onboarding?.done && me.user.setupMode;
-  if (path === '/' && (state !== 'ready' || inSetup)) return <Site signedIn={state === 'ready'} />;
+  // The website's first page, signed in or not: the logo leads here. Signed in, its buttons open the dashboard.
+  if (path === '/') return <Site account={state !== 'ready' || !me ? undefined : !me.user.onboarding?.done && me.user.setupMode ? 'setup' : 'ready'} />;
   if (path === '/status') return <Status />;
   // Start free: set rules first, sign in to save them.
   if (path === '/start' && state !== 'ready') return state === 'loading' ? <div className="center-page muted">Loading…</div> : <Onboarding key="guest" me={null} reload={reload} />;

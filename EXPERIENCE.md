@@ -124,7 +124,7 @@ These rules apply to product copy about the trader or their trades.
 
 - **Desktop**: Today · Rules · Devices · Stats · Alerts · Account. Help and "Report a problem" in the header.
 - **Mobile**: bottom tabs for Today, Rules, Stats and Alerts. Devices and Account sit in a menu. Every screen works on a phone.
-- **The logo** leads home: the website's first page when signed out or during setup (Help and Status too), Today once the rules are saved.
+- **The logo** always leads to the website's first page, from every page. Signed in, the first page's buttons say "Open dashboard" ("Continue setup" before the rules are saved) instead of Sign in and Start free.
 
 ### 5.2 Sign-up and onboarding
 

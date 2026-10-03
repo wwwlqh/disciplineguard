@@ -124,7 +124,7 @@ main { padding: 34px 44px 96px; max-width: 1140px; width: 100%; }
 .bottom-tabs { display: none; }
 
 @media (max-width: 860px) {
-  .shell { grid-template-columns: 1fr; }
+  .shell { grid-template-columns: minmax(0, 1fr); }
   .side { display: none; }
   main { padding: 16px 16px 104px; }
   .topbar {
@@ -199,9 +199,14 @@ select { padding-right: 30px; appearance: none; background-image: url("data:imag
 textarea { width: 100%; resize: vertical; min-height: 84px; }
 input[type='checkbox'], input[type='radio'] { min-height: 0; width: 18px; height: 18px; accent-color: var(--accent); box-shadow: none; }
 input.narrow { width: 92px; }
-label.field { display: grid; gap: 6px; font-size: 12.5px; font-weight: 560; color: var(--muted); }
+label.field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; font-size: 12.5px; font-weight: 560; color: var(--muted); }
+/* A long option or email never widens a phone screen. */
+select { max-width: 100%; min-width: 0; text-overflow: ellipsis; }
+.page-head .sub, .break-anywhere { overflow-wrap: anywhere; }
 label.check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .switch { position: relative; width: 40px; height: 23px; flex: none; }
+/* A setting's switch stays on its right; a long name wraps instead. */
+.row.between:has(> .switch:last-child) { flex-wrap: nowrap; }
 .switch input { opacity: 0; width: 100%; height: 100%; margin: 0; position: absolute; cursor: pointer; z-index: 1; }
 .switch span { position: absolute; inset: 0; background: var(--surface-3); border: 1px solid var(--border-strong); border-radius: 999px; transition: background .2s var(--ease), border-color .2s; pointer-events: none; }
 .switch span::after { content: ''; position: absolute; left: 2px; top: 2px; width: 17px; height: 17px; background: #fff; border-radius: 50%; box-shadow: 0 1px 3px rgb(0 0 0 / 25%); transition: transform .2s var(--ease); }
@@ -488,6 +493,12 @@ table.data tbody tr:hover { background: var(--surface-2); }
   .stepper li.now { flex: 0 0 auto; }
   .stepper li.now span.l { display: inline; white-space: nowrap; }
   .stepper li.now:not(:last-child)::after { flex: 0 0 14px; }
+}
+/* The smallest phones: numbers only, as the heading below names the step; button text may wrap. */
+@media (max-width: 360px) {
+  .stepper li.now span.l { display: none; }
+  .stepper li.now { flex: 1; }
+  button, .btn { white-space: normal; text-align: center; }
 }
 .wizard-nav { display: flex; justify-content: space-between; margin-top: 26px; gap: 10px; }
 .option-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
@@ -861,7 +872,8 @@ a.chip { text-decoration: none; }
 .hero-card .devices .dot { margin-right: 6px; vertical-align: 1px; }
 @media (max-width: 860px) {
   .hero-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
-  .page-head > button, .page-head > .row { flex: none; }
+  .page-head > button { flex: none; }
+  .page-head > .row { flex: 0 1 auto; min-width: 0; }
   .checkin-actions { width: 100%; }
   .checkin-actions .primary { flex: 1; }
 }
