@@ -88,10 +88,9 @@ These rules apply to product copy about the trader or their trades.
 | MT EA: setup checklist | P1 | Shown only while something needs fixing |
 | MT EA: pause | P1 | The core moment |
 | Windows notifications | P1 | Alerts and summaries, from the Windows app. No bot to link |
-| Partner invite page (web) | P2 | Explain before Telegram |
-| Email | P1 | Sign-in, setup link, renewal, security, deletion |
+| Email | P1 | Sign-in, renewal, security, deletion |
 | Internal: page-config editor and health monitor | P1 | Fix TradingView changes |
-| Internal: support console (read-only, never shows notes) | P1 | Help users without seeing private content |
+| Internal: support console (read-only) | P1 | Help users without seeing private content |
 
 ---
 
@@ -103,7 +102,7 @@ These rules apply to product copy about the trader or their trades.
 | How it works | P1 | Right under the hero, played: Set your rules, Connect your platform, Trade as usual, beside a window where a cursor does each step (ticks two costs and saves; downloads, Allow, Protect, On; a trade within the rules goes through, the next gets the pause and is skipped). Each step plays, then the next; click one to watch it. Plays only on screen; reduced motion shows each step's key frame |
 | Pricing | P1 | Free: 1 trading account, every rule, no card. TradingView Paper Trading not counted. Paid plans for more accounts later |
 | Where it works | P1 | One card per platform, one row per way to trade on it, each marked **Works**, **Counts only**, **Not supported** or **Not yet**. MetaTrader 5: Windows app works; phone app and web terminal count only (said under the card: they count while MT5 runs with DisciplineGuard on a computer or VPS); Mac app not yet. TradingView: website in Chrome or Edge works; desktop app and phone app not supported ("Use the website instead"). Polymarket, Kalshi: website works; phone app not supported. Then "MetaTrader 4 is coming later." The top strip names each platform with its way that works. Help → Where it works and Start free's first screen show the same list (`web/src/ui/Where.tsx`) |
-| What we see | P1 | "Our code is public" with a link to the client source on GitHub (the EA, the Windows app and the rules engine; the extension once built). Two columns. "We see": counts, daily P/L totals, symbol/side/size of paused orders, broker or server name, last 3 digits of accounts. "We never see": passwords, full account numbers, other websites. Notes, plans and reasons never go to analytics or partners |
+| What we see | P1 | "Our code is public" with a link to the client source on GitHub (the EA, the Windows app and the rules engine; the extension once built). Two columns. "We see": counts, daily P/L totals, symbol/side/size of paused orders, broker or server name, last 3 digits of accounts. "We never see": passwords, full account numbers, other websites. Reasons never go to analytics or anyone else |
 | Help center | P1 | `/help`: one short article per status reason and per setup step. The EA's Help names the article for its current status |
 | Search pages | P1 | "How to stop revenge trading", and one page per major firm's daily-loss rule |
 | Comparison | P2 | Acts before the order (DisciplineGuard) vs. after the limit (lockout tools) vs. after the trade (journals) |
@@ -122,8 +121,8 @@ These rules apply to product copy about the trader or their trades.
 
 ### 5.1 Navigation
 
-- **Desktop**: Today · Rules · Devices · Stats · Alerts · Account. Help and "Report a problem" in the header.
-- **Mobile**: bottom tabs for Today, Rules, Stats and Alerts. Devices and Account sit in a menu. Every screen works on a phone.
+- **Desktop**: Today · Rules · Devices · Stats · Account in the sidebar, with the protection status and Help below. Alerts are on Account.
+- **Phone**: the same five as bottom tabs. Every screen works on a phone.
 - **The logo** always leads to the website's first page, from every page. Signed in, the first page's buttons say "Open dashboard" ("Continue setup" before the rules are saved) instead of Sign in and Start free.
 
 ### 5.2 Sign-up and onboarding
@@ -140,7 +139,7 @@ Start free opens it signed out: screens 1 to 3 need no account and the draft sta
 1. **Where do you trade?**, tick all that apply, on the website's Where it works cards (§4): each way to trade on MetaTrader 5, TradingView, Polymarket and Kalshi is a tick with its mark (Works, Counts only, Not supported, Not yet), then MetaTrader 4 ("Coming later") and Somewhere else. The MetaTrader 5 card says what Counts only means once its phone app or web terminal is ticked. Picks that can't be protected record "tell me when it's ready".
 2. **About your trading**: account type (prop challenge · funded prop · own money · demo; for prop, the firm and its daily loss limit), how you trade, usual position size in lots, and "Usual bet ($)" when Polymarket or Kalshi is picked. Only Polymarket or Kalshi: no lots and no prop types.
 3. **Your rules**: "What costs you the most?", tick all that apply (§5.3). Each ticked choice opens its rules right under it, ready to adjust; a rule shows once. "I size up after a loss" shows Max size (lots) and Max bet ($) for what was picked; each applies only to its own accounts. Max risk per trade only with MetaTrader. Below: the day reset (folded), "Tightening applies now. Loosening waits until your next day reset", [Try a pause with these rules], and [Save my rules].
-4. **Connect**: one card per way in (§5.7): MetaTrader 5 through the Windows app; TradingView, Polymarket and Kalshi through the browser extension (a site's phone or desktop app also gets this card, since its website can be paused; MetaTrader 5's phone app or web terminal gets the Windows app card, since those trades count only while MT5 runs with it). Each card's live line goes "Waiting…" → "Allowed on DESKTOP-4F2" (or Chrome) → each account and its state. One line per pick that can't be connected. On a phone: "Finish on your computer". Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
+4. **Connect**: one card per way in (§5.6): MetaTrader 5 through the Windows app; TradingView, Polymarket and Kalshi through the browser extension (a site's phone or desktop app also gets this card, since its website can be paused; MetaTrader 5's phone app or web terminal gets the Windows app card, since those trades count only while MT5 runs with it). Each card's live line goes "Waiting…" → "Allowed on DESKTOP-4F2" (or Chrome) → each account and its state. One line per pick that can't be connected. On a phone: "Finish on your computer". Below: setup mode in one line, and [Try a practice pause] [Go to Today] [Lock my rules now].
 
 ### 5.3 Starting templates
 
@@ -217,11 +216,7 @@ Top to bottom:
 - **R4 editor** accepts windows across midnight (22:00–02:00) and explains: "Fri 22:00–Sat 02:00 counts as Friday's session."
 - **Close outside trades** (SPEC §9.2), a card after the rule cards with an MT5 badge, a switch and the same verdict line: "A trade placed on your phone, the web terminal or MetaTrader's own order window that goes past a rule is closed within seconds. If a missing stop loss is the only problem, you get 60 seconds to add one. Trades from other EAs are never closed." Turning it on applies now; turning it off is scheduled. Once a change is scheduled, the switch shows what applies now.
 
-### 5.6 Plan and notes
-
-Not asked for and not edited anywhere: the trader types nothing. The pause shows a note or plan only if one exists (SPEC §5.5).
-
-### 5.7 Devices and accounts
+### 5.6 Devices and accounts
 
 - **Device rows** with their trading accounts, state (§8), last seen and version. Account rows show nickname, platform, server and last 3 digits.
 - **Add TradingView, Polymarket, Kalshi** (the browser extension, Chrome or Edge):
@@ -248,7 +243,7 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
   - Otherwise: "Removing is a loosening. It takes effect Tue 02:00. Until then this account stays protected."
 - **Cap**: "8 of 10 accounts". At the cap: "You've reached 10 accounts. Remove an account to add this one. Ended accounts are removed at once." Ended accounts are listed first.
 
-### 5.8 Stats
+### 5.7 Stats
 
 **P1**
 
@@ -257,7 +252,6 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
 - **Came-back days**: "1 trade placed anyway at 10:32, then rules kept."
 - **Coverage**, shown as information, not misconduct: trades placed outside DisciplineGuard, periods DisciplineGuard was off, orders we couldn't check, stops removed or widened.
 - An account filter and a period switch.
-- **Your baseline (MT5)**: "Before DisciplineGuard: 3.1 trades a day that would have been paused. Weeks 3–6: 1.2."
 
 **P3**
 
@@ -267,18 +261,17 @@ Not asked for and not edited anywhere: the trader types nothing. The pause shows
   - Always with the line: "Small samples swing a lot. A few trades can't show whether breaking a rule pays."
   - Never a P/L total for trades placed anyway on its own.
 
-### 5.9 Alerts (on Account)
+### 5.8 Alerts (on Account)
 
 - One line: "Shown as notifications on your computer by DisciplineGuard for Windows." Without the app: "Install it".
 - One switch per alert type, following SPEC §11.2.
 - **Summary time**: "End of trading hours, or 60 min after the last trade" (default), or a time every 30 minutes.
 - "Include amounts". "Hide amounts on screen" also hides them in alerts.
 - **Send a test**: shows a notification within a minute.
-- **Partner [P2]**: §11.2.
 
-### 5.10 Account
+### 5.9 Account
 
-- **Alerts** (§5.9).
+- **Alerts** (§5.8).
 - **Plan**:
   - status ("Free · 1 trading account · TradingView Paper Trading doesn't count", or the renewal date);
   - change plan, cancel, request a refund;
@@ -369,7 +362,7 @@ The three trust lines sit under the sign-in screen only.
 **Tray**
 - Icon dot uses the status colors (§8). The menu: status per terminal · Open dashboard · Practice pause · Protect MetaTrader · Help · Report a problem.
 - "New MetaTrader found: IC Markets MT5. [Protect]".
-- Protected terminals show no tick to untick. Under them: "To remove protection, remove the account on the website. It's a loosening, so it waits like any other. [Open Devices]" (same as removing an account, §5.7).
+- Protected terminals show no tick to untick. Under them: "To remove protection, remove the account on the website. It's a loosening, so it waits like any other. [Open Devices]" (same as removing an account, §5.6).
 - Closing the window keeps the app in the tray. Help opens the help center.
 - The trader's alerts and end-of-session summary appear as Windows notifications (§11.1).
 
@@ -427,7 +420,7 @@ When everything passes: "On. Try a practice pause."
 
 - Chart objects cannot block F9, native one-click or other charts. The pause dims the chart, and the checklist and help explain that trades placed around it still count.
 - There is no keyboard focus model. Skip this trade is visually primary, Esc skips, and Enter does nothing.
-- A compact pause (title, note, buttons) is used on narrow charts.
+- A compact pause (title, buttons) is used on narrow charts.
 - The Mac build is tested for fonts and scaling in spike Q9.
 
 ---
@@ -461,57 +454,53 @@ Rules:
 1. **Label**, small: "PAUSE · YOUR RULE".
 2. **Headline**: one line, the fact in the trader's frame (§9.2).
 3. **Other rules also affected**: at most two lines, then "+1 more".
-4. **The note**, only if one exists: the largest text, in quotes, with the attribution "you, 12 Sep".
-5. **Your plan**, only if one exists: "Your plan: close the chart for 10 minutes."
-6. **Way-out or fix line** (§9.2).
-7. **Protect-the-day line**, only when true: "Today is a kept day so far."
-8. **Situational lines**, each only when it applies:
+4. **Way-out or fix line** (§9.2).
+5. **Protect-the-day line**, only when true: "Today is a kept day so far."
+6. **Situational lines**, each only when it applies:
    - re-attempt: "You skipped this trade 40 s ago."
    - outside trade: "1 trade today was placed outside DisciplineGuard and went past a rule."
    - scheduled change: "Your change to 8 trades a day starts at 02:00."
-   - partner **[P2]**: "Sam gets a message if you place this anyway."
-9. **Today**, one quiet line of facts: "Trade 6 today · 2 losses in a row · last loss 4 min ago". It shows P/L only when the headline is the daily loss limit.
-10. **Order**: "Buy 0.50 EURUSD · SL 1.0950", with the side shown as a neutral chip.
-11. **Name it (optional)**: reason chips (§9.5).
-12. **Wait line**: a thin progress bar under the note, hidden when the wait is 0 s. When the trader turned on the growing wait and it has grown: "Wait today: 20 s. It grows with each trade placed anyway and resets at your next trading day."
-13. **Buttons**:
+7. **Today**, one quiet line of facts: "Trade 6 today · 2 losses in a row · last loss 4 min ago". It shows P/L only when the headline is the daily loss limit.
+8. **Order**: "Buy 0.50 EURUSD · SL 1.0950", with the side shown as a neutral chip.
+9. **Name it (optional)**: reason chips (§9.5).
+10. **Wait line**: a thin progress bar, hidden when the wait is 0 s. When the trader turned on the growing wait and it has grown: "Wait today: 20 s. It grows with each trade placed anyway and resets at your next trading day."
+11. **Buttons**:
     - **Skip this trade**: primary, focused, accent color.
     - **Place anyway**: secondary, disabled while waiting ("Place anyway · 0:08"). When unlocked it reads "Place Buy 0.50 EURUSD anyway".
     - **Type to confirm**, when turned on and it applies: "Type 7 to place trade 7 today" [field]. Neutral wording only.
     - **MT only**, when the fix is the only thing left: "Place at <fix> lots" (the largest size that keeps the position within the limit) or "Add stop loss".
-14. **Footer**, small: "Closing, moving SL/TP and cancelling orders are never paused. To close a position, skip first."
+12. **Footer**, small: "Closing, moving SL/TP and cancelling orders are never paused. To close a position, skip first."
 
 Never inside the pause: upsells, plan banners, surveys or ratings requests.
 
 ### 9.2 Headlines and way-out lines
 
-For R2, R3, R7 and R10, the pause does **not** show a countdown to the moment the trader can go again. That would schedule the next impulsive trade. The pause shows the plan instead. The end time is shown where the trader looks when calm: the pill, the panel details and Today. R8 does show when the rest ends, because it lasts hours.
+For R2, R3, R7 and R10, the pause does **not** show a countdown to the moment the trader can go again. That would schedule the next impulsive trade, so the pause shows the headline only. The end time is shown where the trader looks when calm: the pill, the panel details and Today. R8 does show when the rest ends, because it lasts hours.
 
 | Rule | Headline | Way-out or fix line |
 |---|---|---|
 | R1 | "This would be trade 6 today. Your limit is 5." | "Your limit resets Tue 00:00." |
-| R2 | "This would be trade 4 this hour. Your limit is 3." | Plan line only |
-| R3 | "This is your 2nd trade in 45 seconds." | Plan line only |
+| R2 | "This would be trade 4 this hour. Your limit is 3." | — |
+| R3 | "This is your 2nd trade in 45 seconds." | — |
 | R4 | "It's 13:42. Your trading hours start at 14:30." | "Your hours open at 14:30." |
 | R5 | "This would make your EURUSD position 0.80 lots. Your max is 0.50." | "Trade 0.50 lots or less." |
 | R6 | "This trade risks $220. Your max is $100." / "No stop loss, so risk can't be checked." | "0.45 lots fits at this stop." / "Add a stop loss." |
-| R7 | "Your last trade closed at a loss 4 minutes ago." | Plan line only |
+| R7 | "Your last trade closed at a loss 4 minutes ago." | — |
 | R8 | "You're down $310 today. Your daily limit is $300." | "You're done for today. Your rest ends Tue 11:10." |
 | R9 | "This trade has no stop loss." | "Add a stop loss." |
 | R10 | "This is bigger than the trade you just lost on (1.2 vs 0.8 lots)." | "Trade 0.8 lots or less." |
-| Break | "You're on a break until 10:29." | Plan line only |
+| Break | "You're on a break until 10:29." | — |
 | Done for today | "You said you're done for today." | "Your trading day resets at 00:00." |
-| Every new entry, no rule broken | "Check your plan before this trade." | Plan line only |
+| Every new entry, no rule broken | "Check your plan before this trade." | — |
 
 ### 9.3 After the decision
 
 **Skip.** If the skip card is on, it stays for 10 s or until closed:
 
 > "Trade skipped. Today is still a kept day."
-> "Your plan: close the chart for 10 minutes."
 > [Take a 15-minute break] [Done for today] [Close]
 
-The first line appears only when true.
+"Today is still a kept day." appears only when true.
 
 **Place anyway**
 
@@ -519,7 +508,7 @@ The first line appears only when true.
 - **MT**: the card closes. The panel's result line confirms the order.
 - No guilt message. The status line updates: "6 trades · limit 5".
 
-**Timeout**: "Pause closed after 2 minutes. Trade not placed. Your plan: …"
+**Timeout**: "Pause closed after 2 minutes. Trade not placed."
 
 **Hidden tab (extension)**: on return, "The countdown paused while this tab was in the background."
 
@@ -550,7 +539,7 @@ The first line appears only when true.
 
 ### 9.7 Accessibility (extension and web)
 
-- Announced as a modal alert dialog, labelled by the headline and described by the note.
+- Announced as a modal alert dialog, labelled by the headline.
 - Focus stays inside and starts on Skip this trade. Esc skips.
 - The countdown is announced at the start ("Place anyway available in 15 seconds") and at unlock, never every second.
 - Text contrast at least 4.5:1, button boundaries 3:1, and a visible focus ring that does not rely on TradingView's styles.
@@ -560,16 +549,12 @@ The first line appears only when true.
 ### 9.8 The pause on MT
 
 - The same hierarchy, drawn on canvas, with a solid backdrop.
-- The compact form (headline, note, buttons) is used on narrow charts.
+- The compact form (headline, buttons) is used on narrow charts.
 - The fix buttons appear when the size or SL fix is the only thing left.
 
 ### 9.9 Session check-in [P2]
 
-The first time a device is On in a trading day, an optional, dismissible card offers:
-
-- "How are you arriving? Rested · Tired · Stressed · Upset". Saved only with the same consent as reasons.
-- "Tighten for today only: stop after [3] trades · pause after −$[150]". It applies now and reverts at the next reset. It is never looser than the locked rules.
-- Tired, Stressed or Upset suggests one tighten. The check-in never blocks anything.
+Once a device is connected, Today offers an optional card, dismissible for the trading day: "Tighten for today only: stop after [3] trades · pause after a loss of [150]". It applies now and reverts at the next reset. It is never looser than the locked rules, and it never blocks anything.
 
 ---
 
@@ -579,7 +564,7 @@ The first time a device is On in a trading day, an optional, dismissible card of
 |---|---|
 | Setup mode | A banner on Today, Rules, the pill and the EA details: "Setup mode: changes apply instantly until you lock your rules (on their own at Fri 00:00)." |
 | 24 h before the automatic lock | Email and Today: "Your rules lock at Fri 00:00. Review them now." |
-| Lock my rules | A sheet listing each rule in plain words, the plan and the notes. A live example: "If you raise 5 trades to 8 today at 15:00, the change starts Wed 03:00." A checkbox: "I understand loosening waits until my next day reset, or 12 hours if that's later." The trader types their first name, then presses [Lock my rules]. Copy: "Setup mode happens once." Afterwards: "Locked by Alex on 12 Sep, 09:14." |
+| Lock my rules | A sheet listing each rule in plain words. A live example: "If you raise 5 trades to 8 today at 15:00, the change starts Wed 03:00." A checkbox: "I understand loosening waits until my next day reset, or 12 hours if that's later." The trader types their first name, then presses [Lock my rules]. Copy: "Setup mode happens once." Afterwards: "Locked by Alex on 12 Sep, 09:14." |
 | Tighten | "Tighter. Applies now." → toast "Applied. Your devices pick it up at their next sync, within 5 minutes." |
 | Loosen | Verdict with the exact time → [Schedule change] → toast "Scheduled for Tue 02:00. Cancel anytime." → a scheduled chip on the card, Today, the pill panel and the EA details |
 | Cancel a scheduled change | "Cancelled. Your current rule stays." |
@@ -588,73 +573,29 @@ The first time a device is On in a trading day, an optional, dismissible card of
 
 ---
 
-## 11. Alerts and partner
+## 11. Alerts
 
 ### 11.1 Trader alerts (Windows notifications)
 
 | Alert | Message |
 |---|---|
 | Daily loss limit reached | "Daily loss limit reached on FTMO …123: −$310 of $300. New trades are paused until Tue 11:10." |
-| Outside trade went past a rule | "A trade placed on MT mobile went past 'Max trades per day'. It counts toward today." |
-| Outside trade closed (Close outside trades) | "A trade placed on mobile went past 'Max trades per day'. DisciplineGuard closed it." |
-| Outside trade couldn't be closed | "A trade placed on mobile went past 'Max trades per day', and DisciplineGuard couldn't close it (Market is closed). Close it in MetaTrader." Sent at once, never held for a roll-up |
+| Outside trade went past a rule | "A trade placed on your phone went past 'Max trades per day'. It counts toward today." |
+| Outside trade closed (Close outside trades) | "A trade placed on your phone went past 'Max trades per day'. DisciplineGuard closed it." |
+| Outside trade couldn't be closed | "A trade placed on your phone went past 'Max trades per day', and DisciplineGuard couldn't close it (Market is closed). Close it in MetaTrader." Sent at once, never held for a roll-up |
 | DisciplineGuard was off | "DisciplineGuard was off on …123 from 14:02 to 16:40. 2 trades were placed then." |
 | Account moved to another login | "Account …123 was connected to another DisciplineGuard login. If that wasn't you, sign in and check Devices." |
 | Orders we couldn't check | "We couldn't check 4 of your orders today because the Account Manager was closed. How to fix: <link>" |
 | End-of-session summary | "Today: 4 trades · 1 pause · 1 skipped · rules kept." After a day that wasn't kept, it ends with "New trading day. Same rules." |
-| **[P2]** Reflection | "How did today go? [On plan] [Mostly] [Not really]", then "One line for tomorrow's you?" The reply becomes the first note shown tomorrow |
 
 Each alert is a title and one or two lines, e.g. "Daily loss limit reached" / "FTMO …123: −$310 of $300. New trades are paused until Tue 11:10."
-
-### 11.2 Accountability partner [P2]
-
-**Trader side** (Alerts → Add a partner):
-
-- The trader enters their own name as the partner will see it, and the partner's name.
-- A preview shows every message type.
-- A "Share amounts" switch, off by default.
-- A note: "Your notes, plan and reasons are never shared."
-- The trader gets an invite link to share.
-- Status shows: Invite sent · Waiting for your confirmation · Active · Left.
-
-**Invite page (web)**, before Telegram:
-
-- who invited them;
-- DisciplineGuard in two lines;
-- the exact message list;
-- how to get Telegram;
-- [Open in Telegram], with a fallback code for when the link is lost during install.
-
-**Consent in Telegram**:
-
-> "Alex asked you to be their trading accountability partner. You'll get a short message when Alex reaches their daily loss limit, places a trade anyway after it, turns DisciplineGuard off or trades while it's off, connects their account to another login, takes a break of 1 to 30 days, has their plan end or refunded, has a support change made to their account, or asks to delete their account. Other trades placed anyway, trades placed outside DisciplineGuard that went past a rule, and stops removed or widened come in one summary after Alex's session. You won't see amounts. We store your Telegram ID and the name Alex gave you, only to send these messages. You must be 18 or older. Quiet hours: 22:00–08:00, Alex's time (you can change this). Privacy: <link>."
-> [Accept] [No thanks]
-
-The line about amounts changes if the trader shares them. After Accept, the trader sees the partner's Telegram name and @handle and taps Confirm before alerts start.
-
-**Tone** of real-time messages: factual, no counts.
-
-> "Alex placed a trade anyway after reaching their daily loss limit. No need to reply now. If you talk later, asking how the day went helps more than advice."
-
-Every message has two buttons:
-
-- [What does this mean?]: "You don't need to do anything now. A calm check-in later helps more than a call during trading."
-- [Quiet hours].
-
-A [Stop] button is always available.
-
-**Quiet hours**: messages held during quiet hours arrive as one message with their times: "While quiet hours were on: 23:40 …, 00:15 …".
-
-**Digest**, after the trader's session: "Alex's session: 2 trades placed anyway (max trades per day). Rules kept 4 of 5 trading days this week."
-
-**Ending**: the messages in SPEC §11.4. Removal and "stop sharing amounts" apply immediately. The partner is told.
 
 ---
 
 ## 12. Take a break for 1, 7 or 30 days [P2]
 
 - From Account. Every new trade is paused with a 45 s wait and type to confirm.
-- It can't be shortened. The partner is told.
+- It can't be shortened.
 
 ---
 
@@ -736,7 +677,6 @@ The icon: two candlesticks that read as a pause, on a mint-to-blue tile. `web/pu
 ### 14.3 Typography
 
 - One sans-serif family (for example Inter), bundled. Tabular numerals for figures.
-- A humanist serif for the note only, so "your voice" looks different from system text.
 - MT: system fonts drawn on canvas.
 
 ### 14.4 Components
@@ -746,7 +686,6 @@ The icon: two candlesticks that read as a pause, on a mint-to-blue tile. `web/pu
 - **Status and devices**: status dot and pill, device row, checklist item (done, pending, blocked + fix).
 - **Feedback**: banner (setup mode, billing, offline, coverage), toast with actions, sheet and confirmation dialog.
 - **Data display**: meter (x of y), stat tile, empty state.
-- **Alerts**: partner message preview.
 
 ### 14.5 Localization readiness
 
@@ -769,22 +708,7 @@ WCAG 2.2 AA for the website, the web app and the extension, with documented exce
 ## 15. Support
 
 - **Help center**: one short article per status reason and setup step.
-- **Report a problem**, from the web app, the pill, the toolbar popup and the EA menu:
+- **Report a problem**, on Account (the EA menu points there):
   - Types: "This order should not have been paused" · "This order should have been paused but wasn't" · Setup · Billing · Other.
-  - Automatically attached: client type and version, config version, self-test results, status history for the last 24 h, recent event types without values, browser and OS or MT build, hedging or netting, last error codes.
-  - A preview shows exactly what will be sent. Notes, plans and reasons are never attached.
+  - Attached: each device's kind, version, status and last seen, and the browser. Never reasons, trades or amounts.
 - **Support policy**: support can't unlock rules, apply scheduled changes early, or reopen setup mode (SPEC §1.5).
-
----
-
-## 16. Experience metrics
-
-| Metric | Definition |
-|---|---|
-| Onboarding completion | Sign-up → a device On and rules locked |
-| Setup success per platform | Started connecting → On |
-| Setup failure points | Which checklist item or step fails most |
-| Self-serve setup | Reached On with no support contact |
-| Practice pause rate | Users who ran one before their first real pause |
-| Added delay | Extra delay on trades with no pause (SPEC §14) |
-| Support rate | Problem reports per 100 active users, by type |

@@ -18,11 +18,10 @@ A confirmed breach of safety invariants 1–3 stops feature work until it is fix
 - Web app: onboarding, Today, Rules, Devices, Stats, Account, owner dashboard.
 - MT5 EA: panel, the full pause system (SPEC §7), status line, setup checklist.
 - Windows app: sign in with Allow, find and Protect terminals, the file bridge, auto-update of the app and the EA (SPEC §9.5).
-- Early-bird checkout: $79 a year, offered when the trial ends.
 - Help center: one short article per status line and setup step; the EA, the tray and Devices link to it.
 
 **Left**
-- First release: code signing and the release workflow (the founder adds the secrets, clients/windows/README.md).
+- Code signing, so Windows shows no warning (the founder adds the Azure secrets, clients/windows/README.md). Releases already publish unsigned.
 
 ## Phase 1B: TradingView and self-serve
 
@@ -61,7 +60,7 @@ Independent bets, in the order the founder picks.
 
 | Bet | What it is |
 |---|---|
-| Discipline report | Worst days, limit overshoots and size vs. plan, after a minimum sample (EXPERIENCE §5.8) |
+| Discipline report | Worst days, limit overshoots and size vs. plan, after a minimum sample (EXPERIENCE §5.7) |
 | Prop firm mode | Firm presets the user confirms, distance to breach, equity-based and trailing drawdown |
 | Stronger enforcement | Opt-in hard lock after the daily limit, loosening delays of 3 or 7 days, a "day off" rule, "pause after giving back 50% of today's peak profit". Shipped first (2 Oct 2026): Close outside trades on MT5 (SPEC §9.2) |
 | More TradingView paths | DOM ladder, chart trading, dragging order lines |

@@ -39,28 +39,26 @@ This spec uses precise internal terms. Users see the words in EXPERIENCE.md §2.
    - or, only when the user turned on keyboard place anyway (§7.3), typing PLACE and pressing Enter.
 
    When the trader turned on type to confirm (§7.2) and it applies, it comes first. A single key press never places, and nothing continues automatically.
-6. **Symbols, prices, sizes, P/L amounts, notes, plans, reason tags and free-text onboarding answers never reach analytics, partners or coaches.**
-   - P/L amounts reach a partner only when the trader turns on "Share amounts with partner".
+6. **Symbols, prices, sizes, P/L amounts and reason tags never reach analytics or anyone else.**
 7. **A client that has synced at least once keeps enforcing its saved rules** when the network fails, when its web access is blocked, or when the server rejects it. Enforcement ends only in the cases listed in §10.5.
 
 Any confirmed breach of invariants 1–3 stops feature work until it is fixed (PHASES.md).
 
 ### 1.4 Threat model
 
-DisciplineGuard adds friction. It is not a lock. The design goal is that every way around it is **slow** (it waits like a loosening) or **visible** (it shows on Today, in the daily summary, and to the partner from Phase 2).
+DisciplineGuard adds friction. It is not a lock. The design goal is that every way around it is **slow** (it waits like a loosening) or **visible** (it shows on Today and in the end-of-session summary).
 
 Known paths that are neither slow nor visible, accepted and stated on the Platforms page:
 
 - Trading in TradingView Desktop, TradingView mobile, an incognito window, another browser profile or a browser without the extension. These are partly caught later (§10.6), when TradingView's history is readable.
 - A patched EA, a modified extension or a modified Windows app. The client source is public (PHASES.md), so this path is known, not hidden.
 - Closing the DisciplineGuard Windows app. This is not a bypass: the EA keeps enforcing its saved rules and shows **On (offline)** (§9.5). It is visible on Today as an offline period.
-- A partner who is the trader's own second Telegram account.
 
 ### 1.5 Support and admin policy
 
 - Support never activates a scheduled change early, never reopens setup mode, never loosens or disables a rule, and never changes the account email outside the two-address flow (§10.9).
 - The only exception is undoing changes made by a session the user reports as not theirs.
-- Every admin write is logged and emailed to the user, and from Phase 2 also sent to the partner.
+- Every admin write is logged and emailed to the user.
 - The help center states this policy.
 
 ---
@@ -86,14 +84,11 @@ Known paths that are neither slow nor visible, accepted and stated on the Platfo
 | **Place anyway** | The trader places the entry after the countdown. Counts as an override. |
 | **Placed-anyway count** | Place-anyway decisions plus outside violations in the current trading day. Drives the growing wait and type to confirm, when the trader turned them on (§7.2). |
 | **Re-attempt** | A guarded entry on the same symbol and side within 3 minutes of a skip. |
-| **Held pause** | A pause (skip or timeout) followed by no rule-breaking entry, guarded or outside, on any symbol, for 30 minutes. |
 | **Kept day** | A trading day with at least one entry or pause, no place-anyway, no outside violation, and no protection-off period with entries. |
 | **Setup mode** | The single period after sign-up when every rule change applies immediately (§6.1). |
 | **Lock** | The end of setup mode, by the user or automatically. |
 | **Protection state** | On, On (offline), Setting up, Needs attention, Off, Not running. Defined in EXPERIENCE.md §8. |
 | **Coverage** | Time intervals during which a connection was running and enforcing for a trading account (§10.6). |
-| **Activated user** | At least one connection reached On, and rules are locked. |
-| **Retained user** | An activated user with a guarded entry or a pause on at least 2 different days, in days 8–14 after activation. |
 
 ---
 
@@ -209,7 +204,6 @@ Otherwise the last value stays. The value is stored per broker server.
 - They pass without evaluation and are logged.
 - When the Account Manager or an order confirmation later shows that such an order opened or added to a position, it is counted and evaluated as an outside entry (§8.2).
 - The trader sees "Orders we couldn't check" on the pill, Today and in stats, with the fix "Open the Account Manager once today".
-- Unclassified orders are **never** reported to the partner. They describe a product limit, not the trader's behavior.
 
 ---
 
@@ -317,10 +311,6 @@ TradingView (Beta):
 
 When several rules are violated, the pause lists all of them. The title uses the first in this order: done for today, break, R8, R7, R10, R1, R2, R3, R4, R6, R5, R9. Breaks are returned as `BREAK` and done for today as `DONE_TODAY` (§6.5).
 
-### 5.5 Notes and plan
-
-Not asked for: the trader types nothing during setup. `note:1`–`note:3` and `plan` stay optional settings (none by default), and the pause shows them only when set.
-
 ---
 
 ## 6. Rule-change protection
@@ -362,13 +352,9 @@ Every change is compared with the **active** value. If a change is not clearly s
 | Popup: wait after a loss, growing wait, type to confirm | Turn on, or trigger sooner | Turn off, or trigger later |
 | Popup: skip card | Turn on | Turn off |
 | User timezone, any day reset | Never counted as stricter | Always looser |
-| Note or plan: add | Now | — |
-| Note or plan: edit or delete | — | Looser |
 | "Count the same trade on several accounts once", "copies" magic numbers | Turn off, or remove | Turn on, or add |
 | Close outside trades (§9.2) | Turn on | Turn off |
 | Keyboard place anyway (accessibility, §7.3) | Turn off | Turn on |
-| Partner: add | Now | — |
-| Partner: remove, or turn off "Share amounts" | **Now, with a final message to the partner** (§11.4). This is a privacy right and is never delayed | — |
 | Remove a trading account | Now, if the account is **Ended** (§10.7) | Otherwise looser. It stays enforced and keeps its slot until `effective_at` |
 | Remove a connection | — | Looser (except a connection whose accounts are all Ended) |
 | Connect a new connection or trading account | Now | — |
@@ -406,7 +392,7 @@ These are always stricter and apply immediately. They can never be shortened or 
 | Take a break | After a skip, on Today, pill, EA menu | Every entry is paused for 15 minutes. Title: "You're on a break until 10:29." |
 | Done for today | After a skip, on Today, pill, EA menu | Every entry is paused until the next user day reset |
 | **[P2]** Tighten for today | Session check-in (EXPERIENCE.md §9.9) | A temporary lower R1 or R8 value until the next reset. It is never looser than the locked rules |
-| **[P2]** Take a break for 1, 7 or 30 days | Account | Every entry is paused with a 45 s wait and type to confirm (§7.2), and the partner is told |
+| **[P2]** Take a break for 1, 7 or 30 days | Account | Every entry is paused with a 45 s wait and type to confirm (§7.2) |
 
 Place anyway still works during a break or "done for today". Invariant 5 and "friction, not a lock" hold.
 
@@ -432,7 +418,7 @@ The pause is a reminder popup, and every trader sets it to their own style. Ther
 | **Skip card** | On or off (§7.4) | On |
 
 - **Wait used**: the larger of the wait and, when it applies, the wait after a loss, plus the growing-wait step × `placed_anyway_count`, capped at the growing-wait cap.
-- **Every new entry**: when no rule is broken, the popup shows the trader's note and plan with the headline "Check your plan before this trade." It is logged as a pause with no rule ids.
+- **Every new entry**: when no rule is broken, the popup's headline is "Check your plan before this trade." It is logged as a pause with no rule ids.
 - **Re-attempt**: the wait is at least as long as the previous pause for that symbol and side.
 - **Breaks** (§6.5) use their own wait and type to confirm, whatever these settings say.
 - Extension: the countdown and the timeout run only while the tab is visible.
@@ -453,7 +439,7 @@ The pause is a reminder popup, and every trader sets it to their own style. Ther
 
 ### 7.4 After the decision
 
-- **Skip**: if the skip card is on (§7.2), it stays for 10 s or until closed. It shows the plan and two actions: **Take a break** and **Done for today** (§6.5).
+- **Skip**: if the skip card is on (§7.2), it stays for 10 s or until closed. It shows two actions: **Take a break** and **Done for today** (§6.5).
 - **Place anyway, MT**:
   - Right before sending, the EA checks that the SL is still valid (correct side of price, outside the stops level).
   - If the SL is invalid, it shows the reason (its own check, or the broker's reply) on the panel's result line. There is no second pause and no automatic change.
@@ -482,7 +468,7 @@ The extension never clicks TradingView's controls for the trader. It MUST NOT di
 
 ### 7.6 Practice pause
 
-- It uses the real notes, plan and rule wording, with a fake order and a "Practice" label.
+- It uses the trader's own rules and wording, with a fake order and a "Practice" label.
 - It is never counted, never logged as a pause, and never alerted.
 - It is available in onboarding, the toolbar popup, the pill, the EA menu and Today.
 
@@ -602,8 +588,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 **Basics**
 
 - Manifest V3.
-- Host permissions: `https://www.tradingview.com/*` and the DisciplineGuard API. The content script matches only `https://www.tradingview.com/chart/*`.
-- Content scripts match only those pages.
+- Host permissions: `https://www.tradingview.com/*`, `https://polymarket.com/*` and the DisciplineGuard API. Content scripts match only `https://www.tradingview.com/chart/*`, `https://polymarket.com/*` and `https://kalshi.com/*`.
 - All code is bundled: no remote scripts, no `eval`.
 
 **Timers**: sync, heartbeat, alerts and self-tests use `chrome.alarms`, every minute.
@@ -665,16 +650,15 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 **Protection-off signals**
 
-- `chrome.runtime.setUninstallURL` points to `/v1/uninstalled?i=<install_id>&s=<uninstall_secret>`. The install id is random and linked at sign-in; the uninstall secret is a separate 128-bit value (§10.9).
-- When `chrome.permissions.onRemoved` fires, or when the check at each alarm finds the TradingView host permission gone, the extension sends protection-off with reason `site_access_removed` and shows **Off** on its badge.
-- Sign-out sends protection-off and waits for the server to acknowledge it. Without server contact, the sign-out is queued: the extension keeps enforcing and shows "Signing out when back online".
+- Sign-out sends protection-off for each of its connections (best effort), then forgets its tokens.
+- Signing in as another person sends protection-off with reason `switched_login` for the old person's connections first.
 
 **Sign-in**
 
 - The same Allow as the Windows app (§9.5): the extension opens `/allow?ext=<its id>&challenge=<PKCE>`, the trader presses Allow, and the web app hands the single-use code to that extension id (`externally_connectable` lists only the web app origin, and the extension checks the sender origin). The extension redeems it at `POST /v1/auth/desktop` with its verifier.
 - Each TradingView broker account seen on a chart is protected at once, like a new MT login after Protect: the extension registers it at `POST /v1/desktop/terminals` (kind `tv`) and gets a device token for it.
 - The tokens live in the service worker's IndexedDB, never in content scripts.
-- The Phase 2 public listing is **the same store item** as the Phase 1 unlisted one. The web app keeps both the Chrome and the Edge extension ids.
+- There is no store listing: each release publishes the extension zip, and Help → Install the browser extension covers Load unpacked.
 
 ### 9.2 MT5 EA
 
@@ -739,7 +723,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 **Connection changes**
 
 - A new MT login in a protected terminal shows "New account on this terminal: <server> …456. Protect it? [Protect]". Connecting it is immediate.
-- When the Windows app signs in as another DisciplineGuard user, it first sends protection-off with reason `switched_login` for the old user's connections and waits for the server to acknowledge it. Without server contact, the switch is refused. The old user's 90-day upload consent is cleared.
+- When the Windows app signs in as another DisciplineGuard user, it first sends protection-off with reason `switched_login` for the old user's connections and waits for the server to acknowledge it. Without server contact, the switch is refused.
 - A new connection id from the app (a reinstall or another login) replaces the EA's saved cache, so one user's rules never apply under another.
 
 **Heartbeat**: part of every sync call. The EA syncs every 60 s while active and every 300 s while idle (§10.3).
@@ -769,7 +753,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 - Only buttons and the code field are native objects.
 - Pixel sizes are scaled by `TERMINAL_SCREEN_DPI / 96`, times the panel scale.
 - When a pause opens, its objects are recreated so they draw above other indicators' objects.
-- A compact pause (title, note, buttons) is used when the chart is narrower than the full card.
+- A compact pause (title, buttons) is used when the chart is narrower than the full card.
 - Light or dark palette from `CHART_COLOR_BACKGROUND`.
 
 ### 9.3 MT4 EA
@@ -789,7 +773,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 **Why it exists.** Only something running inside MT can pause an MT order, so the EA stays. The Windows app removes the EA as a setup task: the trader signs in, clicks Allow, ticks the terminals to protect, and never copies a file, changes an MT setting or types a code.
 
-**What the trader does** (EXPERIENCE.md §5.7):
+**What the trader does** (EXPERIENCE.md §5.6):
 1. Downloads `DisciplineGuard-Setup.exe` from the web app and runs it.
 2. Signs in: the app opens the web app in the browser, which shows "Allow DisciplineGuard on this computer? [Allow]". This is the extension's sign-in pattern (§9.1): a single-use code exchanged with PKCE at `POST /v1/auth/desktop`.
 3. Sees every MT5 terminal on the computer, all ticked, and presses **Protect**.
@@ -805,9 +789,9 @@ A trader installs at most one thing per kind of platform, never one per platform
 - Marks the terminal protected. The EA's first sync then reaches the app, which registers the terminal and its account (`POST /v1/desktop/terminals`) and passes the reply back.
 
 **The bridge** (EA ↔ app), in `%APPDATA%\MetaQuotes\Terminal\Common\Files\DisciplineGuard\<terminal id>\`:
-- `out.txt`: one request from the EA, `<seq> <path>` then the JSON body. Only `/v1/sync` and `/v1/baseline` are forwarded.
+- `out.txt`: one request from the EA, `<seq> <path>` then the JSON body. Only `/v1/sync` is forwarded.
 - `in.txt`: the reply, `<seq> <HTTP status>` then the body. The signed rules inside are verified by the EA with Ed25519 (§10.5), so editing the file has no effect.
-- `app.txt`: the app heartbeat (time, state, connection id, masked email, baseline consent). `ea.txt`: the EA heartbeat, every 15 s, with `algo_on` or `algo_off`.
+- `app.txt`: the app heartbeat (time, state, connection id, masked email). `ea.txt`: the EA heartbeat, every 15 s, with `algo_on` or `algo_off`.
 - Every file is written to a temp name and renamed, so neither side reads half a file.
 - The EA touches these files only on its timer, never while a pause is open and never in a click handler. Invariant 3 holds with no special network rules.
 
@@ -821,7 +805,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 - An MT5 installed later shows a tray notice: "New MetaTrader found: IC Markets MT5. Protect it? [Protect]".
 
 **Protection-off signals**
-- Removing protection from a terminal is a loosening and waits like any removal (§10.6, EXPERIENCE.md §5.7): the app links to Devices, and keeps serving the terminal until the server reports it removed. Uninstalling the app is a protection-off signal (`uninstalled`). The uninstaller sends protection-off and removes the EA only after the server acknowledges it (a 200 or 410; a 401 means a stale token, not an acknowledgement). The EA file goes even while MT is open, so MT drops it at the next start. Without server contact it leaves the EA in place and says so.
+- Removing protection from a terminal is a loosening and waits like any removal (§10.6, EXPERIENCE.md §5.6): the app links to Devices, and keeps serving the terminal until the server reports it removed. Uninstalling the app is a protection-off signal (`uninstalled`). The uninstaller sends protection-off and removes the EA only after the server acknowledges it (a 200 or 410; a 401 means a stale token, not an acknowledgement). The EA file goes even while MT is open, so MT drops it at the next start. Without server contact it leaves the EA in place and says so.
 - Removing the EA from a chart by hand queues protection-off, which the app sends; a stale `ea.txt` also shows it.
 
 **Later platforms.** The same app installs the MT4 EA, and later cTrader cBots and NinjaTrader add-ons, each as its own adapter (§9.0).
@@ -832,8 +816,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 ### 10.1 Stack
 
-- Cloudflare Workers on the Paid plan, with D1 as the database and Queues for outgoing messages.
-- The web app runs on Cloudflare Pages.
+- One Cloudflare Worker with D1 as the database. It also serves the web app's static files, on the same origin as the API.
 - Durable Objects are not needed. D1 serializes writes, so first-writer values and conditional updates are single atomic statements.
 - Sync reads from the D1 primary, or through a session bookmark, never from a lagging replica.
 
@@ -842,15 +825,10 @@ A trader installs at most one thing per kind of platform, never one per platform
 - A cron trigger every 5 minutes runs due rows from `jobs(id, kind, run_at, payload, done_at)`. Each job is idempotent and marked done in the same batch.
 - Job kinds:
   - setup-mode auto-lock and its notice;
-  - scheduled deletion, account removal and connection removal;
-  - renewal emails;
-  - plan state changes;
-  - end-of-session summaries (keyed by user and trading day);
-  - partner digests;
-  - quiet-hours release;
-  - retention purges.
-- Pending rule changes need no job (§6.4).
-- Alert roll-ups, protection-off checks and end-of-session summaries run as jobs (§11.2).
+  - scheduled account deletion;
+  - yearly renewal reminders;
+  - alert roll-ups, protection-off checks and end-of-session summaries, keyed by user and trading day (§11.2).
+- Retention purges (§13.3) run on every cron. Pending rule changes and removals need no job (§6.4).
 
 ### 10.3 Sync
 
@@ -870,15 +848,15 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /v1/auth/email` | Request a sign-in email (link + 6-digit code) |
-| `POST /v1/auth/extension` | Exchange a web-app code for an extension token (PKCE) |
-| `POST /v1/auth/desktop` | Exchange a web-app code for a Windows app token (PKCE) |
-| `POST /v1/desktop/terminals` | The Windows app registers a terminal the trader ticked and gets its device token |
+| `POST /v1/auth/email`, `POST /v1/auth/verify` | Request a sign-in email (link + 6-digit code), and redeem it |
+| `GET /v1/auth/google` | Continue with Google (OAuth with PKCE) |
+| `POST /v1/auth/desktop` | Exchange a web-app code for a Windows app or extension token (PKCE) |
+| `POST /v1/desktop/terminals` | The Windows app registers a terminal the trader ticked (the extension: a broker account) and gets its device token |
 | `POST /v1/sync` | Events, heartbeat, and the full sync response |
-| `GET /v1/tv-config` | The signed page config |
-| `GET /v1/uninstalled` | Target of the extension's uninstall URL |
-| `POST /v1/desktop/alerts` | The Windows app fetches the trader's alerts after its cursor (app token, §11.1) |
-| Web app API | Rules, notes, settings, connections, stats, alerts, partner, plan, export, delete |
+| `POST /v1/desktop/alerts` | The Windows app and the extension fetch the trader's alerts after their cursor (app token, §11.1) |
+| `GET /tv-page.json` | The signed page config, a static file |
+| `POST /v1/webhooks/lemonsqueezy` | The payment provider's signed webhook |
+| Web app API (`/api/*`) | Rules, settings, connections, today, stats, alerts, plan, export, delete |
 
 ### 10.5 Offline and failure behavior
 
@@ -913,8 +891,8 @@ A trader installs at most one thing per kind of platform, never one per platform
 - Only the server decides protection-off status and sends alerts. Two EAs therefore never both alert.
 - Protection-off is **visible by default** from Phase 1:
   - Today and the end-of-session summary list every protection-off period and every connection not seen during the user's trading hours;
-  - from Phase 2, the partner is alerted when protection stays off for 30 minutes, or when entries are placed while it is off (§11.2).
-- **Removing the EA or uninstalling** sends protection-off at once (best effort). The partner alert waits 10 minutes for that user's accounts to be covered again, to avoid false alarms after a reinstall.
+  - the trader is alerted when protection stays off, or when entries are placed while it is off (§11.2).
+- **Removing the EA or uninstalling** sends protection-off at once (best effort). The alert waits 10 minutes for that user's accounts to be covered again, to avoid false alarms after a reinstall.
 - **Same account under another login**: account numbers aren't secret, so claiming one proves nothing. When a trading account's HMAC is connected under user B while it is connected, or pending removal, under user A:
   - while it is live under A (not Ended, §10.7), B is refused: state `taken`. A keeps protection and is not told. B's EA says "Off · This account is on another DisciplineGuard login", the TradingView pill "Off · On another login", with the help article `account-taken`;
   - once it has Ended under A (no heartbeat or entries for 3 full trading days), it moves to B. A gets email, an alert and a Today notice: "Account …123 was connected to another DisciplineGuard login", and A's coverage for it ends then.
@@ -935,7 +913,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 - `connection` n–m `trading_account` (platform, `server_hash`, `account_hash`, `last3`, nickname, firm, R8 reset, state), through `seen_by(first_seen, last_seen)`.
 - `rule_setting` (user or account scope, `active_value`, `pending_value`, `effective_at`, `set_at`).
 - `event` (deterministic or random id, `client_seq`, type, times, payload per §7.7).
-- `coverage`, `jobs`, `plan`, `partner`, `alert_channel`, `session`, `audit_log`.
+- `coverage`, `jobs`, `alerts`, `session`, `audit_log`.
 
 ### 10.9 Security
 
@@ -950,7 +928,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 **Web sessions**
 
 - Account lists web sessions with "Sign out all". Signing out web sessions does not revoke connections.
-- Every change to a protected setting, note, plan, alert channel or connection emails the account address within 1 minute: what changed, when, browser and OS, and "Not you? Sign out all web sessions".
+- Every change to a protected setting or connection emails the account address within 1 minute: what changed, when, browser and OS, and "Not you? Sign out all web sessions".
 - Export needs a sign-in within the last 10 minutes and is delivered as an emailed link.
 - Changing the account email needs confirmation from both addresses. The old address gets a 7-day undo link.
 
@@ -965,21 +943,9 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 - Bound to one connection. They may call only `/v1/sync`, receive only their own accounts' figures, and are limited to 120 events per minute in batches of at most 100.
 
-**Partner [P2]**
-
-- Partner invites: single use, valid 7 days.
-- Both work only in private chats. The partner's chat can never be the trader's own chat.
-
-**Uninstall URL**
-
-- It carries only a random install id and a separate 128-bit uninstall secret.
-- The endpoint records a candidate uninstall. It confirms it only if, within 10 minutes, no heartbeat arrives from that install or from any other extension connection of the same user covering the same trading accounts.
-- Each install id is accepted once. The endpoint is rate-limited per IP.
-- The page sends `Referrer-Policy: no-referrer` and loads no third-party scripts.
-
 **Release integrity** (before the first beta install)
 
-- Hardware-key two-factor authentication on the store developer account, Cloudflare, the domain registrar, the payment provider and the email provider.
+- Hardware-key two-factor authentication on Cloudflare, the domain registrar, the payment provider and the email provider.
 - Dependencies pinned with a lockfile and reviewed on update.
 - The Windows app and its installer are code-signed. The app checks every EA build against a signed release manifest before copying it.
 - The EA reports its build hash when it connects, and the server warns about unknown builds.
@@ -988,7 +954,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 - Health events, sync errors and diagnostics contain only check ids, error codes, versions and times.
 - They never contain account names or numbers, page text, query strings or tokens.
-- Worker logs never record request bodies or query strings for auth, the Windows app sign-in, or uninstall.
+- Worker logs never record request bodies or query strings for auth or the Windows app sign-in.
 
 ---
 
@@ -998,56 +964,32 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 - **Windows notifications**: the server decides every alert and queues it. Each DisciplineGuard for Windows signed in to the user fetches new ones every 30 seconds (`POST /v1/desktop/alerts`) and shows them as Windows notifications. Nothing to link or install. A new install starts from the latest alert and doesn't replay old ones. Alerts are kept 7 days, and one older than 24 hours is never shown.
 - **TradingView [with the extension]**: the extension shows the same alerts as browser notifications.
-- **MT push to the phone (later, optional)**: only for traders who already set a MetaQuotes ID in MT. Never a setup step.
 - **Email**: transactional only (§12.7).
 - SMS is out of scope.
 
 ### 11.2 What is sent
 
-| Event | Trader (default) | Partner **[P2]** |
-|---|---|---|
-| R8 limit reached | On | Real time |
-| Placed anyway after R8 was reached | On | Real time |
-| Protection off for 30 minutes (10 minutes after a confirmed uninstall or EA removal), or entries placed while it was off | On | Real time |
-| Account connected to another DisciplineGuard login | On (also email) | Real time |
-| Placed anyway (other rules) | Off | In the digest |
-| Outside violation (other rules) | On | In the digest |
-| Close outside trades (§9.2): closed, or it couldn't be closed (never held for a roll-up). Replaces the outside violation alert for that trade | On | In the digest |
-| Stop removed or widened | Off | In the digest |
-| Orders we couldn't check (more than 3 in a trading day) | On (as a product problem) | **Never** |
-| Account deletion requested | Email | Real time |
-| Plan ended, refund, chargeback or provider cancellation | Email | Real time |
-| **[P2]** Take a break for 1, 7 or 30 days | In-app | Real time |
-| Support change to the account (§1.5) | Email | Real time |
-| End-of-session summary | On | Off |
+| Event | Trader (default) |
+|---|---|
+| R8 limit reached | On |
+| Placed anyway after R8 was reached | On |
+| Protection off (10 minutes after the device turned off, unless its accounts are covered again), or entries placed while it was off | On |
+| Account connected to another DisciplineGuard login | On (also email) |
+| Placed anyway (other rules) | Off |
+| Outside violation (other rules) | On |
+| Close outside trades (§9.2): closed, or it couldn't be closed (never held for a roll-up). Replaces the outside violation alert for that trade | On |
+| Stop removed or widened | Off |
+| Orders we couldn't check (4 in a trading day) | On (as a product problem) |
+| Account deletion requested | Email |
+| Plan ended, refund, chargeback or provider cancellation | Email |
+| Support change to the account (§1.5) | Email |
+| End-of-session summary | On |
 
-- **Partner messages** never contain amounts, symbols, sizes, notes, plans or reasons, unless the trader turns on "Share amounts" (amounts only).
-- Real-time partner messages carry no counts. The digest summarizes the session, including good news ("Rules kept 4 of 5 trading days").
 - **Rate limit** per recipient: at most 1 message per rule per 30 minutes. When messages were held back, one roll-up is sent at the end of the window ("4 more trades placed anyway since 10:14").
 - **End-of-session summary**:
   - sent at a time the user chooses; default: the end of the last R4 window, or 60 minutes after the last trade;
   - never sent at a reset in the middle of the night;
   - lists protection-off periods and connections not seen.
-
-### 11.3 Partner flow [P2]
-
-1. The trader enters their own display name and the partner's name. They see a preview of every message type, then get an invite link.
-2. The link opens a short web page: who invited the partner, what DisciplineGuard is, the full list of messages, how to get Telegram, and an "Open in Telegram" button with a fallback code.
-3. In Telegram, the partner sees the full consent text (EXPERIENCE.md §11.2) and taps Accept.
-4. The web app shows the partner's Telegram name and @handle. Alerts start only after the trader taps Confirm.
-5. **Quiet hours**: 22:00–08:00 by default, in the **trader's** timezone, which is stated at Accept. Telegram does not reveal the partner's timezone; the partner can change it with a button. Messages due during quiet hours are sent together, with their times, when quiet hours end.
-6. The partner can leave at any time with a button or `/stop`. A blocked bot (HTTP 403) counts as leaving. The trader is told. The partner's data is deleted 7 days later.
-7. One partner per user until Phase 3.
-
-### 11.4 Partner end messages
-
-| Event | Message to the partner |
-|---|---|
-| Trader removes the partner | "Alex removed you as their accountability partner. You won't get more messages." (immediate) |
-| Trader turns off "Share amounts" | "Alex stopped sharing amounts with you." (immediate) |
-| Trader's plan ends | "Alex's DisciplineGuard plan has ended, so alerts have stopped." |
-| Account deletion requested | "Alex asked to delete their DisciplineGuard account. It will be deleted on <date>." |
-| Account deleted | "Alex's account was deleted. This chat is closed." Then the bot forgets the chat |
 
 ---
 
@@ -1106,7 +1048,7 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 ### 12.6 Account deletion
 
-- **Protection not active** (setup mode, plan ended, or no connection seen for a full trading day): deletion is immediate.
+- **Protection not active** (setup mode, or no connection seen for a full trading day): deletion is immediate.
 - **Protection active**: deletion is scheduled like a loosening (§6.3).
 - In every case:
   - the plan is cancelled at the payment provider at once, and the user is never charged again;
@@ -1117,7 +1059,6 @@ A trader installs at most one thing per kind of platform, never one per platform
 ### 12.7 Transactional emails
 
 - Sign-in link and code.
-- Setup link for a computer (phone hand-off).
 - "Your rules lock at <time>" (setup mode ending).
 - Payment failed.
 - Receipts (from the provider).
@@ -1132,28 +1073,25 @@ A trader installs at most one thing per kind of platform, never one per platform
 
 ### 13.1 Analytics
 
-- Counts only, from the server's own database, shown on the owner dashboard (§14): how many users, activation, retention, pauses and outcomes.
+- Counts only, from the server's own database, shown on the owner dashboard (§14).
 - No third-party analytics tool and no consent screen. No user's settings, rules or trades leave the server for analytics.
-- **Country** comes only from sign-up: the hosting provider's country header or the billing country.
 
 ### 13.2 Reason tags
 
 - Saved only after explicit consent, asked at first use: "Save the reasons you pick? Only you see them, in your stats."
 - The trader can delete all reason history at any time. This applies immediately and is not protected.
-- Reasons never reach analytics, partners or coaches (invariant 6).
+- Reasons never reach analytics or anyone else (invariant 6).
 - Onboarding answers are stored only as the resulting template ids.
 
 ### 13.3 Retention
 
 | Data | Kept |
 |---|---|
-| Account data, rules, notes, plan, pause log, reasons | While the account exists. Deleted on deletion, or 90 days after the plan ends |
-| Raw events | 90 days, then daily aggregates |
-| Coverage and health events | 30 days (aggregates kept) |
-| Protection-off and alert logs | 90 days |
+| Account data, rules, pauses, trades, closes, reasons | While the account exists. Deleted on deletion |
+| Other events (protection-off, stop changes, orders we couldn't check) | 90 days |
+| Coverage | 30 days |
+| Alerts | 7 days |
 | Support reports | 12 months |
-| Partner Telegram data | 7 days after leaving, decline, block or removal |
-| Unaccepted partner invites | Expire after 7 days |
 | Backups | Deleted data leaves backups within 30 days |
 
 ### 13.4 Export
@@ -1167,42 +1105,18 @@ Contents:
 
 - profile and settings;
 - rules with their full change history;
-- notes and plan;
 - connections (last 3 characters only);
 - the pause log with reasons;
 - alert settings;
-- the partner's display name and status, but not their Telegram details;
 - plan status.
 
 Billing records are in the payment provider's portal.
 
 ---
 
-## 14. Metrics
+## 14. Owner dashboard
 
-Computed on the server and shown on the owner dashboard, per platform.
-
-| Metric | Definition |
-|---|---|
-| Activation | Connection reached On and rules locked |
-| Retention | Retained users ÷ activated users (§2) |
-| Held rate | Held pauses ÷ pauses |
-| Rule-breaking trades per trading day | Placed anyway + outside violations, per user, against the user's baseline (below) |
-| Limit overshoot | Share of trading days ending with a loss beyond the R8 limit, and the overshoot as % of the limit (bucketed) |
-| Bypass rate | (Outside violations + entries placed while protection was off + orders we couldn't check) ÷ (pauses + those) |
-| Displacement | Outside violations ÷ all violations |
-| Reactance | Protection off or uninstall within 24 h after a pause. Users who place anyway on more than 90% of pauses are "kept on, not working" |
-| Re-attempt rate | Re-attempts ÷ skips |
-| Skip rate | Skips (not timeouts) ÷ pauses. Median per user, among users with 5 or more pauses |
-| Added delay | Extra delay on entries that get no pause. Extension: measured at the click. EA: clicks handled within 50 ms after a network call returned are logged as possibly delayed |
-| Self-serve setup | Activated users who reached On with no support contact |
-
-**Baseline (MT5)**
-
-- When a terminal is first protected, if the trader left "Include my last 90 days of trades" ticked in the Windows app, the EA uploads the last 60–90 days of entries and closes.
-- The server runs `evaluate()` over them to count "would have been paused" trades per trading day, leaving out the 14 days before sign-up.
-- This is compared with weeks 3–6 after lock. The data is used only for this comparison and the user's own stats. Nothing reaches analytics.
-- For TradingView, week 1 is compared with weeks 3–6, labelled as weaker evidence.
+Counts only, from the server's own database, for the owner emails: users (and new this week), users whose device turned on, users with a device seen this week, accounts by platform, pauses and trades this week, "tell me when it's ready" picks by platform, and problem reports by type. Never anyone's settings.
 
 ---
 
@@ -1372,15 +1286,12 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 | CHG-13 | R4 14:30–17:00 | → 14:00–16:00 | Pending |
 | CHG-14 | R5 0.5, no overrides | Add EURUSD 2.0 | Pending |
 | CHG-15 | R5 0.5, no overrides | Add XAUUSD 0.1 | Active now |
-| CHG-16 | Locked | Add a second note | Active now |
-| CHG-17 | Locked | Edit the first note | Pending |
 | CHG-18 | Pending change | Cancel it | Removed now |
 | CHG-19 | R1 active 5, pending 8 at 00:00. This client made 5 entries 00:00–00:20, offline 23:00–01:00 | Entry 00:30 | R1 (pending not active without a sync) |
-| CHG-20 | Partner set | Remove partner | Immediate. Partner gets the final message |
 | CHG-21 | Account A Ended | Remove A | Immediate. Slot freed |
 | CHG-22 | Account A active | Remove A at 10:00 | Pending, 00:00 tonight. Still enforced |
-| CHG-23 | Protection active | Delete account at 10:00 | Scheduled 00:00 tonight. Plan cancelled now. Partner told |
-| CHG-24 | Plan ended | Delete account | Immediate |
+| CHG-23 | Protection active | Delete account at 10:00 | Scheduled 00:00 tonight. Plan cancelled now |
+| CHG-24 | Setup mode | Delete account | Immediate |
 
 ### 15.6 Offline, security, coverage, plans, alerts
 
@@ -1411,21 +1322,15 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 | CLO-06 | Close outside trades on | The EA starts 6 minutes after a phone trade that went past a rule | Reported, never closed |
 | CLO-07 | Close outside trades on, the same account on two terminals | A phone trade past a rule | Closed once; the other terminal finds it gone |
 | CLO-08 | Locked, Close outside trades on at 10:00 | Turned off | Scheduled for the next reset (CHG-02) |
-| COV-03 | Extension uninstalled | No heartbeat within 10 min | Protection-off confirmed. Partner alerted (P2) |
-| COV-04 | Extension uninstalled and reinstalled within 5 min | — | No partner alert |
 | SUB-01 | Free user, first connection On | Any day later | Protection stays on; `valid_until` is at least 30 days ahead |
 | SUB-02 | Signed up, never connected | Day 25 | Still Free and enforcing |
 | SUB-03 | Free, 1 MT account connected | Protect a second MT account; connect TradingView Paper Trading | The second is refused with the cap; Paper Trading connects |
 | SUB-04 | Paid, 10 accounts, none Ended | Connect an 11th | Refused with the cap message |
 | SUB-05 | 10 accounts, 2 Ended | Connect a new one | Allowed after removing an Ended one (immediate) |
 | SUB-06 | Paid, chargeback at 20:00 | — | Back on Free; protection stays on |
-| ALR-01 | Partner, amounts not shared | Place anyway on R8 | Partner real-time message without counts or amounts |
-| ALR-02 | Partner | Place anyway on R1 | In the partner digest, not real time |
-| ALR-03 | Partner | 4 unclassified orders | Trader told. Partner never |
+| ALR-03 | — | 4 orders we couldn't check in a trading day | Trader told once |
 | ALR-04 | Outside violations at 10:00, 10:05, 10:05 | Alerts | One at 10:00, then at 10:30 "2 more outside trades went past a rule since 10:00." |
 | ALR-05 | A new Windows app install | First fetch | No old alerts shown. Only alerts after that fetch |
-| ALR-06 | Partner blocked the bot | Next message | 403 counted as leaving. Trader told |
-| ALR-07 | Partner quiet hours 22:00–08:00 | Real-time events at 23:40 and 00:15 | One message at 08:00 listing both with times |
 
 ---
 
@@ -1436,5 +1341,4 @@ Times are on the same day unless stated. "Pass" means an empty list: no pause. E
 | Q1a | Can a `document_start` capture listener hold the TradingView order-panel submit, Enter in its fields, the one-click floating buttons and the Reverse button, on paper trading and 2+ target brokers? Also: touch input, confirmation dialogs, where one-click SL/brackets come from | TradingView leaves the plan until a new spike passes |
 | Q2 | Can the extension read positions, fills history, P/L and the account id from the Account Manager, including when it is collapsed or on another tab, for the brokers the founder trades with? Which allow hedging? | More orders become unclassified. R7 and R8 stay Beta on TradingView, and the listing says so |
 | Q3 | Does MT5 `DEAL_REASON` label desktop, mobile and web trades on real brokers and prop firm servers? | All non-panel trades are labelled "outside" (counting is unaffected) |
-| Q4 | Does `SendNotification` work on the MT builds that prop firms ship? | Document the limits per firm |
 | Q11 | Can the Windows app, with no clicks inside MT: (a) put the EA on a chart and in `default.tpl`; (b) turn on Algo Trading through a start-up configuration; (c) keep both after a terminal restart; (d) exchange bridge files in the Common folder within 1 s with no effect on click handling? On a broker build and a prop-firm build. **2026-09-27, MetaQuotes build 6230, demo account:** (a) yes: `expertmode=5` loads the EA on the profile chart, and a new chart gets it from `default.tpl`; (b) yes; (c) yes over two normal restarts, but MT turns Algo Trading off whenever the account changes. Open: (d), and a prop-firm build | For each part that fails, the app shows only that one step, with a screenshot ("Click Algo Trading once"), instead of the whole manual flow |
