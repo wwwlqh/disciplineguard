@@ -2,8 +2,8 @@
 // there. The website, Start free and Help show this one list, so they always say the same thing.
 import { Icon, type IconName } from './Icon.tsx';
 
-/** works: a trade that breaks a rule gets the pause. counts: no pause, but the trade counts toward the rules. */
-export type Works = 'works' | 'counts' | 'no' | 'not_yet' | 'later';
+/** works: DisciplineGuard covers it (the pause, or for MT5's phone app and web terminal, counting; see `foot`). */
+export type Works = 'works' | 'no' | 'not_yet' | 'later';
 
 export interface Way {
   /** The Start free pick. Picks that aren't "works" record "tell me when it's ready". */
@@ -20,14 +20,15 @@ export interface Platform {
   /** The platform's own app icon, in web/public/brands. */
   logo: string;
   ways: Way[];
-  /** What "Counts only" means here. */
+  /** A note under the card; in Start free it shows once one of `footFor` is ticked. */
   foot?: string;
+  footFor?: string[];
 }
 
 /** The whole list in one line. */
-export const WHERE_LINE = "MetaTrader 5 on Windows. TradingView, Polymarket and Kalshi in Chrome or Edge, on Windows or Mac. Phone apps can't be paused.";
+export const WHERE_LINE = "MetaTrader 5 on Windows, and its phone and web terminal trades count too. TradingView, Polymarket and Kalshi in Chrome or Edge, on Windows or Mac.";
 
-export const MT5_COUNTS ="Phone and web terminal trades aren't paused. They count toward your rules while MetaTrader 5 with DisciplineGuard runs on your computer or VPS.";
+export const MT5_COUNTS = "Phone and web terminal trades count toward your rules while MetaTrader 5 with DisciplineGuard runs on your computer or VPS. They aren't paused.";
 
 const website = (id: string): Way => ({ id, label: 'Website', icon: 'globe', works: 'works', note: 'Chrome or Edge' });
 const phone = (id: string): Way => ({ id, label: 'Phone app', icon: 'phone', works: 'no' });
@@ -39,11 +40,12 @@ export const WHERE: Platform[] = [
     logo: '/brands/mt5.png',
     ways: [
       { id: 'mt5', label: 'Windows app', icon: 'window', works: 'works', note: 'With the DisciplineGuard app' },
-      { id: 'mt_phone', label: 'Phone app', icon: 'phone', works: 'counts' },
-      { id: 'mt5_web', label: 'Web terminal', icon: 'globe', works: 'counts' },
+      { id: 'mt_phone', label: 'Phone app', icon: 'phone', works: 'works' },
+      { id: 'mt5_web', label: 'Web terminal', icon: 'globe', works: 'works' },
       { id: 'mt5_mac', label: 'Mac app', icon: 'laptop', works: 'not_yet' },
     ],
     foot: MT5_COUNTS,
+    footFor: ['mt_phone', 'mt5_web'],
   },
   {
     id: 'tv',
@@ -63,7 +65,6 @@ export const worksOn = (p: Platform) => p.ways.find((w) => w.works === 'works')?
 
 const STATUS: Record<Works, { label: string; tone: string; icon?: IconName }> = {
   works: { label: 'Works', tone: 'accent', icon: 'check' },
-  counts: { label: 'Counts only', tone: 'amber' },
   no: { label: 'Not supported', tone: 'no', icon: 'x' },
   not_yet: { label: 'Not yet', tone: 'no' },
   later: { label: 'Coming later', tone: 'no' },
@@ -102,7 +103,7 @@ export function WayBody({ w }: { w: Pick<Way, 'label' | 'icon' | 'note'> & { wor
 export function WhereCard({ p, picked, onPick, className = '' }: { p: Platform; picked?: string[]; onPick?(id: string, on: boolean): void; className?: string }) {
   const has = (id: string) => !!picked?.includes(id);
   const on = p.ways.some((w) => has(w.id));
-  const foot = p.foot && (!onPick || p.ways.some((w) => w.works === 'counts' && has(w.id)));
+  const foot = p.foot && (!onPick || !!p.footFor?.some(has));
   return (
     <div className={`card where${on ? ' on' : ''} ${className}`}>
       <div className="where-head">

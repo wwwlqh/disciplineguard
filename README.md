@@ -36,7 +36,7 @@ Tightening a rule applies now. **Loosening one waits until your next day reset**
 
 ## Your platform, on your computer
 
-<img src="docs/platforms.png" width="880" alt="MetaTrader 5 works with the Windows app; phone app and web terminal trades count only; Mac app not yet. TradingView, Polymarket and Kalshi work on the website in Chrome or Edge; their phone apps aren't supported. MetaTrader 4 is coming later.">
+<img src="docs/platforms.png" width="880" alt="MetaTrader 5 works with the Windows app, phone app and web terminal (phone and web terminal trades are counted, not paused); Mac app not yet. TradingView, Polymarket and Kalshi work on the website in Chrome or Edge; their phone apps aren't supported. MetaTrader 4 is coming later.">
 
 - **MetaTrader 5:** the Windows app sets MT5 up for you: no files to copy, nothing to type. Prop firm and broker accounts.
 - **TradingView:** pauses the order panel and one-click Buy/Sell.

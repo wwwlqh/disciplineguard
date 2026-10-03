@@ -38,13 +38,6 @@ export async function rateLimit(env: Env, key: string, limit: number, windowMs: 
   if (row && row.count > limit) throw new HttpError(429, 'rate_limited');
 }
 
-/** Counts without incrementing. */
-export async function rateCount(env: Env, key: string, windowMs: number): Promise<number> {
-  const w = Math.floor(clock(env) / windowMs) * windowMs;
-  const row = await env.DB.prepare('SELECT count FROM rate_limits WHERE key = ? AND window_start = ?').bind(key, w).first<{ count: number }>();
-  return row?.count ?? 0;
-}
-
 export async function audit(env: Env, userId: string | null, actor: string, action: string, detail?: unknown): Promise<void> {
   await env.DB.prepare('INSERT INTO audit_log (user_id, actor, action, detail, created_at) VALUES (?, ?, ?, ?, ?)')
     .bind(userId, actor, action, detail === undefined ? null : JSON.stringify(detail), clock(env))

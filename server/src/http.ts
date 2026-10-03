@@ -48,7 +48,3 @@ export function str(v: unknown, max = 500): string {
   return v;
 }
 
-export function num(v: unknown, min = -Infinity, max = Infinity): number {
-  if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max) throw new HttpError(400, 'bad_number');
-  return v;
-}
