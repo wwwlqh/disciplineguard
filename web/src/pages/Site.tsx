@@ -105,7 +105,7 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
           <span className="eyebrow">Works with</span>
           {WHERE.map((p) => (
             <a key={p.id} href="#platforms" className="plat">
-              <span className="where-glyph" aria-hidden="true">{p.glyph}</span>
+              <img className="where-glyph" src={p.logo} alt="" />
               <span>{p.name} <small>{worksOn(p)}</small></span>
             </a>
           ))}
@@ -202,7 +202,7 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
             </div>
             <video src="/demo-tradingview.mp4" autoPlay muted loop playsInline aria-label="A Buy on TradingView past the day's trade limit gets a pause and is skipped" />
           </div>
-          <p className="caption">Trade 3 on a day capped at 1. Paused, skipped, nothing placed.</p>
+          <p className="caption">Trade 2 on a day capped at 1. Paused, skipped, nothing placed.</p>
         </div>
       </section>
 

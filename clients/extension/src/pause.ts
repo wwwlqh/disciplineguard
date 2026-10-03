@@ -16,32 +16,40 @@ export interface PauseInput {
 
 const CSS = `
 :host { all: initial; }
-dialog { width: min(480px, calc(100vw - 32px)); border: 0; border-radius: 14px; padding: 22px; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: #fff; color: #131722; box-shadow: 0 16px 48px rgba(0,0,0,.35); font-variant-numeric: tabular-nums; }
-dialog.dark { background: #1e222d; color: #d1d4dc; }
+dialog { width: min(480px, calc(100vw - 32px)); border: 1px solid rgba(15,23,42,.08); border-radius: 18px; padding: 22px; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: linear-gradient(110deg, #5af0cf, #2fd3e3 50%, #3aaaf5) 22px 0 / calc(100% - 44px) 3px no-repeat, #fff; color: #131722;
+  box-shadow: 0 30px 80px -24px rgba(15,50,110,.45); font-variant-numeric: tabular-nums; }
+dialog.dark { background-color: #1e222d; color: #d1d4dc; border-color: rgba(255,255,255,.08); }
 dialog::backdrop { background: rgba(0,0,0,.5); }
-.label { font-size: 11px; letter-spacing: .08em; opacity: .65; display: flex; gap: 8px; align-items: center; }
-.label b { width: 14px; height: 14px; border-radius: 4px; background: #0f766e; display: inline-block; }
+.label { font-size: 11px; letter-spacing: .12em; font-weight: 650; display: flex; gap: 8px; align-items: center; }
+.label span { opacity: .6; }
+.label svg { width: 16px; height: 16px; flex: none; }
 .head { font-size: 18px; font-weight: 650; margin: 8px 0 6px; }
 .others, .facts, .foot { font-size: 12px; opacity: .7; }
 .lines div { margin: 4px 0; }
-.chip { display: inline-block; font-size: 13px; border: 1px solid rgba(127,127,127,.4); border-radius: 999px; padding: 3px 10px; margin: 8px 0; }
+.chip { display: inline-block; font-size: 13px; font-weight: 600; background: rgba(127,127,127,.08); border: 1px solid rgba(127,127,127,.25); border-radius: 999px; padding: 3px 10px; margin: 8px 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .chips button { min-height: 32px; padding: 4px 10px; font-size: 13px; border-radius: 999px; flex: none; }
-.chips button[aria-pressed="true"] { border-color: #0f766e; color: #0f766e; }
+.chips button[aria-pressed="true"] { border-color: #2fd3e3; background: rgba(47,211,227,.12); color: #0b6fc0; }
+.dark .chips button[aria-pressed="true"] { color: #7ee8f0; }
 .bar { height: 4px; background: rgba(127,127,127,.25); border-radius: 2px; overflow: hidden; margin: 10px 0 14px; }
-.bar i { display: block; height: 100%; width: 0; background: #0f766e; }
+.bar i { display: block; height: 100%; width: 0; border-radius: 2px; background: linear-gradient(110deg, #5af0cf, #2fd3e3 50%, #3aaaf5); }
 .row { display: flex; gap: 8px; }
 button { flex: 1; min-height: 44px; padding: 10px; border-radius: 10px; border: 1px solid rgba(127,127,127,.45); background: transparent; color: inherit; font: inherit; cursor: pointer; }
-button.skip { background: #0f766e; border-color: #0f766e; color: #fff; font-weight: 600; }
+button.skip { background: linear-gradient(110deg, #5af0cf, #2fd3e3 50%, #3aaaf5); border-color: transparent; color: #052b3a; font-weight: 650;
+  box-shadow: 0 8px 18px -10px rgba(20,170,200,.8); }
+button.skip:hover { filter: brightness(1.05); }
 button:disabled { opacity: .45; cursor: default; }
-button:focus-visible { outline: 3px solid #5eead4; outline-offset: 2px; }
+button:focus-visible { outline: 3px solid #3aaaf5; outline-offset: 2px; }
 .foot { margin-top: 12px; }
 .type { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0 0; }
 .type input { width: 70px; min-height: 32px; border-radius: 8px; border: 1px solid rgba(127,127,127,.45); background: transparent; color: inherit; font: inherit; padding: 4px 8px; }
 .card { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 2147483647; background: #131722; color: #fff;
   padding: 10px 16px; border-radius: 10px; font: 13px system-ui, sans-serif; display: none; }
 `;
+
+// The DisciplineGuard icon (web/public/mark.svg, simplified): two candlesticks that read as a pause.
+const MARK = `<svg viewBox="0 0 256 256" aria-hidden="true"><defs><linearGradient id="dg-m" x1="40" y1="8" x2="216" y2="248" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6af4cc"/><stop offset=".33" stop-color="#1cd0d0"/><stop offset=".67" stop-color="#1e98f2"/><stop offset="1" stop-color="#5262f4"/></linearGradient></defs><rect x="8" y="8" width="240" height="240" rx="62" fill="url(#dg-m)"/><g fill="#fff"><rect x="92" y="62" width="12" height="150" rx="6"/><rect x="76" y="92" width="44" height="94" rx="13"/><rect x="152" y="42" width="12" height="150" rx="6"/><rect x="136" y="70" width="44" height="94" rx="13"/></g></svg>`;
 
 export class PauseUI {
   private host = document.createElement('dg-pause');
@@ -83,7 +91,7 @@ export class PauseUI {
     const side = p.order.side === 'buy' ? 'Buy' : 'Sell';
     this.dlg.className = document.documentElement.classList.contains('theme-dark') ? 'dark' : '';
     this.dlg.innerHTML = `
-      <div class="label"><b></b>PAUSE · YOUR RULE</div>
+      <div class="label">${MARK}<span>PAUSE · YOUR RULE</span></div>
       <div class="head" id="h">${esc(headline(v, p.order, p.fmt, Date.now(), p.r3Seconds))}</div>
       ${others.length ? `<div class="others">Also: ${esc(others.join(' · '))}</div>` : ''}
       <div class="lines">

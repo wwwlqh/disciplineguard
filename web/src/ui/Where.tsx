@@ -17,7 +17,8 @@ export interface Way {
 export interface Platform {
   id: string;
   name: string;
-  glyph: string;
+  /** The platform's own app icon, in web/public/brands. */
+  logo: string;
   ways: Way[];
   /** What "Counts only" means here. */
   foot?: string;
@@ -35,7 +36,7 @@ export const WHERE: Platform[] = [
   {
     id: 'mt5',
     name: 'MetaTrader 5',
-    glyph: 'M5',
+    logo: '/brands/mt5.png',
     ways: [
       { id: 'mt5', label: 'Windows app', icon: 'window', works: 'works', note: 'With the DisciplineGuard app' },
       { id: 'mt_phone', label: 'Phone app', icon: 'phone', works: 'counts' },
@@ -47,11 +48,11 @@ export const WHERE: Platform[] = [
   {
     id: 'tv',
     name: 'TradingView',
-    glyph: 'TV',
+    logo: '/brands/tv.png',
     ways: [website('tv'), { id: 'tv_desktop', label: 'Desktop app', icon: 'window', works: 'no', note: 'Use the website instead' }, phone('tv_phone')],
   },
-  { id: 'pm', name: 'Polymarket', glyph: 'P', ways: [website('pm'), phone('pm_phone')] },
-  { id: 'kalshi', name: 'Kalshi', glyph: 'K', ways: [website('kalshi'), phone('kalshi_phone')] },
+  { id: 'pm', name: 'Polymarket', logo: '/brands/pm.png', ways: [website('pm'), phone('pm_phone')] },
+  { id: 'kalshi', name: 'Kalshi', logo: '/brands/kalshi.png', ways: [website('kalshi'), phone('kalshi_phone')] },
 ];
 
 /** Picks that get the pause today. */
@@ -105,7 +106,7 @@ export function WhereCard({ p, picked, onPick, className = '' }: { p: Platform; 
   return (
     <div className={`card where${on ? ' on' : ''} ${className}`}>
       <div className="where-head">
-        <span className="where-glyph" aria-hidden="true">{p.glyph}</span>
+        <img className="where-glyph" src={p.logo} alt="" />
         <strong>{p.name}</strong>
       </div>
       <ul className={`where-ways${onPick ? ' pick' : ''}`}>

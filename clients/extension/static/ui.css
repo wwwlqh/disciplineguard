@@ -1,5 +1,4 @@
-:root { --accent: #0f766e; --muted: #6b7280; --bg: #fff; --fg: #111827; --border: #e5e7eb; }
-@media (prefers-color-scheme: dark) { :root { --bg: #1e222d; --fg: #e5e7eb; --border: #374151; --muted: #9ca3af; } }
+:root { --accent: #0b6fc0; --grad: linear-gradient(110deg, #5af0cf, #2fd3e3 50%, #3aaaf5); --muted: #6b7280; --bg: #fff; --fg: #111827; --border: #e5e7eb; }
 body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--fg); }
 .popup { width: 300px; padding: 16px; }
 .welcome { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
@@ -10,6 +9,6 @@ body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-ser
 .muted { color: var(--muted); font-size: 13px; }
 .stack > * + * { margin-top: 8px; }
 button { width: 100%; min-height: 40px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; cursor: pointer; }
-button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.primary { background: var(--grad); border-color: transparent; color: #052b3a; font-weight: 650; }
 button.link { border: 0; min-height: 0; color: var(--accent); text-decoration: underline; width: auto; padding: 0; }
 ul { padding-left: 18px; }

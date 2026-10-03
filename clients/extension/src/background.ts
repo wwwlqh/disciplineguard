@@ -106,7 +106,7 @@ async function getCache(): Promise<Cache> {
 async function setCache(c: Cache): Promise<void> {
   await chrome.storage.local.set({ [CACHE_KEY]: c });
   const badge: Record<Status, [string, string]> = {
-    on: ['', '#0f766e'], offline: ['', '#0f766e'], setting_up: ['…', '#2563eb'], attention: ['!', '#f59e0b'], off: ['off', '#9ca3af'], signed_out: ['off', '#9ca3af'],
+    on: ['', '#0b98c0'], offline: ['', '#0b98c0'], setting_up: ['…', '#2563eb'], attention: ['!', '#f59e0b'], off: ['off', '#9ca3af'], signed_out: ['off', '#9ca3af'],
   };
   const [text, color] = badge[c.status];
   await chrome.action.setBadgeText({ text });

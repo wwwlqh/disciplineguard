@@ -515,10 +515,7 @@ table.data tbody tr:hover { background: var(--surface-2); }
 .where.on { border-color: var(--accent-line); box-shadow: 0 0 0 1px var(--accent-line), var(--shadow); }
 .where-head { display: flex; align-items: center; gap: 12px; }
 .where-head strong { font-size: 16px; font-weight: 680; letter-spacing: -0.015em; }
-.where-glyph {
-  width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; flex: none; background: var(--brand); color: #fff;
-  font-weight: 760; font-size: 13px; letter-spacing: -0.02em; box-shadow: 0 8px 18px -10px rgb(30 120 240 / 60%), inset 0 1px 0 rgb(255 255 255 / 45%);
-}
+.where-glyph { width: 36px; height: 36px; border-radius: 10px; flex: none; display: block; object-fit: cover; box-shadow: 0 0 0 1px rgb(15 23 42 / 8%), 0 6px 14px -8px rgb(15 23 42 / 35%); }
 .where-ways { list-style: none; margin: 0; padding: 0; display: grid; }
 .where-ways:not(.pick) .way + .way { border-top: 1px solid var(--border); }
 .where-ways.pick { gap: 8px; }
@@ -648,7 +645,7 @@ details > summary::marker { color: var(--faint); }
 .plat small { font-weight: 500; color: var(--faint); font-size: 12px; }
 .plat { color: var(--text); text-decoration: none; transition: border-color .15s, background .15s; }
 .plat:hover { border-color: var(--accent-line); background: var(--surface); }
-.plat .where-glyph { width: 28px; height: 28px; border-radius: 8px; font-size: 11px; }
+.plat .where-glyph { width: 28px; height: 28px; border-radius: 8px; }
 
 .sec { padding: 92px 0; position: relative; }
 .sec-head { max-width: 640px; margin: 0 auto 44px; text-align: center; }

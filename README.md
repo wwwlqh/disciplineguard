@@ -10,7 +10,7 @@
 <a href="https://disciplineguard.leowqiheng.workers.dev/start"><img src="https://img.shields.io/badge/Start_free_→-5EEAD4?style=for-the-badge" alt="Start free" height="36"></a>&nbsp;&nbsp;<a href="https://disciplineguard.leowqiheng.workers.dev/downloads/DisciplineGuard-Setup.exe"><img src="https://img.shields.io/badge/Windows_app-E2E8F0?style=for-the-badge" alt="Download the Windows app" height="36"></a>&nbsp;&nbsp;<a href="https://disciplineguard.leowqiheng.workers.dev/help/tradingview"><img src="https://img.shields.io/badge/Browser_extension-E2E8F0?style=for-the-badge" alt="Browser extension" height="36"></a>
 </p>
 
-**Works with** &nbsp; MetaTrader 5 <sub>Windows app</sub> &nbsp;·&nbsp; TradingView <sub>website</sub> &nbsp;·&nbsp; Polymarket <sub>website</sub> &nbsp;·&nbsp; Kalshi <sub>website</sub>
+**Works with** &nbsp; <img src="web/public/brands/mt5.png" height="18" align="center" alt=""> MetaTrader 5 <sub>Windows app</sub> &nbsp;·&nbsp; <img src="web/public/brands/tv.png" height="18" align="center" alt=""> TradingView <sub>website</sub> &nbsp;·&nbsp; <img src="web/public/brands/pm.png" height="18" align="center" alt=""> Polymarket <sub>website</sub> &nbsp;·&nbsp; <img src="web/public/brands/kalshi.png" height="18" align="center" alt=""> Kalshi <sub>website</sub>
 
 </div>
 
@@ -45,7 +45,7 @@ Tightening a rule applies now. **Loosening one waits until your next day reset**
 
 ## On a real chart
 
-<img src="docs/pause.png" width="880" alt="A TradingView Buy past the day's trade limit gets a pause: 'This would be trade 3 today. Your limit is 1.'">
+<img src="docs/pause.png" width="880" alt="A TradingView Buy past the day's trade limit gets a pause: 'This would be trade 2 today. Your limit is 1.'">
 
 ## What it never does
 

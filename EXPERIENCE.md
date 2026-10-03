@@ -528,7 +528,7 @@ For R2, R3, R7 and R10, the pause does **not** show a countdown to the moment th
 
 ### 9.6 Visual rules
 
-- **Palette**: a neutral surface with one calm accent (teal or indigo) on Skip this trade only. No red or green anywhere. Place anyway is never colored like the platform's Buy (blue) or Sell (red).
+- **Palette**: a neutral surface with one accent, the brand's mint-to-sky gradient with dark ink, on Skip this trade only (and the wait bar). No red or green anywhere. Place anyway is never colored like the platform's Buy (blue) or Sell (red).
 - **Identity**: a distinct DisciplineGuard surface with a small mark, so it is never mistaken for TradingView's own order dialog.
 - **Position**: centered in the viewport, never at the clicked button. Place anyway is placed away from where the original Buy/Sell button was.
 - **Motion**: no pulse or color change when Place anyway unlocks. Fade-in under 200 ms, and none with reduced motion. No sounds.

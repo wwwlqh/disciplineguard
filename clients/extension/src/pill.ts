@@ -30,7 +30,7 @@ const CSS = `
   background: #fff; color: #131722; border: 1px solid #e0e3eb; box-shadow: 0 2px 8px rgba(0,0,0,.12); white-space: nowrap; touch-action: none; }
 .dark .pill { background: #1e222d; color: #d1d4dc; border-color: #363a45; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; cursor: pointer; }
-.on .dot { background: #0f766e; } .setup .dot { background: #2563eb; } .attention .dot { background: #f59e0b; }
+.on .dot { background: #14c3cf; } .setup .dot { background: #2563eb; } .attention .dot { background: #f59e0b; }
 .off .dot { background: #9ca3af; }
 .collapsed .text { display: none; }
 .collapsed .pill { padding: 6px; }
@@ -45,7 +45,7 @@ button { flex: 1; min-height: 32px; border-radius: 8px; border: 1px solid rgba(1
   font: inherit; font-size: 12px; cursor: pointer; }
 button:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
 .links { display: flex; gap: 12px; margin-top: 10px; font-size: 12px; }
-.links a { color: #0f766e; cursor: pointer; text-decoration: underline; }
+.links a { color: #0b6fc0; cursor: pointer; text-decoration: underline; }
 .dark .links a { color: #5eead4; }
 .hidden { display: none !important; }
 `;
