@@ -1,5 +1,5 @@
 // Protected settings storage (SPEC §6). Pending values become active on any read at or after effective_at.
-import { emptyRules, RESET_PRESETS, type ResetSpec, type Rules, type SettingRow } from '@dg/core';
+import { DEFAULT_POPUP, emptyRules, RESET_PRESETS, type PopupSettings, type ResetSpec, type Rules, type SettingRow } from '@dg/core';
 import type { D1Like } from './env.ts';
 
 export interface StoredSetting {
@@ -83,6 +83,7 @@ export async function saveSetting(
 
 export interface Assembled {
   rules: Rules;
+  popup: PopupSettings;
   tz: string;
   reset: ResetSpec;
   accountResets: Record<string, ResetSpec>;
@@ -103,6 +104,7 @@ export function resetSpec(v: any, tz: string): ResetSpec {
 /** Builds the active rule set and friends from stored settings. */
 export function assemble(settings: Map<string, StoredSetting>): Assembled {
   const rules = emptyRules();
+  let popup: PopupSettings = { ...DEFAULT_POPUP };
   let tz = 'UTC';
   let resetRaw: any;
   const accountResetRaw: Record<string, any> = {};
@@ -132,13 +134,15 @@ export function assemble(settings: Map<string, StoredSetting>): Assembled {
       else if (sub === 'removed' && v === true) removedAccounts.add(id);
     } else if (kind === 'default') (defaults as any)[id] = v;
     else if (kind === 'conn' && sub === 'removed' && v === true) removedConnections.add(id);
+    else if (kind === 'popup') popup = { ...DEFAULT_POPUP, ...v };
     else if (kind === 'countOnce') rules.countOnce = !!v;
+    else if (kind === 'closeOutside') rules.closeOutside = !!v;
     else if (kind === 'tz') tz = v;
     else if (kind === 'reset') resetRaw = v;
   }
   const accountResets: Record<string, ResetSpec> = {};
   for (const [id, v] of Object.entries(accountResetRaw)) accountResets[id] = resetSpec(v, tz);
-  return { rules, tz, reset: resetSpec(resetRaw, tz), accountResets, removedAccounts, removedConnections, pending, lockedValues, defaults };
+  return { rules, popup, tz, reset: resetSpec(resetRaw, tz), accountResets, removedAccounts, removedConnections, pending, lockedValues, defaults };
 }
 
 /** The extension files Polymarket and Kalshi accounts under 'tv', with the site as the server. */

@@ -1,5 +1,5 @@
-// The content script on Kalshi: the shared bet counter (bets.ts) with Kalshi's page reader (kalshi.ts).
-import { countBets } from './bets.ts';
-import { orderTarget, KS_BROKER, readAccount, readEquity, readOrder } from './kalshi.ts';
+// The content script on Kalshi: the shared bet guard (bets.ts) with Kalshi's page reader (kalshi.ts).
+import { guardBets } from './bets.ts';
+import { guardedTarget, KS_BROKER, readAccount, readEquity, readOrder } from './kalshi.ts';
 
-countBets({ name: KS_BROKER, accountWord: 'account', prefix: 'ks', orderTarget, readAccount, readEquity, readOrder });
+guardBets({ name: KS_BROKER, accountWord: 'account', prefix: 'ks', guardedTarget, readAccount, readEquity, readOrder });

@@ -1,7 +1,7 @@
 // Diffs the MQL5 engine's output (dg_results.json) against the TypeScript engine on the same cases.
 // Usage: node clients/mt5/tests/compare.ts <dg_results.json>
 import { readFileSync } from 'node:fs';
-import { evaluate } from '../../../packages/core/src/index.ts';
+import { evaluate, planPause } from '../../../packages/core/src/index.ts';
 import { CASES } from '../../../packages/core/test/cases.ts';
 
 const mql = JSON.parse(readFileSync(process.argv[2], 'utf8'));
@@ -25,6 +25,17 @@ for (const c of CASES) {
       if (!close(v.fix?.size, g.fixSize)) problems.push(`${v.rule} fix ${v.fix?.size} vs ${g.fixSize}`);
       if (!!v.fix?.addSl !== !!g.fixAddSl) problems.push(`${v.rule} addSl`);
     });
+    if (c.popup) {
+      const p = planPause(c.input, vs, c.popup);
+      if (!p !== !got.plan) problems.push(`plan ${!!p} vs ${!!got.plan}`);
+      else if (p) {
+        if (p.title !== got.plan.title) problems.push(`title ${p.title} vs ${got.plan.title}`);
+        if (p.waitSec !== got.plan.waitSec) problems.push(`wait ${p.waitSec} vs ${got.plan.waitSec}`);
+        if ((p.typeConfirm ?? null) !== (got.plan.typeConfirm ?? null)) problems.push(`typeConfirm ${p.typeConfirm} vs ${got.plan.typeConfirm}`);
+        if ((p.reattemptAgoSec ?? null) !== (got.plan.reattemptAgoSec ?? null)) problems.push('reattempt');
+        if (p.tradeNumber !== got.plan.tradeNumber) problems.push(`tradeNumber ${p.tradeNumber} vs ${got.plan.tradeNumber}`);
+      }
+    }
   }
   if (problems.length) {
     fail++;

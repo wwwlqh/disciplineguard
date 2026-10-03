@@ -1,8 +1,8 @@
 // How it works, played (EXPERIENCE §4): a cursor sets the rules, connects MetaTrader 5, then trades until a trade
-// breaks a rule: it goes through, is counted, and a note says which rule. Each step plays, then the next; click a step
-// to watch it. Plays only while on screen; reduced motion shows each step's last frame.
+// breaks a rule and gets the pause. Each step plays, then the next; click a step to watch it. Plays only while on
+// screen; reduced motion shows each step's last frame.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { breakLine, type Order } from '@dg/core';
+import { headline, type Order } from '@dg/core';
 import { coreFmt } from '../fmt.ts';
 import { Mark } from './Brand.tsx';
 import { Icon, type IconName } from './Icon.tsx';
@@ -49,7 +49,7 @@ const STEPS: Step[] = [
   {
     title: 'Trade as usual',
     short: 'Trade',
-    line: 'Every trade goes straight through and is counted. One that goes past a rule is marked.',
+    line: 'Trades within your rules go straight through. Break one and you get a pause.',
     bar: 'EURUSD · M5',
     beats: [
       { id: 'start', ms: 900 },
@@ -57,9 +57,11 @@ const STEPS: Step[] = [
       { id: 'placed', ms: 1600, at: 'buy', click: true },
       { id: 'away', ms: 600, at: 'chart' },
       { id: 'aimBuy2', ms: 700, at: 'buy' },
-      { id: 'broke', ms: 3800, at: 'buy', click: true },
+      { id: 'paused', ms: 2600, at: 'buy', click: true },
+      { id: 'aimSkip', ms: 750, at: 'skip' },
+      { id: 'skipped', ms: 2300, at: 'skip', click: true },
     ],
-    rest: 'broke',
+    rest: 'aimSkip',
   },
 ];
 
@@ -75,6 +77,7 @@ export function HowDemo() {
   const [beat, setBeat] = useState(() => (still ? rest(0) : 0));
   const [visible, setVisible] = useState(false);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  const [left, setLeft] = useState(5);
   const root = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
 
@@ -128,6 +131,15 @@ export function HowDemo() {
     setCursor({ x: r.left - o.left + r.width * 0.5, y: r.top - o.top + r.height * 0.62 });
   }, [step, beat, still]);
 
+  // The pause's countdown on Place anyway.
+  const pausing = step === 2 && reached('paused') && !reached('skipped');
+  useEffect(() => {
+    if (!pausing || still) return;
+    setLeft(5);
+    const id = setInterval(() => setLeft((x) => Math.max(1, x - 1)), 1000);
+    return () => clearInterval(id);
+  }, [pausing, still]);
+
   const total = s.beats.reduce((a, x) => a + x.ms, 0);
   const done = s.beats.slice(0, beat + 1).reduce((a, x) => a + x.ms, 0);
 
@@ -156,12 +168,12 @@ export function HowDemo() {
         <div className="demo-top" aria-hidden="true">
           <span className="demo-dots"><i /><i /><i /></span>
           <span className="demo-title">{step === 2 ? <Icon name="candles" size={14} /> : <Mark size={14} />} {s.bar}</span>
-          {step === 2 && <span className={`demo-pill${reached('broke') ? ' over' : ''}`}><span className="live-dot" /> DisciplineGuard · On · {reached('broke') ? 4 : reached('placed') ? 3 : 2} of 3 trades</span>}
+          {step === 2 && <span className="demo-pill"><span className="live-dot" /> DisciplineGuard · On · {reached('placed') ? 3 : 2} of 3 trades</span>}
         </div>
         <div className="demo-body how-body" ref={body} aria-hidden="true">
           {step === 0 && <RulesScreen reached={reached} pressed={pressed} />}
           {step === 1 && <ConnectScreen reached={reached} pressed={pressed} />}
-          {step === 2 && <TradeScreen reached={reached} pressed={pressed} />}
+          {step === 2 && <TradeScreen reached={reached} pressed={pressed} left={left} run={pausing && !still} />}
           {!still && cursor && (
             <div className={`demo-cursor${b.click ? ' click' : ''}`} style={{ transform: `translate(${cursor.x}px, ${cursor.y}px)` }}>
               <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 3.5 18.5 12 12 13.4 9.2 19.5 5 3.5Z" fill="#fff" stroke="#0b1220" strokeWidth="1.4" strokeLinejoin="round" /></svg>
@@ -215,7 +227,7 @@ function RulesScreen({ reached, pressed }: { reached: Reached; pressed: Pressed 
   );
 }
 
-/** Connect for MetaTrader 5: download, Allow on the website, Connect in the app, then On. */
+/** Connect for MetaTrader 5: download, Allow on the website, Protect in the app, then On. */
 function ConnectScreen({ reached, pressed }: { reached: Reached; pressed: Pressed }) {
   const n = (done: boolean, i: number) => <span className="hw-n">{done ? <Icon name="check" size={13} strokeWidth={2.6} /> : i}</span>;
   return (
@@ -227,7 +239,7 @@ function ConnectScreen({ reached, pressed }: { reached: Reached; pressed: Presse
           <span className={`hw-btn primary${press(pressed('dl'))}`} data-at="dl"><Icon name="download" size={14} /> Download DisciplineGuard</span>
         </li>
         <li className={reached('allowed') ? 'done' : ''}>{n(reached('allowed'), 2)}<span>Open it and click <b>Allow</b></span></li>
-        <li className={reached('on') ? 'done' : ''}>{n(reached('on'), 3)}<span>Tick your MetaTrader and press <b>Connect</b></span></li>
+        <li className={reached('on') ? 'done' : ''}>{n(reached('on'), 3)}<span>Tick your MetaTrader and press <b>Protect</b></span></li>
       </ol>
       <p className={`hw-live${reached('on') ? ' on' : reached('allowed') ? ' allowed' : ''}`}>
         {reached('on') ? (
@@ -247,7 +259,7 @@ function ConnectScreen({ reached, pressed }: { reached: Reached; pressed: Presse
       <div className={`hw-pop hw-app${reached('allowed') && !reached('on') ? ' on' : ''}`}>
         <div className="hw-app-top"><Mark size={14} /> DisciplineGuard</div>
         <div className="hw-mt"><span className="hw-box"><Icon name="check" size={12} strokeWidth={3} /></span> MetaTrader 5 · FTMO</div>
-        <span className={`hw-btn primary${press(pressed('protect'))}`} data-at="protect">Connect</span>
+        <span className={`hw-btn primary${press(pressed('protect'))}`} data-at="protect">Protect</span>
       </div>
     </div>
   );
@@ -266,14 +278,15 @@ const CANDLES: [number, number, number, number][] = (() => {
   });
 })();
 
-/** The chart: a trade within the rules is placed; the next breaks the day's limit, goes through, and is marked. */
-function TradeScreen({ reached, pressed }: { reached: Reached; pressed: Pressed }) {
+/** The chart: a trade within the rules is placed; the next breaks the day's limit, gets the pause, and is skipped. */
+function TradeScreen({ reached, pressed, left, run }: { reached: Reached; pressed: Pressed; left: number; run: boolean }) {
   const lo = Math.min(...CANDLES.map((c) => c[2]));
   const hi = Math.max(...CANDLES.map((c) => c[1]));
   const y = (v: number) => 10 + ((hi - v) / (hi - lo)) * 200;
   const w = 540 / CANDLES.length;
   const order: Order = { platform: 'mt5', account: 'demo', symbol: 'EURUSD', side: 'buy', size: 0.5, type: 'market', kind: 'entry' };
-  const line = breakLine({ rule: 'R1', observed: 4, limit: 3 }, order, coreFmt(), Date.now());
+  const head = headline({ rule: 'R1', observed: 4, limit: 3 }, order, coreFmt(), Date.now());
+  const paused = reached('paused') && !reached('skipped');
   return (
     <div className="hw hw-trade">
       <svg className="hw-chart" viewBox="0 0 600 220" preserveAspectRatio="none" data-at="chart">
@@ -296,11 +309,18 @@ function TradeScreen({ reached, pressed }: { reached: Reached; pressed: Pressed 
         <span className={`demo-btn buy${pressed('buy') ? ' pressed' : ''}`} data-at="buy"><small>Buy</small>1.08415</span>
       </div>
       <div className={`demo-toast${reached('placed') && !reached('aimBuy2') ? ' on' : ''}`}><Icon name="check" size={15} strokeWidth={2.2} /> Placed. Trade 3 of 3 today.</div>
-      <div className={`demo-note${reached('broke') ? ' on' : ''}`}>
-        <div className="dp-label"><Mark size={15} /> PAST YOUR RULE · MAX TRADES PER DAY</div>
-        <div className="dp-head">{line}</div>
-        <div className="dp-line">Placed, and it counts toward today.</div>
+      <div className={`demo-scrim${paused ? ' on' : ''}`} />
+      <div className={`demo-pause${paused ? ' on' : ''}`}>
+        <div className="dp-label"><Mark size={15} /> PAUSE · YOUR RULE</div>
+        <div className="dp-head">{head}</div>
+        <div className="dp-chip">Buy 0.50 EURUSD</div>
+        <div className="dp-wait"><i className={run ? 'run' : ''} /></div>
+        <div className="dp-buttons">
+          <span className={`dp-skip${pressed('skip') ? ' pressed' : ''}`} data-at="skip">Skip this trade</span>
+          <span className="dp-place">Place anyway · 0:0{left}</span>
+        </div>
       </div>
+      <div className={`demo-toast${reached('skipped') ? ' on' : ''}`}><Icon name="check" size={15} strokeWidth={2.2} /> Skipped. Nothing was placed.</div>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 // Starting templates (EXPERIENCE §5.3). Starting values, not advice. Edit the numbers here.
 // If two choices set the same rule, the stricter value wins.
+import { DEFAULT_POPUP } from './pause.ts';
 import { tzOffset } from './resolve.ts';
 import { splitWindow } from './changes.ts';
-import type { AccountRules, Platform, Rules, TimeWindow } from './types.ts';
+import type { AccountRules, Platform, PopupSettings, Rules, TimeWindow } from './types.ts';
 
 export type Choice = 'too_many' | 'win_back' | 'size_up' | 'hours' | 'skip_sl' | 'bad_days';
 export type Style = 'scalping' | 'day' | 'swing';
@@ -58,6 +59,7 @@ export function emptyRules(): Rules {
     R10: { on: false, minutes: 30 },
     accounts: {},
     countOnce: false,
+    closeOutside: false,
   };
 }
 
@@ -79,7 +81,7 @@ function minDefined(a: number | undefined, b: number): number {
   return a === undefined ? b : Math.min(a, b);
 }
 
-export function buildTemplate(input: TemplateInput, now = Date.now()): { rules: Rules } {
+export function buildTemplate(input: TemplateInput, now = Date.now()): { rules: Rules; popup: PopupSettings } {
   const r = emptyRules();
   const has = (c: Choice) => input.choices.includes(c);
   const acct = (id: string): AccountRules => (r.accounts[id] ??= {});
@@ -142,5 +144,5 @@ export function buildTemplate(input: TemplateInput, now = Date.now()): { rules: 
     r.R9 = { on: true };
   }
 
-  return { rules: r };
+  return { rules: r, popup: { ...DEFAULT_POPUP } };
 }

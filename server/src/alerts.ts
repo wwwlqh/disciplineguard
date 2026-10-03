@@ -7,12 +7,12 @@ import { coverageGaps } from './coverage.ts';
 import { dayRows, isKept } from './days.ts';
 import { now as clock, type Env } from './env.ts';
 
-export const ALERT_KINDS = ['limit', 'after_limit', 'broke', 'off', 'moved', 'unchecked', 'summary', 'stop'] as const;
+export const ALERT_KINDS = ['limit', 'after_limit', 'off', 'moved', 'outside', 'closed', 'unchecked', 'summary', 'placed', 'stop'] as const;
 export type AlertKind = (typeof ALERT_KINDS)[number];
 
 /** SPEC §11.2 trader defaults. */
 const DEFAULT_ON: Record<AlertKind, boolean> = {
-  limit: true, after_limit: true, broke: true, off: true, moved: true, unchecked: true, summary: true, stop: false,
+  limit: true, after_limit: true, off: true, moved: true, outside: true, closed: true, unchecked: true, summary: true, placed: false, stop: false,
 };
 
 export interface AlertPrefs {
@@ -29,8 +29,6 @@ export function alertPrefs(stored: string | null): AlertPrefs {
   } catch {}
   const on = { ...DEFAULT_ON };
   for (const k of ALERT_KINDS) if (typeof p.on?.[k] === 'boolean') on[k] = p.on[k];
-  // Saved before "broke" replaced "outside" (trades that went past a rule outside DisciplineGuard).
-  if (typeof p.on?.broke !== 'boolean' && typeof p.on?.outside === 'boolean') on.broke = p.on.outside;
   const summaryAt = Number.isInteger(p.summaryAt) && p.summaryAt >= 0 && p.summaryAt < 1440 ? p.summaryAt : null;
   return { on, summaryAt, amounts: p.amounts !== false };
 }
@@ -38,8 +36,10 @@ export function alertPrefs(stored: string | null): AlertPrefs {
 /** At most one message per alert kind per 30 minutes; the rest are counted and sent as one roll-up (SPEC §11.2). */
 export const WINDOW = 30 * MIN;
 const ROLLUP: Partial<Record<AlertKind, string>> = {
-  after_limit: 'trades placed after your daily loss limit',
-  broke: 'trades went past a rule',
+  after_limit: 'trades placed anyway after your daily loss limit',
+  placed: 'trades placed anyway',
+  outside: 'outside trades went past a rule',
+  closed: 'outside trades closed',
   off: 'trades placed while DisciplineGuard was off',
   stop: 'stops removed or widened',
 };
@@ -96,7 +96,7 @@ export async function alert(env: Env, uc: UserCtx, kind: AlertKind, title: strin
   await insertAlert(env, uc.user.id, kind, title, text);
 }
 
-/** The roll-up at the end of a 30-minute window: "4 more trades went past a rule since 10:14". */
+/** The roll-up at the end of a 30-minute window: "4 more trades placed anyway since 10:14". */
 export async function rollup(env: Env, userId: string, kind: AlertKind): Promise<void> {
   const st = await env.DB.prepare('SELECT sent_at, held FROM alert_state WHERE user_id = ? AND kind = ?').bind(userId, kind).first<{ sent_at: number; held: number }>();
   if (!st || st.held === 0 || !ROLLUP[kind]) return;
@@ -112,17 +112,32 @@ export async function limitReached(env: Env, uc: UserCtx, a: AccountRow, loss: n
   const resets = uc.accountResets[a.id] ?? uc.userResets;
   const until = Math.max(dayOf(resets, t).end, t + uc.asm.rules.R8.restHours * HOUR);
   const amounts = showAmounts(uc) && loss !== undefined && limit !== undefined ? `: −${money(loss, a.currency)} of ${money(limit, a.currency)}` : '';
-  await alert(env, uc, 'limit', 'Daily loss limit reached', `${acctLabel(a)}${amounts}. Until ${when(uc, until, t)}, a new trade breaks this rule.`);
+  await alert(env, uc, 'limit', 'Daily loss limit reached', `${acctLabel(a)}${amounts}. New trades are paused until ${when(uc, until, t)}.`);
 }
 
-/** A counted trade broke a rule (SPEC §11.2). After the daily loss limit it has its own alert. */
-export async function ruleBroken(env: Env, uc: UserCtx, a: AccountRow, rules: string[], p: { side: string; size?: number; symbol?: string; label?: string }): Promise<void> {
+export async function placedAnyway(env: Env, uc: UserCtx, a: AccountRow | undefined, p: { title?: string; rules: string[]; side: string; size?: number; symbol?: string }): Promise<void> {
   const order = `${p.side === 'sell' ? 'Sell' : 'Buy'} ${p.size ?? ''} ${p.symbol ?? ''}`.replace(/\s+/g, ' ').trim();
-  const where = placedWhere(p.label);
-  if (rules.includes('R8')) {
-    await alert(env, uc, 'after_limit', 'Trade after your daily loss limit', `${order} on ${acctLabel(a)}${where ? ` ${where}` : ''}. It counts toward today.`);
+  if (p.title === 'R8' || p.rules.includes('R8')) {
+    await alert(env, uc, 'after_limit', 'Placed anyway after your daily loss limit', `${order} on ${acctLabel(a)}.`);
   } else {
-    await alert(env, uc, 'broke', 'A trade went past your rule', `${order}${where ? ` ${where}` : ''} went past ${ruleName(rules[0])}. It counts toward today.`);
+    await alert(env, uc, 'placed', 'Placed anyway', `${order} past ${ruleName(p.title ?? p.rules[0])}.`);
+  }
+}
+
+export async function outsideViolation(env: Env, uc: UserCtx, rules: string[], label: string | undefined): Promise<void> {
+  const where = `placed ${placedWhere(label)}`;
+  await alert(env, uc, 'outside', 'A trade went past your rule', `A trade ${where} went past ${ruleName(rules[0])}. It counts toward today.`);
+}
+
+/** "Close outside trades" (SPEC §9.2): the EA closed an outside trade that went past a rule, or couldn't. */
+export async function outsideClosed(env: Env, uc: UserCtx, rules: string[], label: string | undefined, ok: boolean, reason?: string): Promise<void> {
+  const where = `placed ${placedWhere(label)}`;
+  if (ok) {
+    await alert(env, uc, 'closed', 'Outside trade closed', `A trade ${where} went past ${ruleName(rules[0])}. DisciplineGuard closed it.`);
+  } else {
+    // Never held for a roll-up: the trade is still open.
+    const why = reason ? ` (${reason})` : '';
+    await alert(env, uc, 'closed', "Couldn't close an outside trade", `A trade ${where} went past ${ruleName(rules[0])}, and DisciplineGuard couldn't close it${why}. Close it in MetaTrader.`, true);
   }
 }
 
@@ -147,7 +162,7 @@ export async function offCheck(env: Env, p: { userId: string; connectionId: stri
   }
   if (!uncovered || !conn) return;
   const uc = await userCtx(env, p.userId, clock(env));
-  await alert(env, uc, 'off', `DisciplineGuard is off on ${conn.name}`, `Turned off at ${hhmm(uc, p.t)}. New trades there aren't counted.`);
+  await alert(env, uc, 'off', `DisciplineGuard is off on ${conn.name}`, `Turned off at ${hhmm(uc, p.t)}. New trades there aren't paused.`);
 }
 
 export async function accountMoved(env: Env, userId: string, last3: string): Promise<void> {
@@ -170,7 +185,7 @@ export async function unchecked(env: Env, uc: UserCtx, t: number): Promise<void>
 //--- end-of-session summary --------------------------------------------------------------------
 
 /**
- * Called on each trade: the summary goes at the trader's chosen time, or at the end of today's trading
+ * Called on each trade or pause: the summary goes at the trader's chosen time, or at the end of today's trading
  * hours, or 60 minutes after the last trade (SPEC §11.2). One per trading day.
  */
 export async function scheduleSummary(env: Env, uc: UserCtx, t: number): Promise<void> {
@@ -193,12 +208,14 @@ export async function scheduleSummary(env: Env, uc: UserCtx, t: number): Promise
 export async function sendSummary(env: Env, p: { userId: string; dayStart: number; dayEnd: number }): Promise<void> {
   const uc = await userCtx(env, p.userId, clock(env));
   const d = (await dayRows(env, uc, p.dayStart, p.dayEnd)).find((x) => x.start === p.dayStart);
-  if (!d || d.entries === 0) return;
-  const span = await env.DB.prepare("SELECT MIN(t) AS a, MAX(t) AS b FROM events WHERE user_id = ? AND type = 'entry' AND t >= ? AND t < ?")
+  if (!d || d.entries + d.pauses === 0) return;
+  const span = await env.DB.prepare("SELECT MIN(t) AS a, MAX(t) AS b, SUM(json_extract(payload, '$.decision') IN ('skip', 'timeout')) AS skipped FROM events WHERE user_id = ? AND type IN ('entry', 'pause') AND t >= ? AND t < ?")
     .bind(p.userId, p.dayStart, p.dayEnd)
-    .first<{ a: number; b: number }>();
+    .first<{ a: number; b: number; skipped: number | null }>();
   const n = (x: number, one: string, many: string) => `${x} ${x === 1 ? one : many}`;
-  const parts = [n(d.entries, 'trade', 'trades'), `${d.breaks} past a rule`];
+  const parts = [n(d.entries, 'trade', 'trades'), n(d.pauses, 'pause', 'pauses')];
+  if (d.pauses) parts.push(`${span?.skipped ?? 0} skipped`);
+  if (d.placed) parts.push(`${d.placed} placed anyway`);
   const kept = isKept(d);
   if (kept) parts.push('rules kept');
   const lines = [`Today: ${parts.join(' · ')}.`];

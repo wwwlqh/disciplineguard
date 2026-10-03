@@ -1,8 +1,8 @@
 // SPEC §15 test cases as data. The TypeScript tests and the MQL5 runner (clients/mt5/tests) both run these.
-// Defaults (SPEC §15): user timezone UTC, reset 00:00 UTC, setup mode ended,
+// Defaults (SPEC §15): user timezone UTC, reset 00:00 UTC, setup mode ended, popup defaults,
 // R8 rest 12 h and all_accounts off, clock verified, no recent losing close.
-import { classifyOrder, DAY, emptyRules, HOUR, MIN, resets, transitions } from '../src/index.ts';
-import type { AccountState, EvalInput, Order, ResolvedTime, Rules, State, TitleId } from '../src/index.ts';
+import { classifyOrder, DAY, emptyRules, HOUR, MIN, DEFAULT_POPUP, resets, transitions } from '../src/index.ts';
+import type { AccountState, EvalInput, Order, PopupSettings, ResolvedTime, Rules, State, TitleId } from '../src/index.ts';
 
 /** Monday 5 Oct 2026, 00:00 UTC. */
 export const BASE = Date.UTC(2026, 9, 5);
@@ -35,7 +35,7 @@ export function mtAccount(p: Partial<AccountState> = {}): AccountState {
 }
 
 export function state(p: Partial<State> = {}): State {
-  return { entries: [], closes: [], accounts: { A: mtAccount() }, clock: { verified: true }, ...p };
+  return { entries: [], closes: [], overrides: [], accounts: { A: mtAccount() }, clock: { verified: true }, ...p };
 }
 
 export function entries(times: number[], account = 'A', symbol = 'EURUSD'): State['entries'] {
@@ -47,10 +47,10 @@ export function order(p: Partial<Order> = {}): Order {
 }
 
 export interface Expect {
-  /** No rule broken. */
+  /** No pause. */
   pass?: boolean;
   /** Title rule (first violation). */
-  title?: TitleId;
+  title?: TitleId | 'CHECK';
   /** Every rule listed, in order. */
   rules?: TitleId[];
   observed?: number;
@@ -58,20 +58,28 @@ export interface Expect {
   clearsAt?: number;
   fixSize?: number;
   fixAddSl?: boolean;
+  /** Pause wait in seconds (runs planPause). */
+  wait?: number;
+  typeConfirm?: number | null;
+  reattemptAgoSec?: number;
 }
 
 export interface Case {
   id: string;
   input: EvalInput;
+  popup?: PopupSettings;
   expect: Expect;
 }
 
 const T0 = utcTime();
-const c = (id: string, input: Partial<EvalInput> & { now: number }, expect: Expect): Case => ({
+const c = (id: string, input: Partial<EvalInput> & { now: number }, expect: Expect, popup?: PopupSettings): Case => ({
   id,
   input: { rules: rules(), time: T0, state: state(), order: order(), ...input },
+  popup,
   expect,
 });
+
+const popup = (p: Partial<PopupSettings>): PopupSettings => ({ ...DEFAULT_POPUP, ...p });
 
 // DAY-02/03: Forex close. 5 Oct 2026 is EDT (UTC−4), so 17:00 New York = 21:00 UTC.
 const FX = zoneTime('UTC', '17:00', BASE, 'America/New_York');
@@ -244,17 +252,35 @@ export const CASES: Case[] = [
     ];
   })(),
 
-  // 15.4 Several rules, breaks and exits
+  // 15.4 Pause, waits and decisions
   c('MUL-01', {
     rules: rules({ R1: { on: true, max: 1 }, R7: { on: true, minutes: 10, doubleAfter2: false } }),
     state: state({ entries: entries([at('09:00')]), closes: [{ t: at('09:58'), account: 'A', net: -5, size: 1 }] }),
     now: at('10:00'),
-  }, { title: 'R7', rules: ['R7', 'R1'] }),
-  c('SHOW-02', { now: at('10:00') }, { pass: true }),
-  c('BRK-01', { state: state({ breakUntil: at('10:29') }), now: at('10:20') }, { title: 'BREAK', clearsAt: at('10:29') }),
-  c('BRK-03', { state: state({ breakUntil: at('10:00', 7) }), now: at('18:00') }, { title: 'BREAK', clearsAt: at('10:00', 7) }),
-  c('BRK-02', { state: state({ doneUntil: at('00:00', 1) }), now: at('18:00') }, { title: 'DONE_TODAY', clearsAt: at('00:00', 1) }),
-  c('EXIT-01', { rules: R8(300), state: state({ accounts: r8Acct({ dayStartBalance: 10000, equity: 9000 }) }), order: order({ kind: 'exit' }), now: at('10:00') }, { pass: true }),
+  }, { title: 'R7', rules: ['R7', 'R1'], wait: 5 }, DEFAULT_POPUP),
+  c('WAIT-01', { rules: rules({ R1: { on: true, max: 1 } }), state: state({ entries: entries([at('09:00')]), overrides: [at('09:10'), at('09:20'), at('09:30')] }), now: at('10:00') }, { title: 'R1', wait: 5, typeConfirm: null }, DEFAULT_POPUP),
+  c('WAIT-02', { rules: rules({ R1: { on: true, max: 1 } }), state: state({ entries: entries([at('09:00')]), overrides: [at('09:10'), at('09:20')] }), now: at('10:00') }, { wait: 15 }, popup({ growing: { on: true, step: 5, cap: 45 } })),
+  c('WAIT-03', {
+    rules: R8(300),
+    state: state({ accounts: r8Acct({ dayStartBalance: 10000, equity: 9000 }), overrides: Array.from({ length: 10 }, (_, i) => at('09:00') + i * MIN) }),
+    now: at('10:00'),
+  }, { title: 'R8', wait: 45 }, popup({ growing: { on: true, step: 5, cap: 45 } })),
+  c('WAIT-04', { rules: rules({ R1: { on: true, max: 1 } }), state: state({ entries: entries([at('09:00')]), closes: [{ t: at('09:40'), account: 'A', net: -5, size: 1 }] }), now: at('10:00') }, { wait: 15 }, popup({ lossWait: { on: true, seconds: 15, withinMinutes: 30 } })),
+  c('WAIT-05', { rules: rules({ R1: { on: true, max: 1 } }), state: state({ entries: entries([at('09:00')]), closes: [{ t: at('09:20'), account: 'A', net: -5, size: 1 }] }), now: at('10:00') }, { wait: 5 }, popup({ lossWait: { on: true, seconds: 15, withinMinutes: 30 } })),
+  c('WAIT-06', { rules: rules({ R1: { on: true, max: 1 } }), state: state({ entries: entries([at('09:00')]), overrides: [at('09:10'), at('09:20')] }), now: at('10:00') }, { wait: 5, typeConfirm: 2 }, popup({ typeConfirm: { mode: 'after', n: 2 } })),
+  c('WAIT-07', { rules: rules({ R1: { on: true, max: 1 } }), state: state({ entries: entries([at('09:00')]), overrides: [at('09:30')] }), now: at('10:00') }, { wait: 10 }, popup({ growing: { on: true, step: 5, cap: 45 } })),
+  c('WAIT-08', { rules: rules({ R1: { on: true, max: 1 } }), state: state({ entries: entries([at('09:00')]) }), now: at('10:00') }, { title: 'R1', wait: 0 }, popup({ wait: 0 })),
+  c('SHOW-01', { now: at('10:00') }, { title: 'CHECK', wait: 5 }, popup({ show: 'every' })),
+  c('SHOW-02', { now: at('10:00') }, { pass: true }, DEFAULT_POPUP),
+  c('RE-01', {
+    rules: rules({ R1: { on: true, max: 1 } }),
+    state: state({ entries: entries([at('09:00')]), lastSkip: { t: at('10:00:00'), symbol: 'EURUSD', side: 'buy', waitSec: 15 } }),
+    now: at('10:00:40'),
+  }, { wait: 15, reattemptAgoSec: 40 }, DEFAULT_POPUP),
+  c('BRK-01', { state: state({ breakUntil: at('10:29') }), now: at('10:20') }, { title: 'BREAK', clearsAt: at('10:29'), wait: 15 }, DEFAULT_POPUP),
+  c('BRK-03', { state: state({ breakUntil: at('10:00', 7) }), now: at('18:00') }, { title: 'BREAK', clearsAt: at('10:00', 7), wait: 45, typeConfirm: 1 }, DEFAULT_POPUP),
+  c('BRK-02', { state: state({ doneUntil: at('00:00', 1) }), now: at('18:00') }, { title: 'DONE_TODAY', clearsAt: at('00:00', 1) }, DEFAULT_POPUP),
+  c('EXIT-01', { rules: R8(300), state: state({ accounts: r8Acct({ dayStartBalance: 10000, equity: 9000 }) }), order: order({ kind: 'exit' }), now: at('10:00') }, { pass: true }, DEFAULT_POPUP),
 
   // 15.6 Offline (evaluate level)
   c('OFF-05', { rules: rules({ R1: { on: true, max: 1 } }), state: state({ entries: entries([at('09:00')]) }), now: at('10:00') }, { title: 'R1' }),

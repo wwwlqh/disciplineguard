@@ -1,10 +1,10 @@
 //+------------------------------------------------------------------+
 //| AppTrades.mqh                                                    |
 //| What the primary instance reports from the account (SPEC §4.4,   |
-//| §5.2, §9.2): every entry with the rules it broke, closes, stop   |
-//| changes, the day-start balance, the loss limit being reached,    |
-//| and offline heartbeats. It never places, changes or closes a     |
-//| trade.                                                           |
+//| §5.2, §9.2): outside entries, closes, voided pending orders,     |
+//| stop changes, the day-start balance, the loss limit being        |
+//| reached, and offline heartbeats. With "Close outside trades" on, |
+//| it also closes an outside trade that goes past a rule.           |
 //+------------------------------------------------------------------+
 #ifndef DG_APPTRADES_MQH
 #define DG_APPTRADES_MQH
@@ -13,11 +13,12 @@
 
 ulong    gSeen[];
 long     gSeenT[];
+ulong    gTrackOrders[];
 ulong    gPosT[];
 double   gPosSl[];
 long     gLimitSentDay = DG_NONE;
-string   gBreakCard = "";            // "Trade 4 today. Your limit is 3. It counts toward today."
-ulong    gBreakCardTick = 0;
+string   gOutsideCard = "";          // "A trade placed outside DisciplineGuard went past …"
+ulong    gOutsideCardTick = 0;
 
 bool Tracking() { return gPrimary && Linked() && gCursorLoaded && gAcctId != "" && gAcctState == "active"; }
 
@@ -73,13 +74,237 @@ void EvaluateFill(const long tms, const ulong pos, const string sym, const int s
    for(int i = 0; i < ArraySize(gM.vRule); i++) rules[i] = gM.vRule[i];
   }
 
-/// Which rules a fill broke. Its stop loss is the deal's, or the position's when the deal has none.
-void EvaluateDeal(const ulong d, const long tms, const string sym, const int side, const double vol, string &rules[])
+/// Which rules an outside fill went past. Its stop loss is the deal's, or the position's when the deal has none.
+void EvaluateOutside(const ulong d, const long tms, const string sym, const int side, const double vol, string &rules[])
   {
    ulong pos = (ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID);
    double sl = HistoryDealGetDouble(d, DEAL_SL);
    if(sl <= 0 && PositionSelectByTicket(pos)) sl = PositionGetDouble(POSITION_SL);
    EvaluateFill(tms, pos, sym, side, vol, sl, HistoryDealGetDouble(d, DEAL_PRICE), rules);
+  }
+
+//--- "Close outside trades" (SPEC §9.2) -------------------------------------
+// Opt-in. A trade placed by hand outside DisciplineGuard (phone, web, the terminal's own order window) that goes
+// past a rule is closed right after its fill. A missing stop loss alone gets DG_SL_GRACE_MS to be added. Only the
+// position that outside order opened is ever closed: on a netting account, a fill that added to an open position
+// is reported as usual and never touched. Jobs live in a file, so a reload doesn't drop one that is waiting.
+#define DG_CLOSE_WINDOW_MS  120000   // only fills this recent are closed
+#define DG_SL_GRACE_MS      60000    // a missing stop loss alone: time to add one
+#define DG_CLOSE_LATE_MS    300000   // never close a fill older than this
+#define DG_CLOSE_TRIES      3
+#define DG_JOBS_FILE        "closing.txt"
+
+struct DGCloseJob
+  {
+   ulong             deal;           // the outside entry deal
+   ulong             pos;            // the position it opened
+   string            sym;
+   int               side;
+   double            vol;
+   double            price;
+   long              t;              // fill time, UTC ms
+   long              due;            // DG_NONE: close now. Otherwise the stop-loss deadline
+   string            rules;          // comma-separated rule ids
+   string            label;          // desktop, mobile or web
+   int               tries;
+  };
+
+DGCloseJob gJobs[];
+bool       gJobsLoaded = false;
+
+bool CloseOutsideOn(const long now) { return PBool("rules.closeOutside") && Enforcing(now); }
+
+/// Placed by hand: the terminal, the phone app or the web terminal. Never another EA's trades.
+bool ByHand(const string label) { return label == "desktop" || label == "mobile" || label == "web"; }
+
+/// The only rules gone past are about the missing stop loss (R9, or R6 without a stop).
+bool OnlyNoStop(const string &rules[], const bool hasSl)
+  {
+   if(hasSl) return false;
+   for(int i = 0; i < ArraySize(rules); i++) if(rules[i] != "R9" && rules[i] != "R6") return false;
+   return ArraySize(rules) > 0;
+  }
+
+string JoinRules(const string &rules[])
+  {
+   string s = "";
+   for(int i = 0; i < ArraySize(rules); i++) s += (i ? "," : "") + rules[i];
+   return s;
+  }
+
+string PlacedWhere(const string label)
+  {
+   if(label == "mobile") return "on your phone";
+   if(label == "web") return "on the web terminal";
+   if(label == "desktop") return "in MetaTrader's order window";
+   return "outside DisciplineGuard";
+  }
+
+void SaveCloseJobs()
+  {
+   string s = "";
+   for(int i = 0; i < ArraySize(gJobs); i++)
+      s += gKey + "\t" + IntegerToString((long)gJobs[i].deal) + "\t" + IntegerToString((long)gJobs[i].pos) + "\t" + gJobs[i].sym + "\t"
+           + IntegerToString(gJobs[i].side) + "\t" + DoubleToString(gJobs[i].vol, 8) + "\t" + DoubleToString(gJobs[i].price, 10) + "\t"
+           + IntegerToString(gJobs[i].t) + "\t" + IntegerToString(gJobs[i].due) + "\t" + gJobs[i].rules + "\t" + gJobs[i].label + "\t"
+           + IntegerToString(gJobs[i].tries) + "\n";
+   if(s == "") DGDelete(DG_JOBS_FILE);
+   else DGWrite(DG_JOBS_FILE, s);
+  }
+
+/// Jobs of this account from the file: the instance that does the counting may have changed.
+void EnsureCloseJobs()
+  {
+   if(gJobsLoaded) return;
+   gJobsLoaded = true;
+   ArrayResize(gJobs, 0);
+   string lines[];
+   int n = StringSplit(DGRead(DG_JOBS_FILE), '\n', lines);
+   for(int i = 0; i < n; i++)
+     {
+      string f[];
+      if(StringSplit(lines[i], '\t', f) != 12 || f[0] != gKey) continue;
+      int k = ArraySize(gJobs);
+      ArrayResize(gJobs, k + 1);
+      gJobs[k].deal = (ulong)StringToInteger(f[1]); gJobs[k].pos = (ulong)StringToInteger(f[2]); gJobs[k].sym = f[3];
+      gJobs[k].side = (int)StringToInteger(f[4]); gJobs[k].vol = StringToDouble(f[5]); gJobs[k].price = StringToDouble(f[6]);
+      gJobs[k].t = StringToInteger(f[7]); gJobs[k].due = StringToInteger(f[8]); gJobs[k].rules = f[9]; gJobs[k].label = f[10];
+      gJobs[k].tries = (int)StringToInteger(f[11]);
+     }
+  }
+
+void AddCloseJob(const ulong deal, const ulong pos, const string sym, const int side, const double vol, const double price, const long t, const long due, const string &rules[], const string label)
+  {
+   EnsureCloseJobs();
+   for(int i = 0; i < ArraySize(gJobs); i++) if(gJobs[i].deal == deal) return; // seen again after a reload
+   int k = ArraySize(gJobs);
+   ArrayResize(gJobs, k + 1);
+   gJobs[k].deal = deal; gJobs[k].pos = pos; gJobs[k].sym = sym; gJobs[k].side = side; gJobs[k].vol = vol; gJobs[k].price = price;
+   gJobs[k].t = t; gJobs[k].due = due; gJobs[k].rules = JoinRules(rules); gJobs[k].label = label; gJobs[k].tries = 0;
+   SaveCloseJobs();
+  }
+
+/// Selects the position the job's outside order opened: false when it is closed, reversed or replaced.
+bool SelectJobPosition(const DGCloseJob &j)
+  {
+   if(IsNetting())
+     {
+      if(!PositionSelect(j.sym) || (ulong)PositionGetInteger(POSITION_IDENTIFIER) != j.pos) return false;
+     }
+   else if(!PositionSelectByTicket(j.pos)) return false;
+   return ((ENUM_POSITION_TYPE)PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY) == (j.side > 0);
+  }
+
+/// Netting: no other order added to the position since. Hedging: a position is always one order.
+bool OnlyThatOrder(const ulong pos)
+  {
+   if(!IsNetting()) return true;
+   if(!HistorySelectByPosition((long)pos)) return false;
+   for(int i = HistoryDealsTotal() - 1; i >= 0; i--)
+     {
+      ulong d = HistoryDealGetTicket(i);
+      if(d == 0) continue;
+      long e = HistoryDealGetInteger(d, DEAL_ENTRY);
+      if((e == DEAL_ENTRY_IN || e == DEAL_ENTRY_INOUT) && (ulong)HistoryDealGetInteger(d, DEAL_ORDER) != pos) return false;
+     }
+   return true;
+  }
+
+/// Closes the job's position. "closed", "gone" (closed already), "failed" (why says why), or "" to try again.
+string CloseJobPosition(DGCloseJob &j, string &why)
+  {
+   why = "";
+   if(!OnlyThatOrder(j.pos)) { why = "the position holds other trades now"; return SelectJobPosition(j) ? "failed" : "gone"; }
+   if(!SelectJobPosition(j)) return "gone";
+   if(!AccountInfoInteger(ACCOUNT_TRADE_ALLOWED)) { why = "this login can't trade"; return "failed"; }
+   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) || !MQLInfoInteger(MQL_TRADE_ALLOWED) || !AccountInfoInteger(ACCOUNT_TRADE_EXPERT))
+     { why = "Algo Trading is off"; return "failed"; }
+   ulong tk = (ulong)PositionGetInteger(POSITION_TICKET);
+   gTrade.SetExpertMagicNumber((ulong)Magic());
+   gTrade.SetAsyncMode(false);
+   gTrade.SetDeviationInPoints(50);
+   bool ok = gTrade.PositionClose(tk);
+   uint rc = gTrade.ResultRetcode();
+   if(ok && (rc == TRADE_RETCODE_DONE || rc == TRADE_RETCODE_PLACED)) return "closed";
+   if(rc == TRADE_RETCODE_POSITION_CLOSED || !SelectJobPosition(j)) return "gone";
+   j.tries++;
+   why = rc == TRADE_RETCODE_DONE_PARTIAL ? "only part of it closed" : (rc == 0 ? "MetaTrader refused the order" : gTrade.ResultRetcodeDescription());
+   bool hopeless = rc == TRADE_RETCODE_MARKET_CLOSED || rc == TRADE_RETCODE_TRADE_DISABLED || rc == TRADE_RETCODE_CLIENT_DISABLES_AT || rc == TRADE_RETCODE_SERVER_DISABLES_AT;
+   return hopeless || j.tries >= DG_CLOSE_TRIES ? "failed" : "";
+  }
+
+/// Reports what happened to a job, on the panel and to the server (the Windows app shows the alert).
+void CloseJobDone(const DGCloseJob &j, const string result, const string why)
+  {
+   string rules[];
+   int n = StringSplit(j.rules, ',', rules);
+   DGJsonWriter w;
+   EvBegin(w, "auto_close", NowMs());
+   w.Str("ticket", "d" + IntegerToString((long)j.deal));
+   w.Str("symbol", j.sym);
+   w.Str("side", j.side > 0 ? "buy" : "sell");
+   w.Num("size", j.vol);
+   w.Str("label", j.label);
+   w.BeginArr("violations");
+   for(int k = 0; k < n; k++) w.Str("", rules[k]);
+   w.EndArr();
+   w.Str("result", result);
+   if(why != "") w.Str("reason", why);
+   Enqueue(w);
+   string rule = n > 0 ? DGRuleName(rules[0]) : "Check your plan";
+   string where = PlacedWhere(j.label);
+   if(result == "closed") gOutsideCard = "Closed a trade placed " + where + ". It went past your '" + rule + "'.";
+   else if(result == "failed") gOutsideCard = "Couldn't close a trade placed " + where + " (" + why + "). It went past your '" + rule + "'. Close it yourself.";
+   else if(result == "kept") gOutsideCard = "Stop loss added in time. The trade stays open and counts toward today.";
+   else if(result == "off") gOutsideCard = "A trade placed " + where + " went past your '" + rule + "'. It counts toward today.";
+   else gOutsideCard = "";
+   gOutsideCardTick = GetTickCount64();
+  }
+
+/// Every timer cycle, after the history scan: waits for stop losses, closes, retries and reports.
+void ProcessCloseJobs()
+  {
+   if(!Tracking()) { gJobsLoaded = false; return; }
+   EnsureCloseJobs();
+   if(ArraySize(gJobs) == 0) return;
+   long now = NowMs();
+   bool changed = false;
+   for(int i = 0; i < ArraySize(gJobs); i++)
+     {
+      string result = "", why = "";
+      if(!CloseOutsideOn(now)) result = "off";
+      else if(gJobs[i].due != DG_NONE)
+        {
+         // Waiting for a stop loss: added in time and nothing else broken, it stays.
+         if(!SelectJobPosition(gJobs[i])) result = "gone";
+         else
+           {
+            double sl = PositionGetDouble(POSITION_SL);
+            if(sl > 0)
+              {
+               string rules[];
+               EvaluateFill(gJobs[i].t, gJobs[i].pos, gJobs[i].sym, gJobs[i].side, gJobs[i].vol, sl, gJobs[i].price, rules);
+               if(ArraySize(rules) == 0) result = "kept";
+               else if(!OnlyNoStop(rules, true)) { gJobs[i].rules = JoinRules(rules); gJobs[i].due = DG_NONE; changed = true; }
+              }
+            else if(now >= gJobs[i].due) { gJobs[i].due = DG_NONE; changed = true; }
+           }
+        }
+      if(result == "" && gJobs[i].due == DG_NONE)
+        {
+         if(now - gJobs[i].t <= DG_CLOSE_LATE_MS) result = CloseJobPosition(gJobs[i], why);
+         else if(!SelectJobPosition(gJobs[i])) result = "gone";
+         else { result = "failed"; why = "DisciplineGuard wasn't running in time"; }
+         changed = true;
+        }
+      if(result == "") continue;
+      CloseJobDone(gJobs[i], result, why);
+      for(int k = i; k < ArraySize(gJobs) - 1; k++) gJobs[k] = gJobs[k + 1];
+      ArrayResize(gJobs, ArraySize(gJobs) - 1);
+      i--;
+      changed = true;
+     }
+   if(changed) SaveCloseJobs();
   }
 
 void ScanHistory()
@@ -88,6 +313,7 @@ void ScanHistory()
    long off = BrokerOffsetSec();
    datetime from = (datetime)((gScanFrom - 60000) / 1000 + off);
    if(!HistorySelect(from, TimeTradeServer() + 86400)) return;
+   long magic = Magic();
    long maxT = gScanFrom;
    long now = NowMs();
    int n = HistoryDealsTotal();
@@ -117,30 +343,89 @@ void ScanHistory()
          continue;
         }
       if(entry != DEAL_ENTRY_IN) continue;
+      // Panel fills were reported by the chart that placed them (§4.4).
+      if(magic != 0 && HistoryDealGetInteger(d, DEAL_MAGIC) == magic) continue;
       string rules[];
-      EvaluateDeal(d, tms, sym, side, vol, rules);
+      EvaluateOutside(d, tms, sym, side, vol, rules);
       string label = DealLabel(HistoryDealGetInteger(d, DEAL_REASON));
+      ulong pos = (ulong)HistoryDealGetInteger(d, DEAL_POSITION_ID);
+      // "Close outside trades": a fill placed by hand just now that opened its own position (always so on hedging).
+      bool closeIt = ArraySize(rules) > 0 && ByHand(label) && now - tms < DG_CLOSE_WINDOW_MS
+                     && (ulong)HistoryDealGetInteger(d, DEAL_ORDER) == pos && CloseOutsideOn(now);
+      bool waitSl = closeIt && OnlyNoStop(rules, gM.oHasSl);
       DGJsonWriter w;
       EvBegin(w, "entry", tms);
       w.Str("ticket", "d" + IntegerToString((long)d));
       w.Str("symbol", sym);
       w.Str("side", side > 0 ? "buy" : "sell");
       w.Num("size", vol);
-      w.Str("source", "history");
+      w.Str("source", "outside");
       w.Str("label", label);
       w.BeginArr("violations");
       for(int k = 0; k < ArraySize(rules); k++) w.Str("", rules[k]);
       w.EndArr();
+      if(closeIt) w.Bool("autoClose", true);
       Enqueue(w);
-      // A recent trade that broke a rule: the card says which, in words (EXPERIENCE §9).
-      if(ArraySize(rules) > 0 && now - tms < 5 * (long)DG_MIN && Enforcing(now))
+      if(closeIt)
         {
-         gBreakCard = DGBreakLine(gM, 0, tms) + " It counts toward today.";
-         gBreakCardTick = GetTickCount64();
+         AddCloseJob(d, pos, sym, side, vol, HistoryDealGetDouble(d, DEAL_PRICE), tms, waitSl ? tms + DG_SL_GRACE_MS : DG_NONE, rules, label);
+         if(waitSl)
+           {
+            gOutsideCard = "A trade placed " + PlacedWhere(label) + " has no stop loss. Add one within " + IntegerToString(DG_SL_GRACE_MS / 1000) + " seconds or DisciplineGuard closes it.";
+            gOutsideCardTick = GetTickCount64();
+           }
+        }
+      else if(ArraySize(rules) > 0 && now - tms < 5 * (long)DG_MIN && Enforcing(now))
+        {
+         gOutsideCard = "A trade placed outside DisciplineGuard went past your '" + DGRuleName(rules[0]) + "'. It counts toward today.";
+         gOutsideCardTick = GetTickCount64();
         }
      }
    gScanFrom = maxT;
    PruneSeen(gScanFrom - 120000);
+  }
+
+bool IsPendingType(const long t)
+  {
+   return t == ORDER_TYPE_BUY_LIMIT || t == ORDER_TYPE_SELL_LIMIT || t == ORDER_TYPE_BUY_STOP || t == ORDER_TYPE_SELL_STOP
+          || t == ORDER_TYPE_BUY_STOP_LIMIT || t == ORDER_TYPE_SELL_STOP_LIMIT;
+  }
+
+/// Panel pending orders count when placed; one cancelled or expired with nothing filled is voided (§4.4).
+void TrackPendingOrders()
+  {
+   if(!Tracking()) return;
+   long magic = Magic();
+   if(magic == 0) return;
+   ulong open[];
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+     {
+      ulong t = OrderGetTicket(i);
+      if(t == 0 || OrderGetInteger(ORDER_MAGIC) != magic || !IsPendingType(OrderGetInteger(ORDER_TYPE))) continue;
+      int n = ArraySize(open); ArrayResize(open, n + 1); open[n] = t;
+      bool known = false;
+      for(int k = 0; k < ArraySize(gTrackOrders); k++) if(gTrackOrders[k] == t) known = true;
+      if(!known) { int m = ArraySize(gTrackOrders); ArrayResize(gTrackOrders, m + 1); gTrackOrders[m] = t; }
+     }
+   int keep = 0;
+   for(int k = 0; k < ArraySize(gTrackOrders); k++)
+     {
+      ulong t = gTrackOrders[k];
+      bool still = false;
+      for(int i = 0; i < ArraySize(open); i++) if(open[i] == t) still = true;
+      if(still) { gTrackOrders[keep++] = t; continue; }
+      if(!HistoryOrderSelect(t)) { gTrackOrders[keep++] = t; continue; } // history not loaded yet
+      long st = HistoryOrderGetInteger(t, ORDER_STATE);
+      double filled = HistoryOrderGetDouble(t, ORDER_VOLUME_INITIAL) - HistoryOrderGetDouble(t, ORDER_VOLUME_CURRENT);
+      if((st == ORDER_STATE_CANCELED || st == ORDER_STATE_EXPIRED || st == ORDER_STATE_REJECTED) && filled <= 1e-9)
+        {
+         DGJsonWriter w;
+         EvBegin(w, "entry_void", NowMs());
+         w.Str("ticket", "o" + IntegerToString((long)t));
+         Enqueue(w);
+        }
+     }
+   ArrayResize(gTrackOrders, keep);
   }
 
 /// R6 limit in money for this account, or -1 when R6 is off or unknown.

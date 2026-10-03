@@ -1,6 +1,6 @@
 // Reading Kalshi's page. Everything page-specific is in KS_PAGE: data only, like tv.ts and pm.ts. Anything that can't be
-// read isn't counted. Checked on a market page and the order panel's code on kalshi.com, 2 Oct 2026.
-// A buy is placed by "Buy with 1-Click", or by "Review Buy" then "Submit Buy" on the review screen. The bet is counted at
+// read makes the click pass. Checked on a market page and the order panel's code on kalshi.com, 2 Oct 2026.
+// A buy is placed by "Buy with 1-Click", or by "Review Buy" then "Submit Buy" on the review screen. The pause comes at
 // the click that places it; the order is read from the panel at "Review Buy", because the review screen has no fields.
 import type { Order } from '@dg/core';
 import type { TvAccount } from './messages.ts';
@@ -18,7 +18,7 @@ export const KS_PAGE = {
   amount: 'input[inputmode="decimal"]',
   /** The unit menu: "Dollars", "Shares" or "Limit". Limit orders aren't read yet, so they pass. */
   units: 'button[aria-haspopup="menu"]',
-  /** Buttons that place a buy. Selling, "Sign up to trade" and everything else are never counted. */
+  /** Buttons that place a buy. Selling, "Sign up to trade" and everything else are never guarded. */
   place: /^(buy with 1-click|submit buy)$/i,
   /** Opens the review screen. */
   review: /^review buy$/i,
@@ -81,8 +81,8 @@ function noteReview(button: Element) {
   reviewed = draft ? { draft, path: location.pathname, at: Date.now() } : undefined;
 }
 
-/** The Buy button this event is on, or null. Enter in the amount field counts as its main button. */
-export function orderTarget(e: Event): Element | null {
+/** The guarded button this event is on, or null. Enter in the amount field counts as its main button. */
+export function guardedTarget(e: Event): Element | null {
   let button: Element | null = null;
   if (e.type === 'keydown') {
     if ((e as KeyboardEvent).key !== 'Enter') return null;

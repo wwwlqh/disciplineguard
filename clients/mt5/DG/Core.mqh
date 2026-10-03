@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //| Core.mqh                                                         |
-//| MQL5 port of packages/core: evaluate(), the rules a trade broke. |
+//| MQL5 port of packages/core: evaluate() and planPause().          |
 //| Must pass the same shared cases (SPEC §15, tests/cases.json).    |
 //| Instants are UTC epoch milliseconds. Weekdays: 0 = Monday.       |
 //+------------------------------------------------------------------+
@@ -91,6 +91,7 @@ public:
    long              cT[];
    string            cAcct[];
    double            cNet[], cSize[];
+   long              oT[];
    long              breakUntil, doneUntil;
    string            sId[], sPlat[];
    bool              sNetting[];
@@ -102,18 +103,31 @@ public:
    double            pSize[];
    bool              clockVerified;
    long              clockAnchor;
+   bool              hasLastSkip;
+   long              lsT;
+   string            lsSym;
+   int               lsSide;
+   double            lsWait;
    // Order
    string            oPlat, oAcct, oSym, oKind, oType;
    int               oSide;
    double            oSize;
    bool              oHasSl, oHasPrice, oHasSpec;
    double            oSl, oPrice, oTick, oTickValue, oStep, oMin;
+   // Popup
+   bool              pShowEvery, pLossOn, pGrowOn, pSkipCard, pKbd;
+   int               pWait, pLossSec, pLossMin, pGrowStep, pGrowCap, pTcN;
+   string            pTcMode;
    // Output
    string            vRule[];
    double            vObs[], vLim[];
    long              vClears[];
    bool              vHasFix[], vFixSl[];
    double            vFixSize[];
+   // Pause plan
+   bool              planShow;
+   string            planTitle;
+   int               planWait, planTypeConfirm, planReattempt, planTradeNumber, planPlaced;
 
                      DGModel() { Reset(); }
 
@@ -129,17 +143,26 @@ public:
       ArrayResize(userResets, 0); ArrayResize(rsAcct, 0); ArrayResize(rsStart, 0); ArrayResize(rsLen, 0); ArrayResize(rsVals, 0);
       ArrayResize(offT, 0); ArrayResize(offS, 0);
       ClearState();
+      ResetPopup();
      }
 
    void              ClearState()
      {
       ArrayResize(eT, 0); ArrayResize(eAcct, 0); ArrayResize(eSym, 0); ArrayResize(eSide, 0); ArrayResize(eSize, 0);
       ArrayResize(cT, 0); ArrayResize(cAcct, 0); ArrayResize(cNet, 0); ArrayResize(cSize, 0);
+      ArrayResize(oT, 0);
       breakUntil = DG_NONE; doneUntil = DG_NONE;
       ArrayResize(sId, 0); ArrayResize(sPlat, 0); ArrayResize(sNetting, 0); ArrayResize(sHasDsb, 0); ArrayResize(sHasEq, 0);
       ArrayResize(sHasTv, 0); ArrayResize(sDsb, 0); ArrayResize(sEq, 0); ArrayResize(sCredit, 0); ArrayResize(sTvLoss, 0); ArrayResize(sLimitAt, 0);
       ArrayResize(pAcct, 0); ArrayResize(pSym, 0); ArrayResize(pSide, 0); ArrayResize(pSize, 0);
       clockVerified = true; clockAnchor = DG_NONE;
+      hasLastSkip = false;
+     }
+
+   void              ResetPopup()
+     {
+      pShowEvery = false; pWait = 5; pLossOn = false; pLossSec = 15; pLossMin = 30; pGrowOn = false; pGrowStep = 5; pGrowCap = 45;
+      pTcMode = "off"; pTcN = 3; pSkipCard = true; pKbd = false;
      }
 
    //--- lookups --------------------------------------------------------
@@ -185,6 +208,8 @@ public:
       ArrayResize(cT, n + 1); ArrayResize(cAcct, n + 1); ArrayResize(cNet, n + 1); ArrayResize(cSize, n + 1);
       cT[n] = t; cAcct[n] = acct; cNet[n] = net; cSize[n] = size;
      }
+
+   void              AddOverride(const long t) { int n = ArraySize(oT); ArrayResize(oT, n + 1); oT[n] = t; }
 
    void              AddPosition(const string acct, const string sym, const int side, const double size)
      {
@@ -294,6 +319,15 @@ public:
       Counted(idx);
       int n = 0;
       for(int i = 0; i < ArraySize(idx); i++) if(eT[idx[i]] >= start && eT[idx[i]] < end && eT[idx[i]] <= t) n++;
+      return n;
+     }
+
+   int               PlacedAnywayCount(const long t)
+     {
+      long start, end;
+      DayOf(userResets, t, start, end);
+      int n = 0;
+      for(int i = 0; i < ArraySize(oT); i++) if(oT[i] >= start && oT[i] < end && oT[i] <= t) n++;
       return n;
      }
 
@@ -668,6 +702,44 @@ public:
       SortViolations();
      }
 
+   //--- planPause (SPEC §7.2) ---------------------------------------
+   void              PlanPause(const long now)
+     {
+      planShow = false;
+      if(oKind != "entry") return;
+      if(ArraySize(vRule) == 0 && !pShowEvery) return;
+      planShow = true;
+      long t = SafeNow(now);
+      int count = PlacedAnywayCount(t);
+      int wait = pWait;
+      if(pLossOn)
+        {
+         long lastLoss = LONG_MIN;
+         for(int i = 0; i < ArraySize(cT); i++) if(cNet[i] < 0 && cT[i] <= t && cT[i] > lastLoss) lastLoss = cT[i];
+         if(lastLoss != LONG_MIN && t - lastLoss < (long)pLossMin * DG_MIN) wait = MathMax(wait, pLossSec);
+        }
+      if(pGrowOn)
+        {
+         int grown = wait + pGrowStep * count;
+         wait = MathMin(grown, MathMax(pGrowCap, wait));
+        }
+      planTitle = ArraySize(vRule) > 0 ? vRule[0] : "CHECK";
+      if(planTitle == "BREAK" || planTitle == "DONE_TODAY") wait = MathMax(wait, 15);
+      // A break of 1, 7 or 30 days (more than 16 minutes left): 45 s and type to confirm (SPEC §6.5).
+      bool longBreak = planTitle == "BREAK" && vClears[0] - t > 16 * DG_MIN;
+      if(longBreak) wait = MathMax(wait, 45);
+      planReattempt = -1;
+      if(hasLastSkip && lsSide == oSide && DGSameInstrument(lsSym, oSym) && t - lsT <= 180000 && t >= lsT)
+        {
+         planReattempt = (int)MathRound((t - lsT) / 1000.0);
+         wait = MathMax(wait, (int)lsWait);
+        }
+      planTradeNumber = EntriesToday(t) + 1;
+      planPlaced = count;
+      planTypeConfirm = (longBreak || pTcMode == "always" || (pTcMode == "after" && count >= pTcN)) ? planTradeNumber : -1;
+      planWait = MathMax(0, MathMin(wait, 180));
+     }
+
    //--- loading from JSON (same shapes as packages/core types) --------
    bool              On(DGJson &j, const int rules, const string id) { return j.Bool(j.Path(rules, id + ".on")); }
 
@@ -755,6 +827,8 @@ public:
       int cl = j.Get(s, "closes");
       for(int c = j.First(cl); c >= 0; c = j.Next(c))
          AddClose(j.Long(j.Get(c, "t")), j.Str(j.Get(c, "account")), j.Num(j.Get(c, "net")), j.Num(j.Get(c, "size")));
+      int ov = j.Get(s, "overrides");
+      for(int c = j.First(ov); c >= 0; c = j.Next(c)) AddOverride(j.Long(c));
       if(j.Valid(j.Get(s, "breakUntil"))) breakUntil = j.Long(j.Get(s, "breakUntil"));
       if(j.Valid(j.Get(s, "doneUntil"))) doneUntil = j.Long(j.Get(s, "doneUntil"));
       int ac = j.Get(s, "accounts");
@@ -773,6 +847,12 @@ public:
       int ck = j.Get(s, "clock");
       clockVerified = j.Bool(j.Get(ck, "verified"), true);
       if(j.Valid(j.Get(ck, "anchor"))) clockAnchor = j.Long(j.Get(ck, "anchor"));
+      int ls = j.Get(s, "lastSkip");
+      if(j.Valid(ls))
+        {
+         hasLastSkip = true;
+         lsT = j.Long(j.Get(ls, "t")); lsSym = j.Str(j.Get(ls, "symbol")); lsSide = Side(j.Str(j.Get(ls, "side"))); lsWait = j.Num(j.Get(ls, "waitSec"));
+        }
      }
 
    void              LoadOrder(DGJson &j, const int o)
@@ -792,6 +872,17 @@ public:
       oStep = j.Num(j.Get(sp, "volumeStep")); oMin = j.Num(j.Get(sp, "volumeMin"));
      }
 
+   void              LoadPopup(DGJson &j, const int p)
+     {
+      ResetPopup();
+      if(!j.Valid(p)) return;
+      pShowEvery = j.Str(j.Get(p, "show")) == "every";
+      pWait = (int)j.Long(j.Get(p, "wait"), 5);
+      pLossOn = j.Bool(j.Path(p, "lossWait.on")); pLossSec = (int)j.Long(j.Path(p, "lossWait.seconds"), 15); pLossMin = (int)j.Long(j.Path(p, "lossWait.withinMinutes"), 30);
+      pGrowOn = j.Bool(j.Path(p, "growing.on")); pGrowStep = (int)j.Long(j.Path(p, "growing.step"), 5); pGrowCap = (int)j.Long(j.Path(p, "growing.cap"), 45);
+      pTcMode = j.Str(j.Path(p, "typeConfirm.mode"), "off"); pTcN = (int)j.Long(j.Path(p, "typeConfirm.n"), 3);
+      pSkipCard = j.Bool(j.Get(p, "skipCard"), true); pKbd = j.Bool(j.Get(p, "keyboardPlace"));
+     }
   };
 
 #endif

@@ -111,7 +111,7 @@ export class Pill {
     const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
     this.panel.innerHTML = `${v.lines.map((l) => `<div>${esc(l)}</div>`).join('')}
       ${v.actions ? '<div class="row"><button data-a="break">Take a 15 min break</button><button data-a="done">Done for today</button></div>' : ''}
-      <div class="links"><a data-p="today">Dashboard</a><a data-p="help">Help</a></div>`;
+      <div class="links"><a data-p="today">Dashboard</a><a data-p="today?practice">Practice pause</a><a data-p="help">Help</a></div>`;
     for (const a of this.panel.querySelectorAll<HTMLElement>('[data-p]')) a.onclick = () => this.h.open(a.dataset.p!);
     const b = this.panel.querySelector<HTMLButtonElement>('[data-a="break"]');
     if (b) b.onclick = () => (this.h.takeBreak(), this.panel.classList.remove('open'));

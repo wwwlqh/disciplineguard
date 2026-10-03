@@ -4,11 +4,26 @@ import { placedWhere, RULE_NAMES, type TitleId } from '@dg/core';
 import { api, type Connection, type Me } from '../api.ts';
 import { ago, money, platformName, plural, time } from '../fmt.ts';
 import { onLink } from '../router.ts';
-import { DeletionBanner, Dot, Sheet, useToast, type StatusKind } from '../ui/kit.tsx';
+import { DeletionBanner, Dot, PracticePause, Sheet, useToast, type StatusKind } from '../ui/kit.tsx';
 import { Icon, type IconName } from '../ui/Icon.tsx';
 import { Gauge, Ring, Stat, WeekStrip, type DayCell } from '../ui/viz.tsx';
 import type { PageProps } from '../main.tsx';
 
+/** What "Close outside trades" did with an outside trade (SPEC §9.2). */
+const AUTO_CLOSE: Record<string, string> = {
+  pending: 'Closing it.',
+  closed: 'DisciplineGuard closed it.',
+  failed: "DisciplineGuard couldn't close it. Close it in MetaTrader.",
+  kept: 'A stop loss was added in time. It counts.',
+};
+const AUTO_CHIP: Record<string, [string, string]> = {
+  pending: ['Closing', 'blue'],
+  closed: ['Closed', 'blue'],
+  failed: ["Couldn't close", 'amber'],
+  kept: ['Kept', ''],
+};
+
+/** Maps what a device last reported to the status vocabulary (EXPERIENCE §8). */
 export function deviceStatus(c: Connection, now = Date.now()): { kind: StatusKind; label: string } {
   if (c.offReason) return { kind: 'off', label: 'Off' };
   if (!c.lastSeen) return { kind: 'setting_up', label: 'Setting up' };
@@ -37,6 +52,7 @@ export function pendingLabel(key: string, value: any): string {
   if (kind === 'acct' && sub === 'removed') return 'Remove an account';
   if (kind === 'conn') return 'Remove a device';
   if (kind === 'popup') return 'Popup settings';
+  if (kind === 'closeOutside') return `Close outside trades: turn ${value ? 'on' : 'off'}`;
   if (kind === 'tz') return `Timezone: ${value}`;
   if (kind === 'reset') return 'Day reset';
   if (kind === 'default' || kind === 'acct') return ({ r5: 'Max position size', r5bet: 'Max bet', r6: 'Max risk per trade', r8: 'Daily loss limit' } as Record<string, string>)[sub ?? id] ?? `Account limit (${sub ?? id})`;
@@ -86,7 +102,7 @@ function CheckIn({ d, onDone }: { d: TodayData; onDone(): void }) {
         </label>
         <label className="check">
           <input type="checkbox" checked={useR8} onChange={(e) => setUseR8(e.target.checked)} />
-          <span>Stop after a loss of <input className="tiny" inputMode="decimal" value={r8} onChange={(e) => setR8(e.target.value)} aria-label="Loss" /></span>
+          <span>Pause after a loss of <input className="tiny" inputMode="decimal" value={r8} onChange={(e) => setR8(e.target.value)} aria-label="Loss" /></span>
         </label>
       </div>
       <div className="checkin-actions">
@@ -107,18 +123,21 @@ interface TodayData {
   accounts: (Me['accounts'][number] & { loss: number | null; limit: number | null; r8On: boolean; inLimit: boolean; limitUntil: number | null })[];
   tighten: { r1?: number; r8?: number; until: number } | null;
   tightenSuggest: { r1: number; r8: number };
-  meters: { tradesToday: number; breaksToday: number; r1Max: number | null; cooldownUntil: number | null; breakUntil: number | null; doneUntil: number | null; hours: { open: boolean; next: number | null } | null };
+  meters: { tradesToday: number; r1Max: number | null; cooldownUntil: number | null; breakUntil: number | null; doneUntil: number | null; hours: { open: boolean; next: number | null } | null };
   pending: { key: string; value: any; effectiveAt: number }[];
-  /** Today's trades that broke a rule, newest first. */
-  broken: { t: number; accountId: string | null; symbol?: string; side?: string; size?: number; label?: string; violations: string[] }[];
+  pauses: { t: number; title: string; decision: string; symbol?: string; side?: string; size?: number }[];
+  outside: { t: number; accountId: string; symbol: string; label?: string; violations: string[]; unprotected: boolean; autoClose?: 'pending' | 'closed' | 'failed' | 'kept' | 'gone' | 'off' }[];
   coverage: { gaps: { accountId: string; last3: string; from: number; to: number; trades: number }[]; unclassified: number; off: { t: number; reason?: string; last3?: string }[] };
-  week: { breaks: number; daysTraded: number; daysKept: number; keptToday: boolean; days?: DayCell[] };
+  week: { pauses: number; skipped: number; placed: number; daysTraded: number; daysKept: number; keptToday: boolean; days?: DayCell[] };
   calibration: { rule: string; count: number } | null;
 }
 
+const DECISION: Record<string, string> = { skip: 'Skipped', timeout: 'Skipped (timed out)', place: 'Placed anyway', reinit: 'Closed' };
 
 export function Today({ me, reload }: PageProps) {
   const [d, setD] = useState<TodayData | null>(null);
+  // The Windows app's "Try a practice pause" opens /today?practice.
+  const [practice, setPractice] = useState(() => new URLSearchParams(location.search).has('practice'));
   const [confirm, setConfirm] = useState<'break' | 'done' | null>(null);
   const toast = useToast();
 
@@ -132,7 +151,7 @@ export function Today({ me, reload }: PageProps) {
   async function tighten(kind: 'break' | 'done') {
     const r = await api('POST', kind === 'break' ? '/api/break' : '/api/done-today');
     setConfirm(null);
-    toast(kind === 'break' ? `Break until ${time(r.until)}.` : `Done for today. A trade before ${time(r.until)} is marked as past your rule.`);
+    toast(kind === 'break' ? `Break until ${time(r.until)}.` : `Done for today. Trades are paused until ${time(r.until)}.`);
     await load();
   }
 
@@ -155,6 +174,7 @@ export function Today({ me, reload }: PageProps) {
           <h1>Today</h1>
           <div className="sub"><Icon name="refresh" size={14} /> Resets {time(d.nextReset, d.now)}</div>
         </div>
+        <button onClick={() => setPractice(true)}><Icon name="pause" size={16} /> Practice pause</button>
       </div>
 
       <DeletionBanner me={me} reload={reload} />
@@ -172,7 +192,7 @@ export function Today({ me, reload }: PageProps) {
       )}
       {lic.enforcing && lic.validUntil - d.now <= 60 * 60_000 && !(lic.state === 'active' && !me.user.cancelAtPeriodEnd) && (
         <div className="banner amber">
-          <span><Icon name="alert" /> Counting ends at {time(lic.validUntil, d.now)}.</span>
+          <span><Icon name="alert" /> Protection ends at {time(lic.validUntil, d.now)}.</span>
           <a className="btn" href="/plans" onClick={onLink}>See plans</a>
         </div>
       )}
@@ -212,7 +232,7 @@ export function Today({ me, reload }: PageProps) {
             <span className="tile amber big-tile"><Icon name={d.meters.doneUntil ? 'moon' : d.meters.breakUntil ? 'coffee' : 'hourglass'} size={24} /></span>
             <div className="meter-text">
               <span className="eyebrow">{d.meters.doneUntil ? 'Done for today' : d.meters.breakUntil ? 'Break' : 'Cooldown'}</span>
-              <strong>Until {time(timer, d.now)}, every trade is marked</strong>
+              <strong>New trades pause until {time(timer, d.now)}</strong>
             </div>
           </div>
         )}
@@ -230,14 +250,16 @@ export function Today({ me, reload }: PageProps) {
 
       <div className="split">
         <div className="card">
-          <div className="card-head"><h2><Icon name="activity" /> Activity</h2><span className="small faint">{d.meters.breaksToday} past a rule</span></div>
+          <div className="card-head"><h2><Icon name="activity" /> Activity</h2><span className="small faint">{plural(d.pauses.length, 'pause')}</span></div>
           <TodayTimeline d={d} />
         </div>
         <div className="card">
           <div className="card-head"><h2><Icon name="calendar" /> This week</h2><a className="small" href="/stats" onClick={onLink}>Stats</a></div>
           {d.week.days && d.week.days.length > 0 && <WeekStrip days={d.week.days} today={d.now} />}
           <div className="kpis">
-            <Stat label="Past a rule" value={d.week.breaks} />
+            <Stat label="Pauses" value={d.week.pauses} />
+            <Stat label="Skipped" value={d.week.skipped} note={d.week.pauses ? `${Math.round((d.week.skipped / d.week.pauses) * 100)}% of pauses` : undefined} />
+            <Stat label="Placed anyway" value={d.week.placed} />
             <Stat label="Days kept" value={<>{d.week.daysKept}<small> of {d.week.daysTraded}</small></>} />
           </div>
         </div>
@@ -259,8 +281,18 @@ export function Today({ me, reload }: PageProps) {
 
       {d.calibration && (
         <div className="banner neutral">
-          <span><Icon name="info" /> {d.calibration.count} trades went past {RULE_NAMES[d.calibration.rule as TitleId] ?? d.calibration.rule} this week, more than any other rule. Is it set right?</span>
+          <span><Icon name="info" /> {RULE_NAMES[d.calibration.rule as TitleId] ?? d.calibration.rule} paused {d.calibration.count} trades this week, mostly placed anyway or in your plan. Limit wrong? Change it.</span>
           <a className="btn" href="/rules" onClick={onLink}>Review rules</a>
+        </div>
+      )}
+
+      {me.user.reasonAsked && me.user.reasonConsent === null && (
+        <div className="banner neutral">
+          <span><Icon name="eye" /> Save the reasons you pick? Only you see them, in your stats.</span>
+          <span className="row">
+            <button className="primary" onClick={() => void api('PUT', '/api/prefs', { reasonConsent: true }).then(reload)}>Save my reasons</button>
+            <button onClick={() => void api('PUT', '/api/prefs', { reasonConsent: false }).then(reload)}>Don't save</button>
+          </span>
         </div>
       )}
 
@@ -268,30 +300,31 @@ export function Today({ me, reload }: PageProps) {
         <Sheet label="Confirm" onClose={() => setConfirm(null)}>
           <span className="tile amber sheet-icon"><Icon name={confirm === 'break' ? 'coffee' : 'moon'} /></span>
           <h2>{confirm === 'break' ? 'Take a 15-minute break?' : 'Done for today?'}</h2>
-          <p className="muted">Until {confirm === 'break' ? time(d.now + 15 * 60_000, d.now) : time(d.nextReset, d.now)}, every trade is marked as past your rule. Can't be shortened.</p>
+          <p className="muted">New trades pause until {confirm === 'break' ? time(d.now + 15 * 60_000, d.now) : time(d.nextReset, d.now)}. Can't be shortened.</p>
           <div className="row">
             <button className="primary" onClick={() => tighten(confirm)}>{confirm === 'break' ? 'Start the break' : "I'm done for today"}</button>
             <button onClick={() => setConfirm(null)}>Not now</button>
           </div>
         </Sheet>
       )}
+      {practice && <PracticePause me={me} onClose={() => setPractice(false)} />}
     </div>
   );
 }
 
 function tradesLine(n: number, max: number | null): string {
   if (!max) return plural(n, 'trade');
-  if (n < max) return `${max - n} left before your limit`;
+  if (n < max) return `${max - n} left before the pause`;
   if (n === max) return 'Limit reached';
   return `${n - max} over your limit`;
 }
 
-/** On, needs a look, or not running, with each device on one line. */
+/** Protected, needs a look, or not running, with each device on one line. */
 function HeroStatus({ d, onBreak, onDone }: { d: TodayData; onBreak(): void; onDone(): void }) {
   const st = d.connections.map((c) => ({ c, s: deviceStatus(c, d.now) }));
   const on = st.some((x) => x.s.kind === 'on');
   const kind = !d.license.enforcing || st.length === 0 ? 'off' : st.some((x) => x.s.kind === 'attention') ? 'attention' : on ? 'on' : 'off';
-  const title = !d.license.enforcing ? 'Counting is off' : st.length === 0 ? 'Connect your platform' : kind === 'on' ? 'Counting' : kind === 'attention' ? 'Needs attention' : 'Not running';
+  const title = !d.license.enforcing ? 'Protection is off' : st.length === 0 ? 'Connect your platform' : kind === 'on' ? 'Protected' : kind === 'attention' ? 'Needs attention' : 'Not running';
   return (
     <div className="card hero-card">
       <div className={`shield-badge ${kind === 'on' ? '' : kind}`}>
@@ -347,20 +380,25 @@ function LossMeter({ a, now }: { a: TodayData['accounts'][number]; now: number }
   );
 }
 
-/** Today's trades past a rule and gaps in one timeline, newest first. */
+/** Today's pauses, outside trades and gaps in one timeline, newest first. */
 function TodayTimeline({ d }: { d: TodayData }) {
   type Item = { t: number; icon: IconName; tone: string; title: string; detail?: string; chip?: [string, string] };
   const items: Item[] = [
-    ...d.broken.map((b): Item => ({
-      t: b.t,
-      icon: 'alert',
-      tone: 'amber',
-      title: RULE_NAMES[b.violations[0] as TitleId] ?? 'Past a rule',
-      detail: [
-        b.symbol ? `${b.side === 'sell' ? 'Sell' : 'Buy'} ${b.size ?? ''} ${b.symbol}`.replace(/\s+/g, ' ') + (placedWhere(b.label) ? ` ${placedWhere(b.label)}` : '') : '',
-        b.violations.length > 1 ? `Also: ${b.violations.slice(1).map((v) => RULE_NAMES[v as TitleId] ?? v).join(', ')}` : '',
-      ].filter(Boolean).join(' · ') || undefined,
-      chip: ['Past a rule', 'amber'],
+    ...d.pauses.map((p): Item => ({
+      t: p.t,
+      icon: 'pause',
+      tone: p.decision === 'place' ? 'amber' : 'accent',
+      title: RULE_NAMES[p.title as TitleId] ?? 'Check your plan',
+      detail: p.symbol ? `${p.side === 'sell' ? 'Sell' : 'Buy'} ${p.symbol}` : undefined,
+      chip: [DECISION[p.decision] ?? p.decision, p.decision === 'place' ? 'amber' : 'accent'],
+    })),
+    ...d.outside.filter((o) => o.violations.length > 0).map((o): Item => ({
+      t: o.t,
+      icon: o.autoClose === 'closed' ? 'shieldCheck' : 'alert',
+      tone: o.autoClose === 'closed' ? 'blue' : 'amber',
+      title: `Trade placed ${placedWhere(o.label)}`,
+      detail: `Went past ${o.violations.map((v) => `"${RULE_NAMES[v as TitleId] ?? v}"`).join(', ')}. ${AUTO_CLOSE[o.autoClose ?? ''] ?? 'It counts.'}`,
+      chip: AUTO_CHIP[o.autoClose ?? ''] ?? ['Counted', 'amber'],
     })),
     ...d.coverage.gaps.map((g): Item => ({
       t: g.from,
@@ -373,9 +411,9 @@ function TodayTimeline({ d }: { d: TodayData }) {
   if (items.length === 0) {
     return (
       <div className="empty-state">
-        <span className="tile accent"><Icon name="check" size={22} /></span>
-        <strong>No trade went past a rule today</strong>
-        <span className="small">Every trade is counted. A trade that goes past a rule shows here.</span>
+        <span className="tile accent"><Icon name="pause" size={22} /></span>
+        <strong>No pauses yet today</strong>
+        <span className="small">Trades that keep your rules go straight through.</span>
       </div>
     );
   }

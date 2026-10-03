@@ -1,6 +1,6 @@
 # Spikes
 
-Throwaway tests for the open questions in SPEC §16. Not product code. Results from before 3 Oct 2026 tested the pause, which has since been removed: DisciplineGuard now only counts. Test on free accounts only: TradingView Paper Trading and an MT5 demo.
+Throwaway tests for the open questions in SPEC §16. Not product code. Test on free accounts only: TradingView Paper Trading and an MT5 demo.
 
 ## TradingView (Q1a)
 

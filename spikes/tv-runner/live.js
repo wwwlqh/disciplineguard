@@ -56,7 +56,8 @@ async function until(f, what, ms = 20000) {
   await call('POST', '/v1/auth/email', { email });
   const mail = (await call('GET', '/dev/outbox')).data.find((m) => m.to_email === email);
   const cookie = (await call('POST', '/v1/auth/verify', { email, code: /code is (\d{6})/.exec(mail.body)[1] })).cookie;
-  const ob = await call('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 1 }, R8: { on: true, restHours: 12 } }, defaults: { r8: { unit: 'amount', value: 1000 } } }, cookie);
+  const popup = { show: 'breaks', wait: 3, lossWait: { on: false, seconds: 15, withinMinutes: 30 }, growing: { on: false, step: 5, cap: 45 }, typeConfirm: { mode: 'off', n: 3 }, skipCard: true, keyboardPlace: false };
+  const ob = await call('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 1 }, R8: { on: true, restHours: 12 } }, defaults: { r8: { unit: 'amount', value: 1000 } }, popup }, cookie);
   check(ob.status === 200, 'DisciplineGuard account with max 1 trade a day and a 1,000 loss limit');
 
   // Sign the extension in (Allow + PKCE).
@@ -84,7 +85,7 @@ async function until(f, what, ms = 20000) {
   check(me.accounts.length === 1 && me.accounts[0].platform === 'tv', `Paper Trading account protected (${me.accounts[0]?.server} …${me.accounts[0]?.last3})`);
 
   const posText = () => chart.evaluate(() => [...document.querySelectorAll('table[data-name$=".positions-table"] tbody tr')].map((r) => r.innerText.replace(/\s+/g, ' ')).join(' / '));
-  const note = () => chart.locator('dg-note .note.on').count();
+  const pauseOpen = () => chart.locator('dg-pause dialog[open]').count();
   const press = async (sel) => {
     // TradingView closes the order panel after an order; Shift+T opens it again.
     if (sel.includes('place-and-modify') || sel.includes('side-control')) {
@@ -108,7 +109,7 @@ async function until(f, what, ms = 20000) {
   await chart.keyboard.press('Enter');
   await chart.waitForTimeout(3000);
   await press('button#Market');
-  // Start flat: sell any BTCUSD long (a close, never counted as an entry).
+  // Start flat: sell any BTCUSD long (a close, which DisciplineGuard never pauses).
   const longQty = async () => {
     const m = /BTCUSD Long ([\d.,]+)/.exec(await posText());
     return m ? m[1].replace(/,/g, '') : null;
@@ -132,38 +133,55 @@ async function until(f, what, ms = 20000) {
   const before = await posText();
   await press('[data-name="place-and-modify-button"]');
   await chart.waitForTimeout(2500);
-  check((await note()) === 0 && (await posText()) !== before, `trade 1 went straight through, no note (positions: ${await posText()})`);
+  check((await pauseOpen()) === 0 && (await posText()) !== before, `trade 1 went straight through (positions: ${await posText()})`);
   await shot(1);
   await until(async () => (await cache())?.snapshot?.entries?.length === 1, 'entry synced', 90000);
 
-  // Trade 2: breaks max 1 a day. It goes straight through, counted as a rule break with a note.
+  // Trade 2: breaks max 1 a day, so it is held.
   const p2 = await posText();
   await chart.waitForTimeout(2000);
   await press('[data-name="place-and-modify-button"]');
-  await chart.waitForTimeout(2500);
-  check((await posText()) !== p2, `trade 2 went straight through (positions: ${await posText()})`);
-  check((await note()) === 1 && ((await chart.locator('dg-note .head').textContent()) || '').includes('Trade 2 today'), `note says: "${await chart.locator('dg-note .head').textContent()}"`);
+  await chart.waitForTimeout(1200);
+  check((await pauseOpen()) === 1, 'trade 2 held with the pause');
+  check(((await chart.locator('dg-pause .head').textContent()) || '').includes('trade 2 today'), `pause says: "${await chart.locator('dg-pause .head').textContent()}"`);
   await shot(2);
+  await chart.waitForTimeout(1500);
+  check((await posText()) === p2, 'no order reached TradingView while paused');
+  await chart.keyboard.press('Escape');
+  await chart.waitForTimeout(800);
+  check((await pauseOpen()) === 0 && (await posText()) === p2, 'Esc skipped; still no order');
 
-  // Closing: selling the whole long is an exit, never counted as an entry.
+  // Trade 3: Place anyway after the wait, then the trader clicks Buy once more.
+  await press('[data-name="place-and-modify-button"]');
+  await chart.waitForTimeout(3400);
+  const placeBox = await chart.locator('dg-pause button.place').boundingBox();
+  await chart.mouse.click(placeBox.x + placeBox.width / 2, placeBox.y + placeBox.height / 2);
+  await chart.waitForTimeout(600);
+  check((await pauseOpen()) === 0 && (await posText()) === p2, 'Place anyway: pause closed, no click made for the trader');
+  await shot(3);
+  await press('[data-name="place-and-modify-button"]');
+  await chart.waitForTimeout(2500);
+  check((await posText()) !== p2, `the trader's own click sent it (positions: ${await posText()})`);
+
+  // Closing: selling the whole long is an exit, never paused.
   await press('[data-name="side-control-sell"]');
   await chart.locator('#quantity-field').first().fill((await longQty()) || '2');
   await chart.waitForTimeout(500);
   const sellText = await submitText();
   await press('[data-name="place-and-modify-button"]');
   await chart.waitForTimeout(2500);
-  check(!(await posText()).includes('BTCUSD Long'), `"${sellText}" closing the long went straight through (positions: ${(await posText()) || 'none'})`);
+  check((await pauseOpen()) === 0, `"${sellText}" closing the long went straight through (positions: ${(await posText()) || 'none'})`);
   await shot(4);
 
   const today = await until(async () => {
     const d = (await call('GET', '/api/today', undefined, cookie)).data;
-    return d.broken.length >= 1 && d;
-  }, 'rule break on the server', 90000);
-  check(today.broken[0].violations[0] === 'R1', 'trade 2 logged on the server as a rule break of max trades per day');
+    return d.pauses.length >= 2 && d;
+  }, 'pauses on the server', 90000);
+  check(today.pauses.some((p) => p.decision === 'skip') && today.pauses.some((p) => p.decision === 'place'), 'skip and place anyway logged on the server');
   console.log('trades counted today:', today.meters.tradesToday);
 
-  // The Account Manager: trades counted at the click aren't counted again, the close is logged with its net, the pill shows On.
-  check(today.meters.tradesToday === 2, `two trades counted, not counted again from the positions table (${today.meters.tradesToday})`);
+  // The Account Manager: the guarded fills aren't counted again, the close is logged with its net, the pill shows On.
+  check(today.outside.length === 0, 'guarded trades filling in the positions table are not counted again as outside trades');
   const closes = await until(async () => {
     const c = (await cache())?.snapshot?.closes ?? [];
     return c.length > 0 && c;

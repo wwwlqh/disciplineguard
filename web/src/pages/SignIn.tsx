@@ -75,8 +75,8 @@ export function SignIn({ onDone, title = 'Sign in or create your account' }: { o
       <Brand />
       <div>
         <div className="orbit" aria-hidden="true"><i /><i /><i /><Mark size={64} /></div>
-        <h2>Your trading rules, counted on every trade.</h2>
-        <p className="lead">Set your own trading rules. Every trade is counted against them, and one that goes past a rule is marked.</p>
+        <h2>A pause before the trade that costs you.</h2>
+        <p className="lead">Set your own trading rules. A trade that breaks one gets a short pause first.</p>
         <ul className="auth-promises">
           {TRUST_LINES.map((l) => <li key={l}><Icon name="shieldCheck" size={18} /><span>{l}</span></li>)}
         </ul>

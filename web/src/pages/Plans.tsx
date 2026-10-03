@@ -12,7 +12,7 @@ type PlanKind = 'yearly' | 'monthly' | 'earlybird_yearly';
 interface PlansData {
   prices: Record<PlanKind, number>;
   earlyBird: boolean;
-  recap: { trades: number; breaks: number; daysTraded: number; daysKept: number; topRule: string | null };
+  recap: { pauses: number; skipped: number; daysTraded: number; daysKept: number; topRule: string | null };
 }
 
 const usd = (c: number) => `$${(c / 100).toFixed(c % 100 ? 2 : 0)}`;
@@ -61,16 +61,16 @@ export function Plans({ me, reload }: PageProps) {
       {paid && (
         <div className="banner">
           {subscribed
-            ? "Counting is back on. Your devices update within 5 minutes."
+            ? "Protection is back on. Today's trades count, so your next trade may be paused. Your devices update within 5 minutes."
             : 'Payment received. Turning your plan on…'}
         </div>
       )}
-      {r && r.daysTraded > 0 && (
+      {r && r.daysTraded + r.pauses > 0 && (
         <div className="card">
           <h2>So far</h2>
           <p>
-            {plural(r.trades, 'trade')}, {r.breaks} past a rule. You kept your rules on {r.daysKept} of the {plural(r.daysTraded, 'day')} you traded.
-            {r.topRule && ` The rule you went past most: ${(RULE_NAMES[r.topRule as TitleId] ?? r.topRule).toLowerCase()}.`}
+            {plural(r.pauses, 'pause')}. You skipped {plural(r.skipped, 'trade')}. You kept your rules on {r.daysKept} of the {plural(r.daysTraded, 'day')} you traded.
+            {r.topRule && ` Your most frequent pause: ${(RULE_NAMES[r.topRule as TitleId] ?? r.topRule).toLowerCase()}.`}
           </p>
         </div>
       )}
@@ -90,7 +90,7 @@ export function Plans({ me, reload }: PageProps) {
           ))}
         </div>
       )}
-      <p className="small muted">Tax, if any, is added at checkout. Paying mid-session turns counting on at once.</p>
+      <p className="small muted">Tax, if any, is added at checkout. Paying mid-session turns protection on at once.</p>
     </div>
   );
 }

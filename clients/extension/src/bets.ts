@@ -1,14 +1,14 @@
-// The bet counter shared by the prediction-market content scripts (Polymarket, Kalshi). Same contract as content.ts on
-// TradingView: it reads each Buy the trader sends, passively in the capture phase, and counts it against the cached
-// rules. It never holds, delays or blocks a bet. Selling isn't an entry, so it isn't counted. Bets have no stop loss, so
-// "Stop loss required" doesn't apply. Loss today = the portfolio value at the first read of the day minus the value
-// now (kept in the extension). Each site only supplies its page reader (pm.ts, kalshi.ts).
+// The bet guard shared by the prediction-market content scripts (Polymarket, Kalshi). Same contract as content.ts on
+// TradingView: it holds a Buy that breaks the trader's rules in the capture phase, decides from the cached rules only,
+// and anything it can't read passes. Selling is never paused (invariant 1). Bets have no stop loss, so "Stop loss
+// required" doesn't apply. Loss today = the portfolio value at the first read of the day minus the value now (kept in
+// the extension). Each site only supplies its page reader (pm.ts, kalshi.ts).
 import {
-  accountResets, activeCooldown, dayOf, entriesToday, evaluate, nextReset, r8Status, round8,
-  BREAK_MINUTES, type Order, type Rules, type State, type Violation,
+  accountResets, activeCooldown, dayOf, entriesToday, evaluate, nextReset, planPause, r8Status, round8,
+  BREAK_MINUTES, type EvalInput, type Order, type Rules, type State,
 } from '@dg/core';
 import { CACHE_KEY, accountKey, type Cache, type QueuedEvent, type TvAccount } from './messages.ts';
-import { makeFmt, NoteUI } from './note.ts';
+import { makeFmt, PauseUI } from './pause.ts';
 import { Pill, type PillView } from './pill.ts';
 import { API } from './config.ts';
 
@@ -19,18 +19,27 @@ export interface BetSite {
   accountWord: string;
   /** Prefix of event ids and of the day-start key. Never change it: the day start is stored under it. */
   prefix: string;
-  /** The Buy submit this event is on, or null. Never a sell, a deposit or a sign-in. */
-  orderTarget(e: Event): Element | null;
+  /** The guarded submit this event is on, or null. Never a sell, a deposit or a sign-in. */
+  guardedTarget(e: Event): Element | null;
   readAccount(): TvAccount | undefined;
   /** Portfolio value, or undefined when it can't be read. */
   readEquity(): number | undefined;
-  /** The bet this submit places, or undefined when it can't be read (then it isn't counted). */
+  /** The bet this submit would place, or undefined when it can't be read (the click then passes). */
   readOrder(submit: Element, account: string): Omit<Order, 'kind'> | undefined;
 }
 
+export function orderKey(o: Omit<Order, 'kind'>): string {
+  return [o.account, o.symbol, o.side, o.size].join('|');
+}
+
+const PASS_MS = 10_000;
 const EVENTS = ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click', 'keydown'] as const;
 
-export function countBets(site: BetSite): void {
+function textOf(el: Element): string {
+  return ((el as HTMLElement).innerText ?? el.textContent ?? '').trim().replace(/\s+/g, ' ');
+}
+
+export function guardBets(site: BetSite): void {
   const DAY_START_KEY = `dg_${site.prefix}_day_start`;
   let cache: Cache | undefined;
   let dayStarts: Record<string, { dayStart: number; balance: number }> = {};
@@ -42,20 +51,23 @@ export function countBets(site: BetSite): void {
     if (c[CACHE_KEY]) cache = c[CACHE_KEY].newValue as Cache | undefined;
   });
 
-  const ui = new NoteUI();
+  const ui = new PauseUI();
   const local: {
     entries: State['entries'];
+    overrides: number[];
+    lastSkip?: State['lastSkip'];
     breakUntil?: number;
     doneUntil?: number;
     limitReachedAt: Record<string, number>;
-  } = { entries: [], limitReachedAt: {} };
+  } = { entries: [], overrides: [], limitReachedAt: {} };
 
   interface Gesture {
     el: Element;
-    /** The bet this gesture places, read at its start: counted at the click that ends it. */
-    entry?: { order: Order; violations: Violation[] };
+    hold: boolean;
+    entry?: { order: Omit<Order, 'kind'>; pauseId?: string };
   }
   let gesture: Gesture | null = null;
+  let pass: { el: Element; key: string; until: number; pauseId: string } | null = null;
 
   const now = () => Date.now() + (cache?.skew ?? 0);
   const rid = () => crypto.getRandomValues(new Uint32Array(3)).reduce((s, x) => s + x.toString(36), '');
@@ -99,50 +111,85 @@ export function countBets(site: BetSite): void {
     return {
       entries: [...(snap.entries ?? []), ...local.entries.filter((e) => e.t > since)],
       closes: snap.closes ?? [],
+      overrides: [...(snap.overrides ?? []), ...local.overrides.filter((t) => t > since)],
       breakUntil: later(snap.breakUntil, local.breakUntil),
       doneUntil: later(snap.doneUntil, local.doneUntil),
+      lastSkip: local.lastSkip && (!snap.lastSkip || local.lastSkip.t > snap.lastSkip.t) ? local.lastSkip : (snap.lastSkip ?? undefined),
       accounts,
       clock: { verified: true },
     };
   }
 
-  /** Reads the bet a gesture on a Buy submit places, and the rules it breaks. Never holds it. */
-  function read(e: Event, el: Element): Gesture {
-    const none: Gesture = { el };
-    if (!e.isTrusted) return none;
+  function decide(e: Event, el: Element): Gesture {
+    const through: Gesture = { el, hold: false };
+    if (!e.isTrusted) return through;
     const account = site.readAccount();
-    if (!account) return none;
+    if (!account) return through;
     reportAccount(account);
     const c = cache;
     const acct = c?.accounts[accountKey(account)];
-    if (!c?.signed || !acct || !acct.enforced || !c.signed.license.enforcing) return none;
-    const o = site.readOrder(el, acct.id);
-    if (!o) {
+    if (!c?.signed || !acct || !acct.enforced || !c.signed.license.enforcing) return through;
+    const read = site.readOrder(el, acct.id);
+    if (!read) {
       send(account, [{ type: 'unclassified', t: now() }]);
-      return none;
+      return through;
     }
-    const order: Order = { ...o, kind: 'entry' };
-    const violations = evaluate({ rules: betRules(c.signed.rules), time: c.signed.time, state: stateFor(c, acct.id), order, now: now() });
-    return { el, entry: { order, violations } };
+    const key = orderKey(read);
+    if (pass && pass.el === el && pass.key === key && performance.now() < pass.until) {
+      return { el, hold: false, entry: { order: read, pauseId: pass.pauseId } };
+    }
+    const order: Order = { ...read, kind: 'entry' };
+    const input: EvalInput = { rules: betRules(c.signed.rules), time: c.signed.time, state: stateFor(c, acct.id), order, now: now() };
+    const plan = planPause(input, evaluate(input), c.signed.popup);
+    if (!plan) return { el, hold: false, entry: { order: read } };
+    showPause(account, order, plan, c, el, key);
+    return { el, hold: true };
   }
 
-  /** The bet went through (the gesture's final click or Enter): count it once, with the rules it broke. */
+  function showPause(account: TvAccount, order: Order, plan: NonNullable<ReturnType<typeof planPause>>, c: Cache, el: Element, key: string) {
+    const s = c.signed!;
+    const pauseId = `${site.prefix}p_${rid()}`;
+    const button = textOf(el) || 'Buy';
+    ui.show(
+      { plan, order, fmt: makeFmt(s.time, 'USD', s.hideAmounts), r3Seconds: s.rules.R3.seconds },
+      (decision, info) => {
+        const t = now();
+        send(account, [{
+          type: 'pause', t, pauseId, rules: plan.violations.map((v) => v.rule), title: plan.title, decision, shownSec: info.shownSec, waitSec: plan.waitSec,
+          placedAnyway: decision === 'place' ? plan.placedAnyway + 1 : undefined, reattempt: plan.reattemptAgoSec !== undefined,
+          symbol: order.symbol, side: order.side, size: order.size, sent: false, reason: info.reason,
+        }]);
+        if (decision === 'place') {
+          pass = { el, key, until: performance.now() + PASS_MS, pauseId };
+          ui.note(`Click ${button} to place it (10 s).`, PASS_MS);
+        } else {
+          local.lastSkip = { t, symbol: order.symbol, side: order.side, waitSec: plan.waitSec };
+        }
+      },
+    );
+  }
+
   function counted(g: Gesture) {
     const account = site.readAccount();
     if (!g.entry || !account) return;
-    const { order, violations } = g.entry;
+    const { order, pauseId } = g.entry;
     const t = now();
     local.entries.push({ t, account: order.account, symbol: order.symbol, side: order.side, size: order.size });
-    send(account, [{ type: 'entry', t, symbol: order.symbol, side: order.side, size: order.size, source: 'click', violations: violations.map((v) => v.rule) }]);
-    const s = cache?.signed;
-    if (s && violations.length) ui.broke(violations, order, makeFmt(s.time, 'USD', s.hideAmounts), t, s.rules.R3.seconds);
+    const events: Omit<QueuedEvent, 'id'>[] = [{ type: 'entry', t, symbol: order.symbol, side: order.side, size: order.size, source: 'panel', pauseId }];
+    if (pauseId) {
+      local.overrides.push(t);
+      events.unshift({ type: 'pause_sent', t, pauseId });
+      pass = null;
+      ui.hideNote();
+    }
+    send(account, events);
   }
 
   function onEvent(e: Event) {
-    if (pill.owns(e)) return;
+    if (ui.owns(e) || pill.owns(e)) return;
     let el: Element | null = null;
     try {
-      el = site.orderTarget(e);
+      el = site.guardedTarget(e);
     } catch {
       return;
     }
@@ -150,20 +197,23 @@ export function countBets(site: BetSite): void {
     const starts = e.type === 'pointerdown' || e.type === 'keydown' || (e.type === 'mousedown' && gesture?.el !== el);
     if (starts || !gesture || gesture.el !== el) {
       try {
-        gesture = read(e, el);
+        gesture = ui.open ? { el, hold: true } : decide(e, el);
       } catch {
-        gesture = { el };
+        gesture = { el, hold: false };
       }
     }
+    const current = gesture;
+    if (current.hold) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
     if (e.type === 'click' || e.type === 'keydown') {
-      try {
-        counted(gesture);
-      } catch {}
+      if (!current.hold) counted(current);
       gesture = null;
     }
   }
 
-  for (const t of EVENTS) window.addEventListener(t, onEvent, { capture: true, passive: true });
+  for (const t of EVENTS) window.addEventListener(t, onEvent, { capture: true });
 
   /** Every 2 s: report the account, and tell the server the first time loss today reaches the limit. */
   function watch() {
@@ -205,21 +255,21 @@ export function countBets(site: BetSite): void {
 
   function pillView(): PillView | undefined {
     const c = cache;
-    if (!c || c.status === 'signed_out') return { tone: 'off', text: 'Off · Signed out', lines: ['Bets aren’t counted.', 'Sign in from the DisciplineGuard toolbar button.'], actions: false };
+    if (!c || c.status === 'signed_out') return { tone: 'off', text: 'Off · Signed out', lines: ['Bets go through normally.', 'Sign in from the DisciplineGuard toolbar button.'], actions: false };
     const account = site.readAccount();
     const acct = account && c.accounts[accountKey(account)];
     const refused = account && !acct ? c.refused?.[accountKey(account)] : undefined;
     if (refused === 'account_taken') {
-      return { tone: 'off', text: 'Off · On another login', lines: [`This ${site.accountWord} is counted under another DisciplineGuard login.`], actions: false };
+      return { tone: 'off', text: 'Off · On another login', lines: [`This ${site.accountWord} is protected under another DisciplineGuard login.`, 'Bets go through normally.'], actions: false };
     }
     if (refused === 'account_cap') {
-      return { tone: 'off', text: 'Off · Account limit', lines: ['The free plan covers 1 trading account.', 'Remove the other account on disciplineguard.leowqiheng.workers.dev/devices.'], actions: false };
+      return { tone: 'off', text: 'Off · Account limit', lines: ['The free plan covers 1 trading account.', 'Remove the other account on disciplineguard.leowqiheng.workers.dev/devices. Bets go through normally.'], actions: false };
     }
-    if (!account || !acct || !c.signed) return { tone: 'setup', text: 'Setting up', lines: [`Log in to ${site.name} to start counting.`], actions: false };
+    if (!account || !acct || !c.signed) return { tone: 'setup', text: 'Setting up', lines: [`Log in to ${site.name} to turn on protection.`], actions: false };
     const where = `${site.name} …${acct.last3}`;
     if (c.status === 'attention') return { tone: 'attention', text: 'Needs attention', lines: ['Sign in again. Your saved rules still apply.', where], actions: false };
-    if (!acct.enforced) return { tone: 'off', text: 'Off', lines: [`Bets on this ${site.accountWord} aren’t counted.`], actions: false };
-    if (!c.signed.license.enforcing) return { tone: 'off', text: 'Off', lines: ['Bets aren’t counted.'], actions: false };
+    if (!acct.enforced) return { tone: 'off', text: 'Off', lines: [`This ${site.accountWord} isn’t protected. Bets go through normally.`], actions: false };
+    if (!c.signed.license.enforcing) return { tone: 'off', text: 'Off', lines: ['Bets are no longer paused.'], actions: false };
 
     const s = c.signed;
     const t = now();
@@ -243,7 +293,7 @@ export function countBets(site: BetSite): void {
       const cd = activeCooldown(s.rules, state.closes, t);
       if (cd && t < cd.until) parts.push(`cooldown ${mmss(cd.until - t)}`);
     }
-    lines.push(`Counting ${where}`);
+    lines.push(`Protecting ${where}`);
     return { tone: 'on', text: [c.status === 'offline' ? 'On (offline)' : 'On', ...parts.slice(0, 2)].join(' · '), lines, actions: true };
   }
 

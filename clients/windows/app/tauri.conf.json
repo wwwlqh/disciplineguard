@@ -18,7 +18,7 @@
     "targets": ["nsis"],
     "icon": ["icons/icon.png", "icons/icon.ico"],
     "publisher": "DisciplineGuard",
-    "shortDescription": "Counts every trade against your own trading rules.",
+    "shortDescription": "Pauses you at the click when a trade breaks your own rules.",
     "createUpdaterArtifacts": true,
     "windows": {
       "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },

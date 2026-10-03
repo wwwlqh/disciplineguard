@@ -28,7 +28,7 @@ const SETUP: Article[] = [
       '2. Open chrome://extensions (in Edge: edge://extensions) and turn on Developer mode.',
       '3. Click Load unpacked and pick the unzipped folder.',
       '4. On the tab that opens, click Sign in, then Allow. No tab? Click the DisciplineGuard button in the toolbar.',
-      '5. Open Polymarket, Kalshi, or a TradingView chart with your broker connected. Trades in phone apps and the TradingView desktop app aren\'t counted.',
+      '5. Open Polymarket, Kalshi, or a TradingView chart with your broker connected. Phone apps and the TradingView desktop app can\'t be paused.',
     ],
   },
   {
@@ -49,9 +49,9 @@ const SETUP: Article[] = [
   },
   {
     slug: 'protect',
-    title: 'Connect MetaTrader',
+    title: 'Protect MetaTrader',
     body: [
-      'The app lists every MetaTrader it finds. Tick the ones you trade on and click Connect.',
+      'The app lists every MetaTrader it finds. Tick the ones you trade on and click Protect.',
       "Don't see yours? Click Browse and pick the folder MetaTrader is installed in.",
     ],
   },
@@ -59,8 +59,24 @@ const SETUP: Article[] = [
     slug: 'restart',
     title: 'Restart MetaTrader to finish setup',
     body: [
-      'If MetaTrader was open when you connected it, it needs one restart. Click Restart MetaTrader in the app, or choose Next time I open it.',
+      'If MetaTrader was open during Protect, it needs one restart. Click Restart MetaTrader in the app, or choose Next time I open it.',
       "Open trades aren't affected. The app never closes MetaTrader unless you click Restart.",
+    ],
+  },
+  {
+    slug: 'algo-trading',
+    title: 'Turn on Algo Trading',
+    body: [
+      'The panel places trades through Algo Trading. The app turns it on, but it can be switched off in MetaTrader.',
+      'Click Algo Trading once in the MetaTrader toolbar so it turns green.',
+    ],
+  },
+  {
+    slug: 'practice',
+    title: 'Try a practice pause',
+    body: [
+      'Today → Practice pause shows exactly what a real pause looks like, with your own rules. Nothing is placed.',
+      'On the chart: panel menu → Practice pause.',
     ],
   },
 ];
@@ -86,14 +102,14 @@ const STATUS: Article[] = [
   {
     slug: 'tick-terminal',
     title: 'Tick this MetaTrader in the app',
-    body: ['This MetaTrader isn\'t connected yet. In the app, tick it and click Connect.'],
+    body: ['This MetaTrader is not protected yet. In the app, tick it and click Protect.'],
   },
   {
     slug: 'connecting',
     title: 'Connecting or loading your rules',
     body: [
       'Usually a few seconds. If it stays, check your internet connection and that the app is open.',
-      '"Can\'t reach DisciplineGuard" means our server is out of reach. Trades are counted once the first rules load.',
+      '"Can\'t reach DisciplineGuard" means our server is out of reach. Orders go through normally until the first rules load.',
     ],
   },
   {
@@ -102,24 +118,29 @@ const STATUS: Article[] = [
     body: [
       'Your rules are still on. The panel uses the rules it saved last time and catches up when it can reach us again.',
       '"App not running": open DisciplineGuard from the Start menu.',
-      'After about 5 weeks with no contact, counting turns off: "Can\'t confirm your plan".',
+      'After about 5 weeks with no contact, protection turns off: "Can\'t confirm your plan".',
     ],
   },
   {
-    slug: 'counting',
-    title: 'How trades are counted',
+    slug: 'panel-only',
+    title: 'On (panel only)',
+    body: ['You have the panel on more than one chart. One chart does the counting, the others are for trading. Nothing to fix.'],
+  },
+  {
+    slug: 'outside-trades',
+    title: 'Trades placed outside the panel',
     body: [
-      'Every trade on a connected account is counted against your rules, wherever you place it: MetaTrader itself, F9, the one-click buttons, the phone app or the web terminal. On TradingView, Polymarket and Kalshi, trades on the website in Chrome or Edge.',
-      'A trade that goes past a rule goes through like any other. It is marked, the chart shows which rule, and you get an alert.',
-      'DisciplineGuard never holds, pauses, changes or closes a trade.',
-      'With MetaTrader on more than one chart, one chart does the counting. Nothing to fix.',
+      'MetaTrader lets you trade with F9, the one-click buttons and the phone app. DisciplineGuard can\'t pause those, but they still count toward today.',
+      'Rules → Close outside trades: with it on, such a trade that goes past a rule is closed within seconds, while MetaTrader with DisciplineGuard runs on your computer or VPS. If a missing stop loss is the only problem, you get 60 seconds to add one. Trades from other EAs are never closed.',
+      'Panel menu → Hide quick-trade buttons on all charts removes the one-click buttons.',
+      'Closing, stop loss, take profit and cancelling are never paused.',
     ],
   },
   {
     slug: 'new-account',
     title: 'New account on this terminal',
     body: [
-      'You logged in to a trading account that isn\'t counted yet. Click Count it on the panel. It applies at once.',
+      'You logged in to a trading account that isn\'t protected yet. Click Protect on the panel. It applies at once.',
       "The free plan covers 1 account. TradingView Paper Trading doesn't count. Remove an account on Devices to add another. Ended accounts are removed at once.",
     ],
   },
@@ -127,7 +148,7 @@ const STATUS: Article[] = [
     slug: 'account-taken',
     title: 'This account is on another login',
     body: [
-      'This trading account is already counted under another DisciplineGuard login, so it stays there. Its trades aren\'t counted here.',
+      'This trading account is already protected under another DisciplineGuard login, so it stays there. Orders on it go through normally here.',
       'Sign in with that login instead, or remove the account on its Devices page. If you can\'t get into that login, sign out of it in the app: after 3 trading days without it, the account can move to this login.',
     ],
   },
@@ -140,8 +161,8 @@ const STATUS: Article[] = [
     slug: 'signed-out',
     title: 'Signed out or removed',
     body: [
-      'Counting is off: trades aren\'t counted.',
-      'To count this MetaTrader again, sign in to the app and tick it. A removed account can be added back on the panel.',
+      'Protection is off and orders go through normally.',
+      'To protect this MetaTrader again, sign in to the app and tick it. A removed account can be added back on the panel.',
     ],
   },
   {
@@ -157,11 +178,11 @@ const STATUS: Article[] = [
   {
     slug: 'unknown-build',
     title: 'Unknown EA build',
-    body: ['The panel on this terminal is not one we published. Reinstall DisciplineGuard for Windows and click Connect.'],
+    body: ['The panel on this terminal is not one we published. Reinstall DisciplineGuard for Windows and click Protect.'],
   },
   {
     slug: 'remove',
-    title: 'Stop counting an account',
+    title: 'Remove protection',
     body: [
       'Remove the account or device on Devices. It\'s a loosening, so it waits until your next day reset, at least 12 hours.',
       'During setup mode, or for an Ended account, it applies at once.',
@@ -171,7 +192,7 @@ const STATUS: Article[] = [
     slug: 'data',
     title: 'What DisciplineGuard stores',
     body: [
-      'Your email, your rules, each trade (time, symbol, side, size, the rules it went past, the net of each close), and what the daily loss limit needs.',
+      'Your email, your rules, each trade and pause (time, symbol, side, size, the net of each close), and what the daily loss limit needs.',
       'Account numbers are stored scrambled, plus the last 3 characters. Account holder names and passwords are never sent.',
       'Nothing is sold or shared. Account → Export or Delete, any time.',
     ],

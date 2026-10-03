@@ -35,14 +35,14 @@ const NAV: [string, string, IconName][] = [
   ['/account', 'Account', 'account'],
 ];
 
-/** One line for the whole setup: on, needs a look, or nothing connected yet. */
+/** One line for the whole setup: protected, needs a look, or nothing connected yet. */
 function protection(me: Me): { kind: 'on' | 'attention' | 'off' | 'setting_up'; title: string; line: string } {
   const st = me.connections.map((c) => deviceStatus(c));
   const on = st.filter((s) => s.kind === 'on').length;
   if (!me.license.enforcing) return { kind: 'off', title: 'Off', line: 'Orders go through normally.' };
   if (me.connections.length === 0) return { kind: 'setting_up', title: 'Not connected', line: 'Connect your platform.' };
   if (st.some((s) => s.kind === 'attention')) return { kind: 'attention', title: 'Needs attention', line: 'A device needs a look.' };
-  if (on > 0) return { kind: 'on', title: 'On', line: `${on} ${on === 1 ? 'device' : 'devices'} on` };
+  if (on > 0) return { kind: 'on', title: 'Protected', line: `${on} ${on === 1 ? 'device' : 'devices'} on` };
   return { kind: 'off', title: 'Not running', line: 'Open MetaTrader or a chart.' };
 }
 

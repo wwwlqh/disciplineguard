@@ -50,12 +50,12 @@ export function usePage(p: PageConfig): void {
   active = p;
 }
 
-/** Words that mark a close, reduce or cancel. A control with them never sends an entry, whatever the config says. */
+/** Words that mark a close, reduce or cancel. A control with them is never guarded (invariant 1), whatever the config says. */
 export const CLOSE_MARKERS = /\b(close|flatten|cancel|reduce|modify|exit|reverse)\b/i;
 
 export type Path = 'panel' | 'floating';
 
-export interface OrderTarget {
+export interface Guarded {
   el: Element;
   path: Path;
 }
@@ -77,8 +77,8 @@ function matchUp(start: EventTarget[], sel: string): Element | null {
   return null;
 }
 
-/** The Buy/Sell control this event is on, or null. Enter in an order-panel field counts as the panel's submit. */
-export function orderTarget(e: Event, page = active): OrderTarget | null {
+/** The guarded control this event is on, or null. Enter in an order-panel field counts as the panel's submit. */
+export function guardedTarget(e: Event, page = active): Guarded | null {
   const path = e.composedPath();
   if (e.type === 'keydown') {
     if ((e as KeyboardEvent).key !== 'Enter') return null;
@@ -168,12 +168,12 @@ export function panelOpen(page = active): boolean {
 const SUBMIT = /^(buy|sell)\s+([\d.,]+)\s+(\S+)(?:\s+@\s*([\d.,]+))?\s+(market|limit|stop)\b/i;
 
 /** False when the panel's button isn't an order yet ("Start creating order" before a side is picked). */
-export function isOrder(g: OrderTarget): boolean {
+export function isOrder(g: Guarded): boolean {
   return g.path === 'floating' || /^(buy|sell)/i.test(textOf(g.el));
 }
 
 /** The order this control would send, or undefined when it can't be read (the click then passes). */
-export function readOrder(g: OrderTarget, account: string, page = active): Omit<Order, 'kind'> | undefined {
+export function readOrder(g: Guarded, account: string, page = active): Omit<Order, 'kind'> | undefined {
   if (g.path === 'floating') {
     const symbol = readSymbol(page);
     const size = num(textOf(document.querySelector(page.floating.qty)));
@@ -194,3 +194,7 @@ export function readOrder(g: OrderTarget, account: string, page = active): Omit<
   return { platform: 'tv', account, symbol: m[3], side: m[1].toLowerCase() as Side, size, type, sl, price: type === 'market' ? undefined : num(m[4]) };
 }
 
+/** Binds a Place anyway pass to exactly this order (SPEC §7.5 step 3). */
+export function orderKey(o: Omit<Order, 'kind'>): string {
+  return [o.account, o.symbol, o.side, o.size, o.sl ?? '', o.type, o.price ?? ''].join('|');
+}

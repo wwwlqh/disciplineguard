@@ -1,6 +1,6 @@
 // Rules (EXPERIENCE §5.5) and rule-change moments (§10).
 import { useEffect, useState } from 'react';
-import { type RuleId } from '@dg/core';
+import { type PopupSettings, type RuleId } from '@dg/core';
 import { api, saveSetting, type Account, type Me } from '../api.ts';
 import { accountName, date, time } from '../fmt.ts';
 import { navigate } from '../router.ts';
@@ -92,6 +92,117 @@ function RuleCard({ me, id, reload }: { me: Me; id: RuleId; reload(): Promise<vo
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PopupCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
+  const [p, setP] = useState<PopupSettings>(me.popup);
+  const changed = JSON.stringify(p) !== JSON.stringify(me.popup);
+  const v = useVerdict('popup', p, changed);
+  const save = useSave(reload);
+  const num = (val: number, f: (n: number) => void, min: number, max: number) => (
+    <input type="number" className="narrow" min={min} max={max} value={val} onChange={(e) => f(Math.max(min, Math.min(max, Number(e.target.value))))} />
+  );
+  const seq = p.growing.on ? [0, 1, 2, 3].map((n) => Math.min(p.wait + p.growing.step * n, Math.max(p.growing.cap, p.wait))).join(' s → ') + ' s' : '';
+  return (
+    <div className="card">
+      <div className="card-head"><h2><Icon name="pause" /> Popup settings</h2></div>
+      <p className="small muted">Trades that keep your rules go straight through, unless you pick "every new trade".</p>
+      <div className="stack">
+        <label className="field">When it shows
+          <select value={p.show} onChange={(e) => setP({ ...p, show: e.target.value as PopupSettings['show'] })}>
+            <option value="breaks">Only when a trade goes past one of my rules</option>
+            <option value="every">On every new trade</option>
+          </select>
+        </label>
+        <label className="field">Wait before "Place anyway" unlocks (0–60 s)
+          <span className="row">{num(p.wait, (wait) => setP({ ...p, wait }), 0, 60)} <span className="small muted">seconds</span></span>
+        </label>
+        <div>
+          <label className="check"><input type="checkbox" checked={p.lossWait.on} onChange={(e) => setP({ ...p, lossWait: { ...p.lossWait, on: e.target.checked } })} /> A longer wait after a loss</label>
+          {p.lossWait.on && (
+            <div className="row small" style={{ marginTop: 6, paddingLeft: 28 }}>
+              Wait {num(p.lossWait.seconds, (seconds) => setP({ ...p, lossWait: { ...p.lossWait, seconds } }), 0, 60)} s when my last losing trade closed less than {num(p.lossWait.withinMinutes, (withinMinutes) => setP({ ...p, lossWait: { ...p.lossWait, withinMinutes } }), 5, 120)} min ago
+            </div>
+          )}
+        </div>
+        <div>
+          <label className="check"><input type="checkbox" checked={p.growing.on} onChange={(e) => setP({ ...p, growing: { ...p.growing, on: e.target.checked } })} /> Growing wait</label>
+          {p.growing.on && (
+            <div className="small" style={{ marginTop: 6, paddingLeft: 28 }}>
+              <div className="row">Each trade placed anyway today adds {num(p.growing.step, (step) => setP({ ...p, growing: { ...p.growing, step } }), 1, 30)} s, up to {num(p.growing.cap, (cap) => setP({ ...p, growing: { ...p.growing, cap } }), 1, 120)} s</div>
+              <div className="muted">Example: {seq}. Resets at your next trading day.</div>
+            </div>
+          )}
+        </div>
+        <label className="field">Type to confirm
+          <span className="row">
+            <select value={p.typeConfirm.mode} onChange={(e) => setP({ ...p, typeConfirm: { ...p.typeConfirm, mode: e.target.value as PopupSettings['typeConfirm']['mode'] } })}>
+              <option value="off">Off</option>
+              <option value="always">Always</option>
+              <option value="after">After some trades placed anyway today</option>
+            </select>
+            {p.typeConfirm.mode === 'after' && <>after {num(p.typeConfirm.n, (n) => setP({ ...p, typeConfirm: { ...p.typeConfirm, n } }), 1, 10)}</>}
+          </span>
+        </label>
+        <label className="check"><input type="checkbox" checked={p.skipCard} onChange={(e) => setP({ ...p, skipCard: e.target.checked })} /> After a skip, offer "Take a break" and "Done for today"</label>
+        <label className="check"><input type="checkbox" checked={p.keyboardPlace} onChange={(e) => setP({ ...p, keyboardPlace: e.target.checked })} /> Accessibility: type PLACE instead of clicking</label>
+      </div>
+      <Scheduled me={me} k="popup" render={() => 'new popup settings'} />
+      {changed && (
+        <div className="stack" style={{ marginTop: 12 }}>
+          <VerdictLine v={v} setupMode={me.user.setupMode} />
+          <div className="row">
+            <button className="primary" disabled={!v || v.direction === 'same'} onClick={() => save('popup', p)}>{applyLabel(v)}</button>
+            <button onClick={() => setP(me.popup)}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** "Close outside trades" (SPEC §9.2): on applies now, off waits like any loosening. */
+function CloseOutsideCard({ me, reload }: { me: Me; reload(): Promise<void> }) {
+  const cur = me.rules.closeOutside;
+  const [on, setOn] = useState(cur);
+  const v = useVerdict('closeOutside', on, on !== cur);
+  const save = useSave(reload);
+  useEffect(() => setOn(cur), [cur]);
+  return (
+    <div className={`card rule-card${cur ? '' : ' off'}`}>
+      <span className={`tile${cur ? ' accent' : ''}`}><Icon name="phone" /></span>
+      <div className="rule-main">
+        <div className="rule-name">Close outside trades <span className="chip">MT5</span></div>
+        <div className="small muted">
+          A trade placed on your phone, the web terminal or MetaTrader's own order window that goes past a rule is closed within seconds. If a missing stop loss is the only problem, you get 60 seconds to add one. Trades from other EAs are never closed.
+        </div>
+        <div className="rule-now"><span className={`value-pill${cur ? ' on' : ''}`}>{cur ? 'On' : 'Off'}</span> <SetOn me={me} k="closeOutside" /></div>
+      </div>
+      <Switch label="Close outside trades" checked={on} onChange={setOn} />
+      <div className="rule-extra">
+      <Scheduled me={me} k="closeOutside" render={(val) => (val ? 'on' : 'off')} />
+      {on !== cur && (
+        <div className="rule-edit">
+          <VerdictLine v={v} setupMode={me.user.setupMode} />
+          <div className="row">
+            <button
+              className="primary"
+              disabled={!v || v.direction === 'same'}
+              onClick={async () => {
+                const r = await save('closeOutside', on);
+                // Scheduled: the switch shows what applies now, and the line above shows the change to come.
+                setOn(r.appliesAt === 'now' ? on : cur);
+              }}
+            >
+              {applyLabel(v)}
+            </button>
+            <button onClick={() => setOn(cur)}>Cancel</button>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
@@ -197,6 +308,7 @@ function LockSheet({ me, onClose, reload }: { me: Me; onClose(): void; reload():
       <h2>Lock my rules</h2>
       <ul>
         {on.map((id) => <li key={id}>{RULE_INFO[id].name}: {ruleSummary(id, me.rules)}</li>)}
+        {me.rules.closeOutside && <li>Close outside trades: on</li>}
         {on.length === 0 && <li>No rules on yet.</li>}
       </ul>
       <label className="check" style={{ margin: '10px 0' }}>
@@ -269,7 +381,12 @@ export function RulesPage({ me, reload }: PageProps) {
         </div>
       ))}
       <div>
-        <Section title="Your trading day" />
+        <Section title="Outside trades" />
+        <CloseOutsideCard me={me} reload={reload} />
+      </div>
+      <div>
+        <Section title="The pause and your day" />
+        <PopupCard me={me} reload={reload} />
         <DayCard me={me} reload={reload} />
       </div>
       <div id="accounts">

@@ -133,8 +133,27 @@ export function validateSetting(key: string, value: unknown, account: AccountLoo
     }
   }
   switch (kind) {
+    case 'popup': {
+      const o = obj(value, 'popup');
+      const lw = obj(o.lossWait, 'lossWait');
+      const g = obj(o.growing, 'growing');
+      const tc = obj(o.typeConfirm, 'typeConfirm');
+      if (o.show !== 'breaks' && o.show !== 'every') bad('show');
+      if (tc.mode !== 'off' && tc.mode !== 'always' && tc.mode !== 'after') bad('typeConfirm');
+      return {
+        show: o.show,
+        wait: int(o.wait, 0, 60, 'wait'),
+        lossWait: { on: bool(lw.on, 'lossWait'), seconds: int(lw.seconds, 0, 60, 'lossWait seconds'), withinMinutes: int(lw.withinMinutes, 5, 120, 'lossWait minutes') },
+        growing: { on: bool(g.on, 'growing'), step: int(g.step, 1, 30, 'growing step'), cap: int(g.cap, 1, 120, 'growing cap') },
+        typeConfirm: { mode: tc.mode, n: int(tc.n, 1, 10, 'typeConfirm n') },
+        skipCard: bool(o.skipCard, 'skipCard'),
+        keyboardPlace: bool(o.keyboardPlace, 'keyboardPlace'),
+      };
+    }
     case 'countOnce':
       return bool(value, 'countOnce');
+    case 'closeOutside':
+      return bool(value, 'closeOutside');
     case 'tz':
       return tz(value);
     case 'reset':

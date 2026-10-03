@@ -4,13 +4,13 @@
 // Signed out (Start free, at /start), the first three run without an account: the draft stays in this browser,
 // Save my rules asks to sign in, and the rules are saved to the account right after.
 import { useEffect, useMemo, useState } from 'react';
-import { buildTemplate, type Choice, type Rules } from '@dg/core';
+import { buildTemplate, DEFAULT_POPUP, type Choice, type Rules } from '@dg/core';
 import { api, type Me } from '../api.ts';
 import { browserTz } from '../fmt.ts';
 import { navigate } from '../router.ts';
 import { SignIn } from './SignIn.tsx';
 import { ConnectBrowser, ConnectMt5, siteList, type Site } from '../ui/Connect.tsx';
-import { Switch } from '../ui/kit.tsx';
+import { PracticePause, Switch } from '../ui/kit.tsx';
 import { Brand } from '../ui/Brand.tsx';
 import { Icon, type IconName } from '../ui/Icon.tsx';
 import { RULE_INFO, RULE_ORDER, RuleFields, validRule } from '../ui/RuleFields.tsx';
@@ -57,19 +57,19 @@ function onlyBets(p: string[]): boolean {
 
 const hasMt = (p: string[]) => p.some((x) => x.startsWith('mt'));
 
-/** What can't be counted from the picks, in one line each. */
+/** What can't be paused from the picks, in one line each. */
 function limits(p: string[]): string[] {
   const out: string[] = [];
   if (p.includes('mt4')) out.push("MetaTrader 4 is coming later. We'll tell you.");
   if (p.includes('mt5_mac')) out.push("MetaTrader 5 on Mac isn't supported yet. We'll tell you.");
   if (p.includes('mt_phone') || p.includes('mt5_web')) out.push(MT5_COUNTS);
-  if (p.includes('tv_desktop')) out.push("Trades in the TradingView desktop app aren't counted. Use the website in Chrome or Edge: same account, same charts.");
-  if (['tv_phone', 'pm_phone', 'kalshi_phone'].some((x) => p.includes(x))) out.push("Trades in the TradingView, Polymarket and Kalshi phone apps aren't counted. Trade on the website on your computer.");
+  if (p.includes('tv_desktop')) out.push("The TradingView desktop app can't be paused. Use the website in Chrome or Edge: same account, same charts.");
+  if (['tv_phone', 'pm_phone', 'kalshi_phone'].some((x) => p.includes(x))) out.push("Phone apps can't be paused. Trade on your computer for the pause.");
   if (p.includes('other')) out.push("We'll tell you if we add your platform.");
   return out;
 }
 
-/** A phone or tablet: nothing there can be connected, so setup finishes on a computer. */
+/** A phone or tablet: nothing there can be paused, so setup finishes on a computer. */
 const MOBILE = typeof navigator !== 'undefined' && (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
 
 const COSTS: { id: Choice; label: string; icon: IconName }[] = [
@@ -108,6 +108,13 @@ function writeGuest(d: Stored | null): void {
   } catch {}
 }
 
+/** Next local midnight, so a guest's practice pause can say when a daily limit clears. */
+function nextMidnight(): number {
+  const t = new Date();
+  t.setHours(24, 0, 0, 0);
+  return t.getTime();
+}
+
 const RESETS: Record<Draft['reset'], string> = {
   midnight: 'midnight in your timezone',
   forex_close: 'forex close, 17:00 New York',
@@ -140,6 +147,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
   const [d, setD] = useState<Draft>(() => initial(me));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [practiceOpen, setPracticeOpen] = useState(false);
   const [signIn, setSignIn] = useState(false);
   const [pending] = useState(() => !!me && !!readGuest()?.pending);
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }));
@@ -289,7 +297,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
           r5bet: defaults.r5bet ? { r5Max: defaults.r5bet.r5Max, r5Overrides: [] } : undefined,
           r6: defaults.r6, r8: defaults.r8, r7ignore: defaults.r7ignore,
         },
-        choices: d.choices, style: d.style,
+        popup: DEFAULT_POPUP, choices: d.choices, style: d.style,
         platforms: d.platforms, accountTypes: accountType, tellMe: d.platforms.filter((p) => !LIVE.includes(p)),
       });
       writeGuest(null);
@@ -319,7 +327,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
   }
 
   // Connect: the Windows app for MT5, the extension for the websites. A site's phone or desktop app gets the website's card,
-  // since trades there are counted on the website. MT5 phone and web terminal trades count while MT5 runs with the Windows app.
+  // since the website can be paused. MT5 phone and web terminal trades count only while MT5 runs with the Windows app.
   const mt5 = ['mt5', 'mt_phone', 'mt5_web'].some((x) => d.platforms.includes(x));
   const sites = SITE_IDS.filter((s) => d.platforms.some((x) => x === s || x.startsWith(`${s}_`)));
   const cantConnect = limits(d.platforms);
@@ -336,6 +344,8 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
     navigate('/');
     if (d.applied) void reload();
   };
+
+  const draftMe = { ...(me ?? { time: { userResets: [nextMidnight()] } }), rules, popup: DEFAULT_POPUP } as Me;
 
   if (signIn && !me) return <SignIn title="Save your rules" onDone={() => window.dispatchEvent(new Event('dg:reload'))} />;
   if (pending && !d.applied && !err) return <div className="center-page muted">{err || 'Saving your rules…'}</div>;
@@ -486,6 +496,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
             </div>
           </details>
 
+          {rulesOn.length > 0 && <button onClick={() => setPracticeOpen(true)}><Icon name="pause" size={16} /> Try a pause with these rules</button>}
           <p className="small muted">Tightening applies now. Loosening waits until your next day reset (at least 12 hours).</p>
           {err && <p role="alert">{err}</p>}
         </section>
@@ -528,6 +539,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
               <strong>Setup mode:</strong> changes apply instantly until you lock your rules. They lock on their own about 3 days after your first device turns on.
             </p>
             <div className="row">
+              <button onClick={() => setPracticeOpen(true)}>Try a practice pause</button>
               <button className="primary" onClick={() => void finish(false)}>Go to Today</button>
               <button onClick={() => void finish(true)}>Lock my rules now</button>
             </div>
@@ -544,6 +556,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
         )}
       </div>
 
+      {practiceOpen && <PracticePause me={draftMe} onClose={() => setPracticeOpen(false)} />}
     </div>
   );
 }

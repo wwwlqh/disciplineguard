@@ -42,6 +42,21 @@ export interface Rules {
   accounts: Record<string, AccountRules>;
   /** "Count the same trade on several accounts once" (SPEC §4.2). */
   countOnce: boolean;
+  /**
+   * "Close outside trades" (SPEC §9.2): the MT5 EA closes a trade placed by hand outside DisciplineGuard (phone, web,
+   * the terminal's own order window) that goes past a rule, right after its fill. Off unless the trader turns it on.
+   */
+  closeOutside: boolean;
+}
+
+export interface PopupSettings {
+  show: 'breaks' | 'every';
+  wait: number;
+  lossWait: { on: boolean; seconds: number; withinMinutes: number };
+  growing: { on: boolean; step: number; cap: number };
+  typeConfirm: { mode: 'off' | 'always' | 'after'; n: number };
+  skipCard: boolean;
+  keyboardPlace: boolean;
 }
 
 /**
@@ -103,10 +118,14 @@ export interface State {
   entries: Entry[];
   /** Closes for the R7/R10 windows, always including the two most recent. */
   closes: Close[];
+  /** Instants of place-anyway decisions and outside violations (the placed-anyway count, SPEC §2). */
+  overrides: number[];
   breakUntil?: number;
   doneUntil?: number;
   accounts: Record<string, AccountState>;
   clock: ClockState;
+  /** The most recent skip, for re-attempts (SPEC §2). */
+  lastSkip?: { t: number; symbol: string; side: Side; waitSec: number };
 }
 
 export type OrderKind = 'entry' | 'exit' | 'unclassified';

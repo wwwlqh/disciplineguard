@@ -1,5 +1,5 @@
 // Watching the Account Manager (SPEC §9.1 "Outside detection", §4.1): what changed in the positions table since the
-// last read, and which of it was already counted at the click. Pure, so the end-to-end test and the content script
+// last read, and which of it the guarded paths already counted. Pure, so the end-to-end test and the content script
 // share it.
 import { normSymbol, round8, sameInstrument, type Position, type Side } from '@dg/core';
 
@@ -38,7 +38,7 @@ export function diffPositions(before: Position[], after: Position[]): { opened: 
   return { opened, closed };
 }
 
-/** An entry counted at the click, still waiting to show up in the table. Market orders wait 15 s, pending orders until they fill. */
+/** A guarded entry still waiting to show up in the table. Market orders wait 15 s, pending orders until they fill. */
 export interface Expected {
   t: number;
   symbol: string;
@@ -50,8 +50,8 @@ export interface Expected {
 export const MARKET_MATCH_MS = 15_000;
 
 /**
- * Takes an opened change off the click-counted entries that explain it. Returns the part nobody placed through a counted
- * path: a trade placed elsewhere. `expected` is updated in place.
+ * Takes an opened change off the guarded entries that explain it. Returns the part nobody placed through a guarded
+ * path: an outside entry. `expected` is updated in place.
  */
 export function unexplained(opened: Change, expected: Expected[], now: number): number {
   let left = opened.size;

@@ -19,8 +19,8 @@ export async function ownerMetrics(_req: Request, env: Env): Promise<Response> {
       "SELECT CASE WHEN platform = 'tv' AND server_name IN ('Polymarket', 'Kalshi') THEN server_name WHEN platform = 'tv' THEN 'TradingView' ELSE UPPER(platform) END AS k, COUNT(*) AS n FROM trading_accounts WHERE removed_at IS NULL GROUP BY k ORDER BY n DESC",
     ),
     week: {
+      pauses: await one("SELECT COUNT(*) FROM events WHERE type = 'pause' AND t >= ?", t - 7 * DAY),
       trades: await one("SELECT COUNT(*) FROM events WHERE type = 'entry' AND void_at IS NULL AND t >= ?", t - 7 * DAY),
-      breaks: await one("SELECT COUNT(*) FROM events WHERE type = 'override' AND t >= ?", t - 7 * DAY),
     },
     tellMe: await rows('SELECT platform AS k, COUNT(*) AS n FROM tell_me GROUP BY platform ORDER BY n DESC'),
     reports: await rows('SELECT type AS k, COUNT(*) AS n FROM problem_reports GROUP BY type ORDER BY n DESC'),

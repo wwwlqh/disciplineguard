@@ -1,16 +1,16 @@
 // Reading Polymarket's page. Everything page-specific is in PM_PAGE: data only, like tv.ts. Anything that can't be
-// read isn't counted. Selectors checked on a market page (signed in, $0 cash), 2 Oct 2026.
+// read makes the click pass. Selectors checked on a market page (signed in, $0 cash), 2 Oct 2026.
 import type { Order } from '@dg/core';
 import type { TvAccount } from './messages.ts';
 
 export const PM_PAGE = {
   /** The trade box's submit button: "Buy Yes", "Trade", or "Deposit"/"Log in" when it isn't an order. */
   submit: '[data-trading-button-wrapper] > button.trading-button:not([role="radio"])',
-  /** The Buy/Sell switch: only Buy is counted. */
+  /** The Buy/Sell switch: only Buy is ever guarded. */
   buyOn: 'button[role="radio"][value="BUY"][aria-checked="true"]',
   /** The outcome picked: "Yes40¢", "No61¢". */
   outcome: 'button.trading-button[role="radio"][aria-checked="true"]',
-  /** The market order's dollar amount. Limit orders don't have it, so they aren't counted yet. */
+  /** The market order's dollar amount. Limit orders don't have it, so they pass for now. */
   amount: '#market-order-amount-input',
   /** localStorage: the trader's Polymarket wallet, and the navbar's balances. */
   walletKey: 'polymarket.auth.proxyWallet',
@@ -32,8 +32,8 @@ function boxOf(el: Element): Element | null {
   return null;
 }
 
-/** The Buy submit this event is on, or null. Enter in the amount field counts as the submit. */
-export function orderTarget(e: Event): Element | null {
+/** The guarded submit this event is on, or null. Enter in the amount field counts as the submit. */
+export function guardedTarget(e: Event): Element | null {
   let submit: Element | null = null;
   if (e.type === 'keydown') {
     if ((e as KeyboardEvent).key !== 'Enter') return null;
@@ -52,7 +52,7 @@ export function orderTarget(e: Event): Element | null {
   if (!submit) return null;
   const text = textOf(submit);
   if (PM_PAGE.notOrder.test(text) || CLOSE_MARKERS.test(text)) return null;
-  // Selling is closing: never an entry.
+  // Selling is closing: never guarded (invariant 1).
   return boxOf(submit)?.querySelector(PM_PAGE.buyOn) ? submit : null;
 }
 

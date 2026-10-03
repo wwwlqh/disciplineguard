@@ -4,7 +4,7 @@ import { DAY } from '@dg/core';
 import { userCtx, type UserRow } from './context.ts';
 import { audit, scheduleJob, sendEmail, type Ctx } from './common.ts';
 import { hmac, safeEqual } from './crypto.ts';
-import { brokenTrades, dayRows, isKept } from './days.ts';
+import { dayRows, isKept } from './days.ts';
 import { now as clock, type Env } from './env.ts';
 import { body, HttpError, json } from './http.ts';
 import { providerEnd } from './license.ts';
@@ -26,18 +26,20 @@ export async function plans(env: Env, user: UserRow): Promise<Response> {
   const t = clock(env);
   const uc = await userCtx(env, user.id, t);
   const from = user.first_on_at ?? user.created_at;
-  const days = (await dayRows(env, uc, from, t + 1)).filter((d) => d.entries > 0);
-  const broken = await brokenTrades(env, user.id, from);
-  const byRule = new Map<string, number>();
-  for (const b of broken) if (b.violations[0]) byRule.set(b.violations[0], (byRule.get(b.violations[0]) ?? 0) + 1);
-  const top = [...byRule].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  const days = (await dayRows(env, uc, from, t + 1)).filter((d) => d.entries + d.pauses > 0);
+  const pauses = await env.DB.prepare(
+    "SELECT json_extract(payload, '$.decision') AS d, json_extract(payload, '$.title') AS title, COUNT(*) AS n FROM events WHERE user_id = ? AND type = 'pause' AND t >= ? GROUP BY d, title",
+  ).bind(user.id, from).all<{ d: string; title: string; n: number }>();
+  const byTitle = new Map<string, number>();
+  for (const r of pauses.results) if (r.title && r.title !== 'CHECK') byTitle.set(r.title, (byTitle.get(r.title) ?? 0) + r.n);
+  const top = [...byTitle].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
   return json({
     prices: PRICES,
     earlyBird: !!user.is_beta,
     current: user.plan_kind,
     recap: {
-      trades: days.reduce((a, d) => a + d.entries, 0),
-      breaks: broken.length,
+      pauses: pauses.results.reduce((a, r) => a + r.n, 0),
+      skipped: pauses.results.filter((r) => r.d === 'skip' || r.d === 'timeout').reduce((a, r) => a + r.n, 0),
       daysTraded: days.length,
       daysKept: days.filter(isKept).length,
       topRule: top,

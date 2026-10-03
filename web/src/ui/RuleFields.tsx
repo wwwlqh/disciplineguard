@@ -4,16 +4,16 @@ import { splitWindow, type RuleId, type Rules, type TimeWindow } from '@dg/core'
 export const RULE_ORDER: RuleId[] = ['R1', 'R2', 'R3', 'R4', 'R7', 'R8', 'R10', 'R5', 'R6', 'R9'];
 
 export const RULE_INFO: Record<RuleId, { name: string; meaning: string; badges: string[] }> = {
-  R1: { name: 'Max trades per day', meaning: 'Every trade past this many today is marked.', badges: [] },
-  R2: { name: 'Max trades per hour', meaning: 'Every trade past this many in the last hour is marked.', badges: [] },
-  R3: { name: 'Too fast', meaning: 'A trade that comes too soon after the ones before it is marked.', badges: [] },
-  R4: { name: 'Trading hours', meaning: 'A trade outside the hours you chose is marked.', badges: [] },
-  R5: { name: 'Max position size', meaning: 'A trade that makes your position bigger than your max is marked. Set per account.', badges: [] },
-  R6: { name: 'Max risk per trade', meaning: 'A trade that risks more than this at its stop loss is marked.', badges: ['MT only'] },
-  R7: { name: 'Cooldown after a loss', meaning: 'A trade soon after a trade closes at a loss is marked.', badges: ['Beta on TradingView'] },
-  R8: { name: 'Daily loss limit', meaning: 'Once you are down this much today, every trade until your rest ends is marked.', badges: ['Beta on TradingView'] },
-  R9: { name: 'Stop loss required', meaning: 'A trade with no stop loss is marked.', badges: [] },
-  R10: { name: 'No bigger after a loss', meaning: 'After a losing trade, a bigger trade than the one you lost on is marked.', badges: ['Beta on TradingView'] },
+  R1: { name: 'Max trades per day', meaning: 'Pause new trades once you reach this many today.', badges: [] },
+  R2: { name: 'Max trades per hour', meaning: 'Pause new trades once you reach this many in the last hour.', badges: [] },
+  R3: { name: 'Too fast', meaning: 'Pause a trade that comes too soon after the ones before it.', badges: [] },
+  R4: { name: 'Trading hours', meaning: 'Pause trades outside the hours you chose.', badges: [] },
+  R5: { name: 'Max position size', meaning: 'Pause a trade that would make your position bigger than your max. Set per account.', badges: [] },
+  R6: { name: 'Max risk per trade', meaning: 'Pause a trade that risks more than this at its stop loss.', badges: ['MT only'] },
+  R7: { name: 'Cooldown after a loss', meaning: 'Pause new trades for a while after a trade closes at a loss.', badges: ['Beta on TradingView'] },
+  R8: { name: 'Daily loss limit', meaning: 'Once you are down this much today, pause every new trade until your rest ends.', badges: ['Beta on TradingView'] },
+  R9: { name: 'Stop loss required', meaning: 'Pause a trade that has no stop loss.', badges: [] },
+  R10: { name: 'No bigger after a loss', meaning: 'After a losing trade, pause a trade bigger than the one you lost on.', badges: ['Beta on TradingView'] },
 };
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -117,7 +117,7 @@ export function RuleFields({ id, value, onChange, inWizard = false }: { id: Rule
           <Num label="Rest after the limit" value={value.restHours} min={0} max={24} unit="hours" onChange={(restHours) => set({ restHours })} />
           <label className="check small">
             <input type="checkbox" checked={!!value.allAccounts} onChange={(e) => set({ allAccounts: e.target.checked })} />
-            Any account at its limit counts for all accounts
+            Any account at its limit pauses all accounts
           </label>
           {!inWizard && <p className="small muted">The limit amount is set per account, under Accounts below.</p>}
         </div>

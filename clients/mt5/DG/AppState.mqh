@@ -7,6 +7,7 @@
 #ifndef DG_APPSTATE_MQH
 #define DG_APPSTATE_MQH
 
+#include <Trade\Trade.mqh>
 #include "Config.mqh"
 #include "Core.mqh"
 #include "Ed25519.mqh"
@@ -24,8 +25,9 @@
 
 DGBridge gBridge;
 DGModel  gM;
-DGJson   gPJ;              // signed payload (rules, time, license)
+DGJson   gPJ;              // signed payload (rules, time, popup, license)
 DGJson   gSJ;              // last sync response (snapshot, accounts)
+CTrade   gTrade;
 
 //--- connection and cache
 string   gConn = "";                 // connection id, set by the Windows app (SPEC §9.5)
@@ -335,7 +337,7 @@ void Enqueue(DGJsonWriter &w, const bool soon = true)
    w.EndObj();
    if(ArraySize(gQueue) >= DG_QUEUE_MAX)
      {
-      // Drop the oldest heartbeat to make room; never drop trades.
+      // Drop the oldest heartbeat to make room; never drop trades or pauses.
       for(int i = 0; i < ArraySize(gQueue); i++)
          if(StringFind(gQueue[i], "\"type\":\"hb\"") >= 0)
            {

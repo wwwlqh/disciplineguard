@@ -59,6 +59,7 @@ void BuildModel(const long now, const ulong excludePos = 0, const double exclude
    int root = gPJ.Root();
    gM.LoadRules(gPJ, gPJ.Get(root, "rules"));
    gM.LoadTime(gPJ, gPJ.Get(root, "time"));
+   gM.LoadPopup(gPJ, gPJ.Get(root, "popup"));
    DGHideAmounts = PBool("hideAmounts");
 
    bool haveDsb = false;
@@ -73,8 +74,17 @@ void BuildModel(const long now, const ulong excludePos = 0, const double exclude
       int cl = gSJ.Get(s, "closes");
       for(int c = gSJ.First(cl); c >= 0; c = gSJ.Next(c))
          gM.AddClose(gSJ.Long(gSJ.Get(c, "t")), gSJ.Str(gSJ.Get(c, "account")), gSJ.Num(gSJ.Get(c, "net")), gSJ.Num(gSJ.Get(c, "size")));
+      int ov = gSJ.Get(s, "overrides");
+      for(int c = gSJ.First(ov); c >= 0; c = gSJ.Next(c)) gM.AddOverride(gSJ.Long(c));
       if(gSJ.Type(gSJ.Get(s, "breakUntil")) == JNUM) gM.breakUntil = gSJ.Long(gSJ.Get(s, "breakUntil"));
       if(gSJ.Type(gSJ.Get(s, "doneUntil")) == JNUM) gM.doneUntil = gSJ.Long(gSJ.Get(s, "doneUntil"));
+      int ls = gSJ.Get(s, "lastSkip");
+      if(gSJ.Type(ls) == JOBJ)
+        {
+         gM.hasLastSkip = true;
+         gM.lsT = gSJ.Long(gSJ.Get(ls, "t")); gM.lsSym = gSJ.Str(gSJ.Get(ls, "symbol"));
+         gM.lsSide = SideOf(gSJ.Str(gSJ.Get(ls, "side"))); gM.lsWait = gSJ.Num(gSJ.Get(ls, "waitSec"));
+        }
       int ac = gSJ.Get(s, "accounts");
       for(int a = gSJ.First(ac); a >= 0; a = gSJ.Next(a))
         {
@@ -102,10 +112,25 @@ void BuildModel(const long now, const ulong excludePos = 0, const double exclude
          string type = q.Str(q.Get(e, "type"));
          long t = q.Long(q.Get(e, "t"));
          bool mine = q.Str(q.Get(e, "acct")) == gKey && gAcctId != "";
-         if(type == "entry" && mine) gM.AddEntry(t, gAcctId, q.Str(q.Get(e, "symbol")), SideOf(q.Str(q.Get(e, "side"))), q.Num(q.Get(e, "size")));
+         if(type == "entry" && mine)
+           {
+            gM.AddEntry(t, gAcctId, q.Str(q.Get(e, "symbol")), SideOf(q.Str(q.Get(e, "side"))), q.Num(q.Get(e, "size")));
+            if(q.Str(q.Get(e, "source")) == "outside" && q.Size(q.Get(e, "violations")) > 0) gM.AddOverride(t);
+           }
          else if(type == "close" && mine) gM.AddClose(t, gAcctId, q.Num(q.Get(e, "net")), q.Num(q.Get(e, "size")));
          else if(type == "break") gM.breakUntil = MathMax(gM.breakUntil, q.Long(q.Get(e, "until")));
          else if(type == "done_today") gM.doneUntil = MathMax(gM.doneUntil, q.Long(q.Get(e, "until")));
+         else if(type == "pause")
+           {
+            string d = q.Str(q.Get(e, "decision"));
+            if(d == "place" && q.Bool(q.Get(e, "sent"))) gM.AddOverride(t);
+            if((d == "skip" || d == "timeout") && (!gM.hasLastSkip || t > gM.lsT))
+              {
+               gM.hasLastSkip = true; gM.lsT = t; gM.lsSym = q.Str(q.Get(e, "symbol"));
+               gM.lsSide = SideOf(q.Str(q.Get(e, "side"))); gM.lsWait = q.Num(q.Get(e, "waitSec"));
+              }
+           }
+         else if(type == "pause_sent") gM.AddOverride(t);
         }
 
    // The live account.
@@ -147,13 +172,23 @@ void BuildModel(const long now, const ulong excludePos = 0, const double exclude
 int    gStatus = ST_SETUP;
 string gStatusText = "";
 
+bool AlgoOk() { return TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) && MQLInfoInteger(MQL_TRADE_ALLOWED) && AccountInfoInteger(ACCOUNT_TRADE_EXPERT); }
+
+string AlgoFix()
+  {
+   if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED)) return "Turn on Algo Trading in the toolbar.";
+   if(!MQLInfoInteger(MQL_TRADE_ALLOWED)) return "Allow Algo Trading in this EA's settings (Common tab).";
+   if(!AccountInfoInteger(ACCOUNT_TRADE_EXPERT)) return "Your broker doesn't allow EAs on this account.";
+   return "";
+  }
+
 bool PlanExpired(const long now)
   {
    long vu = PLong("license.validUntil", 0);
    return vu > 0 && now > vu + 7 * (long)DG_DAY;
   }
 
-/// True when this terminal counts this account's trades against the rules now.
+/// True when this terminal's rules apply to this account now. When false, orders go through normally.
 bool Enforcing(const long now)
   {
    if(!gCacheOk || !Linked() || gOffReason != "") return false;
@@ -168,15 +203,15 @@ string ServerShort() { return AccountInfoString(ACCOUNT_SERVER); }
 
 string OffLine(const long now)
   {
-   if(gOffReason == "account_deleted") return "Off · Account deleted · Trades aren't counted";
-   if(gOffReason != "") return "Off · Signed out · Trades aren't counted";
-   if(gCacheOk && !PBool("license.enforcing")) return "Off · Trades aren't counted";
-   if(PlanExpired(now)) return "Off · Can't confirm your plan · Trades aren't counted";
-   if(gAcctState == "cap") return "Off · The free plan covers 1 account · Trades aren't counted";
-   if(gAcctState == "taken") return "Off · This account is on another DisciplineGuard login · Trades aren't counted";
-   if(gAcctState == "new") return "Off · New account, not counted yet · Trades aren't counted";
-   if(gAcctId != "" && gCacheOk && !PValid("accounts." + gAcctId)) return "Off · This account was removed · Trades aren't counted";
-   return "Off · Trades aren't counted";
+   if(gOffReason == "account_deleted") return "Off · Account deleted · Orders go through normally";
+   if(gOffReason != "") return "Off · Signed out · Orders go through normally";
+   if(gCacheOk && !PBool("license.enforcing")) return "Off · Orders go through normally";
+   if(PlanExpired(now)) return "Off · Can't confirm your plan · Orders go through normally";
+   if(gAcctState == "cap") return "Off · The free plan covers 1 account · Orders go through normally";
+   if(gAcctState == "taken") return "Off · This account is on another DisciplineGuard login · Orders go through normally";
+   if(gAcctState == "new") return "Off · New account, not protected yet · Orders go through normally";
+   if(gAcctId != "" && gCacheOk && !PValid("accounts." + gAcctId)) return "Off · This account was removed · Orders go through normally";
+   return "Off · Orders go through normally";
   }
 
 void ComputeStatus(const long now)
@@ -202,6 +237,7 @@ void ComputeStatus(const long now)
      }
    if(!Enforcing(now)) { gStatus = ST_OFF; gStatusText = OffLine(now); gStatusCode = "off"; return; }
    if(gAuthFail) { gStatus = ST_ATTENTION; gStatusText = "Needs attention · Sign in to the DisciplineGuard app again. Rules still apply."; gStatusCode = "attention"; return; }
+   if(!AlgoOk()) { gStatus = ST_ATTENTION; gStatusText = "Needs attention · Algo Trading is off, so the panel can't place trades"; gStatusCode = "attention"; return; }
    if(!gBridge.appAlive && gLastContact > 0)
      {
       gStatus = ST_OFFLINE;
@@ -219,7 +255,7 @@ void ComputeStatus(const long now)
       return;
      }
    gStatusCode = "on";
-   if(!gPrimary) { gStatus = ST_ON; gStatusText = "On · Another chart is doing the counting."; return; }
+   if(!gPrimary) { gStatus = ST_ON; gStatusText = "On (panel only). Another chart is doing the counting."; return; }
    gStatus = ST_ON;
    long t = gM.SafeNow(now);
    int n = gM.EntriesToday(t);

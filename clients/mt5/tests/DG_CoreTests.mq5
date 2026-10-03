@@ -1,7 +1,7 @@
 //+------------------------------------------------------------------+
 //| DG_CoreTests.mq5                                                 |
 //| Runs the shared cases (MQL5\Files\dg_cases.json) through the     |
-//| MQL5 evaluate(), and writes dg_results.json.                     |
+//| MQL5 evaluate() and planPause(), and writes dg_results.json.     |
 //| tests/compare.ts diffs it against the TypeScript engine.         |
 //| An EA, not a script: scripts wait for chart data.                |
 //+------------------------------------------------------------------+
@@ -45,8 +45,14 @@ void Run()
       m.LoadState(j, j.Get(in, "state"));
       m.LoadOrder(j, j.Get(in, "order"));
       long now = j.Long(j.Get(in, "now"));
+      int popup = j.Get(c, "popup");
       ulong e0 = GetMicrosecondCount();
       m.Evaluate(now);
+      if(j.Valid(popup))
+        {
+         m.LoadPopup(j, popup);
+         m.PlanPause(now);
+        }
       evalUs += GetMicrosecondCount() - e0;
       w.BeginObj();
       w.Str("id", j.Str(j.Get(c, "id")));
@@ -63,6 +69,22 @@ void Run()
          w.EndObj();
         }
       w.EndArr();
+      if(j.Valid(popup))
+        {
+         if(m.planShow)
+           {
+            w.BeginObj("plan");
+            w.Str("title", m.planTitle);
+            w.Long("waitSec", m.planWait);
+            if(m.planTypeConfirm >= 0) w.Long("typeConfirm", m.planTypeConfirm);
+            if(m.planReattempt >= 0) w.Long("reattemptAgoSec", m.planReattempt);
+            w.Long("tradeNumber", m.planTradeNumber);
+            w.Long("placedAnyway", m.planPlaced);
+            w.EndObj();
+           }
+         else
+            w.Null("plan");
+        }
       w.EndObj();
      }
    w.EndArr();

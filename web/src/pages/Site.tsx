@@ -1,17 +1,27 @@
 // The public website (EXPERIENCE §4): one page at `/`, where the logo leads. Signed in, its buttons open the dashboard.
-// Home, how it works (played), compared with lockouts and journals, the rules, where it works, what it never does and
-// pricing (free, 1 account).
+// Home, how it works (played), when each tool acts, the rules, where it works, what it never does, a real recording and pricing
+// (free, 1 account), with a live demo pause.
 import { useEffect, useState } from 'react';
-import { TRUST_LINES } from '@dg/core';
+import { TRUST_LINES, type Order, type PausePlan } from '@dg/core';
+import { coreFmt } from '../fmt.ts';
 import { onLink } from '../router.ts';
 import { Brand, Mark } from '../ui/Brand.tsx';
 import { HeroDemo } from '../ui/HeroDemo.tsx';
 import { HowDemo } from '../ui/HowDemo.tsx';
 import { Icon, RULE_ICON, type IconName } from '../ui/Icon.tsx';
+import { Pause } from '../ui/Pause.tsx';
 import { RULE_INFO } from '../ui/RuleFields.tsx';
 import { WHERE, WHERE_LINE, WhereGrid, worksOn } from '../ui/Where.tsx';
 
 const SOURCE = 'https://github.com/wwwlqh/disciplineguard';
+
+/** A revenge trade four minutes after a loss: the moment the product is for. */
+function demo(): { plan: PausePlan; order: Order } {
+  return {
+    plan: { title: 'R7', violations: [{ rule: 'R7', observed: 4, limit: 15, clearsAt: Date.now() + 11 * 60_000 }], waitSec: 5, tradeNumber: 4, placedAnyway: 0 },
+    order: { platform: 'tv', account: 'demo', symbol: 'NAS100', side: 'buy', size: 2, type: 'market', kind: 'entry', sl: 18_240 },
+  };
+}
 
 const RULES = (['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10'] as const);
 
@@ -35,6 +45,8 @@ function useReveal() {
 
 /** Signed in: "setup" until the rules are saved, then "ready". */
 export function Site({ account }: { account?: 'setup' | 'ready' }) {
+  const [d, setD] = useState<ReturnType<typeof demo> | null>(null);
+  const [after, setAfter] = useState('');
   const [scrolled, setScrolled] = useState(false);
   useReveal();
 
@@ -71,15 +83,16 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
         <div className="wrap">
           <div>
             <span className="pill-badge"><b><Icon name="sparkle" size={12} /> Free</b> 1 trading account · every rule</span>
-            <h1>Your trading rules, <span className="grad-text">counted on every trade.</span></h1>
-            <p className="lead">Set your own rules. Every trade you place is counted against them, and one that goes past a rule is marked. Nothing is ever blocked.</p>
+            <h1>Lockout tools act after your limit. <span className="grad-text">DisciplineGuard pauses you at the click.</span></h1>
+            <p className="lead">Set your own trading rules. A trade that breaks one gets a short pause first. Skip it, or place it anyway.</p>
             <div className="hero-cta">
               {start()}
-              <a className="btn big" href="#how"><Icon name="play" size={16} /> See how it works</a>
+              <button className="big" onClick={() => { setAfter(''); setD(demo()); }}><Icon name="pause" size={16} /> Try the pause</button>
             </div>
+            {after && <p className="demo-after" role="status"><Icon name="check" size={16} /> {after}</p>}
             <div className="hero-meta">
               <span><Icon name="check" size={15} /> No card needed</span>
-              <span><Icon name="check" size={15} /> Never blocks a trade</span>
+              <span><Icon name="check" size={15} /> Closing is never paused</span>
               <span><Icon name="check" size={15} /> Set up in two minutes</span>
             </div>
           </div>
@@ -114,13 +127,16 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
       <section className="sec">
         <div className="wrap">
           <div className="sec-head reveal">
-            <span className="eyebrow">Compared</span>
-            <h2>No journal to fill in. No lockout.</h2>
+            <span className="eyebrow">When each tool acts</span>
+            <h2>The moment that matters is the click.</h2>
+          </div>
+          <div className="card moment reveal">
+            <Moment />
           </div>
           <div className="moment-cards">
-            <div className="card us reveal"><h3><Mark size={20} /> DisciplineGuard</h3><p>Counts every trade by itself, as you place it. You always decide.</p></div>
-            <div className="card reveal"><h3><Icon name="lock" size={18} /> Lockout tools</h3><p>Lock you out after the limit.</p></div>
-            <div className="card reveal"><h3><Icon name="file" size={18} /> Journals</h3><p>You write each trade up yourself, after.</p></div>
+            <div className="card us reveal"><h3><Mark size={20} /> DisciplineGuard</h3><p>At the click, before the order. You decide, every time.</p></div>
+            <div className="card reveal"><h3><Icon name="lock" size={18} /> Lockout tools</h3><p>After the limit. You're locked out.</p></div>
+            <div className="card reveal"><h3><Icon name="file" size={18} /> Journals</h3><p>After the trade. Too late for this one.</p></div>
           </div>
         </div>
       </section>
@@ -173,6 +189,23 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
         </div>
       </section>
 
+      <section className="sec">
+        <div className="wrap">
+          <div className="sec-head reveal">
+            <span className="eyebrow">On a real chart</span>
+            <h2>See it on TradingView.</h2>
+          </div>
+          <div className="browser reveal">
+            <div className="browser-bar">
+              <span className="demo-dots"><i /><i /><i /></span>
+              <span className="url">tradingview.com/chart</span>
+            </div>
+            <video src="/demo-tradingview.mp4" autoPlay muted loop playsInline aria-label="A Buy on TradingView past the day's trade limit gets a pause and is skipped" />
+          </div>
+          <p className="caption">Trade 2 on a day capped at 1. Paused, skipped, nothing placed.</p>
+        </div>
+      </section>
+
       <section className="sec" id="pricing">
         <div className="wrap">
           <div className="sec-head reveal">
@@ -184,7 +217,7 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
               <span className="chip accent"><Icon name="sparkle" size={12} /> Free</span>
               <div className="amount">$0 <small>forever, for 1 account</small></div>
               <ul>
-                <li><Icon name="check" size={17} /> Every rule, every alert</li>
+                <li><Icon name="check" size={17} /> Every rule, every popup setting</li>
                 <li><Icon name="check" size={17} /> MetaTrader 5, TradingView, Polymarket and Kalshi</li>
                 <li><Icon name="check" size={17} /> TradingView Paper Trading doesn't count</li>
                 <li><Icon name="check" size={17} /> No card needed</li>
@@ -200,8 +233,8 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
         <div className="wrap">
           <div className="cta-band reveal">
             <Mark size={44} />
-            <h2 style={{ marginTop: 18 }}>See every time you go<br />past your own rules.</h2>
-            <p>Your rules. Counted on every trade.</p>
+            <h2 style={{ marginTop: 18 }}>A pause before the trade<br />that costs you.</h2>
+            <p>Your rules. Your call. Every time.</p>
             {start()}
           </div>
         </div>
@@ -220,6 +253,58 @@ export function Site({ account }: { account?: 'setup' | 'ready' }) {
         </div>
       </footer>
 
+      {d && (
+        <Pause
+          practice
+          plan={d.plan}
+          order={d.order}
+          fmt={coreFmt()}
+          onDecision={(x) => {
+            setD(null);
+            setAfter(x === 'place' ? 'In real trading, your next click places it. It counts toward today.' : 'Skipped. Nothing was placed. That’s the whole idea.');
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** Where each tool acts on a trade's path: DisciplineGuard at the click, the others after. */
+function Moment() {
+  const stops: [number, string][] = [[90, 'Rule broken'], [330, 'The click'], [530, 'Order sent'], [730, 'Limit hit'], [910, 'Review']];
+  return (
+    <svg viewBox="0 30 1000 145" role="img" aria-label="Journals act after the trade, lockout tools after the limit, DisciplineGuard at the click">
+      <defs>
+        <linearGradient id="m-grad" x1="0" x2="1">
+          <stop offset="0" stopColor="#12b8cf" stopOpacity=".15" />
+          <stop offset="1" stopColor="#12b8cf" />
+        </linearGradient>
+        <filter id="m-glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" /></filter>
+      </defs>
+      <line className="m-track" x1="60" x2="940" y1="120" y2="120" strokeWidth="2" />
+      <line x1="60" x2="330" y1="120" y2="120" stroke="url(#m-grad)" strokeWidth="3" strokeLinecap="round" />
+      {stops.map(([x, label]) => (
+        <g key={label}>
+          <circle className={x === 330 ? '' : 'm-node'} cx={x} cy="120" r={x === 330 ? 9 : 6} fill={x === 330 ? '#12b8cf' : undefined} strokeWidth="1.5" />
+          <text className={x === 330 ? 'm-us' : 'm-small'} x={x} y="156" textAnchor="middle">{label}</text>
+        </g>
+      ))}
+      <circle cx="330" cy="120" r="20" fill="#12b8cf" opacity=".25" filter="url(#m-glow)" />
+      <g transform="translate(330 66)">
+        <rect x="-92" y="-22" width="184" height="36" rx="12" fill="rgb(18 184 207 / 10%)" stroke="rgb(18 184 207 / 45%)" />
+        <text className="m-us" x="0" y="1" textAnchor="middle">DisciplineGuard pauses</text>
+        <line x1="0" x2="0" y1="14" y2="44" stroke="#12b8cf" strokeWidth="1.5" />
+      </g>
+      <g transform="translate(730 66)">
+        <rect x="-70" y="-22" width="140" height="36" rx="12" className="m-dim" />
+        <text className="m-label" x="0" y="1" textAnchor="middle">Lockout tools</text>
+        <line className="m-track" x1="0" x2="0" y1="14" y2="46" strokeWidth="1.5" />
+      </g>
+      <g transform="translate(910 66)">
+        <rect x="-52" y="-22" width="104" height="36" rx="12" className="m-dim" />
+        <text className="m-label" x="0" y="1" textAnchor="middle">Journals</text>
+        <line className="m-track" x1="0" x2="0" y1="14" y2="48" strokeWidth="1.5" />
+      </g>
+    </svg>
   );
 }

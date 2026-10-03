@@ -2,6 +2,7 @@ export * from './types.ts';
 export * from './time.ts';
 export * from './classify.ts';
 export * from './evaluate.ts';
+export * from './pause.ts';
 export * from './changes.ts';
 export * from './copy.ts';
 export * from './resolve.ts';
