@@ -118,7 +118,7 @@ const STATUS: Article[] = [
     body: [
       'Your rules are still on. The panel uses the rules it saved last time and catches up when it can reach us again.',
       '"App not running": open DisciplineGuard from the Start menu.',
-      'After 7 days past your plan end with no contact, protection turns off: "Can\'t confirm your plan".',
+      'After about 5 weeks with no contact, protection turns off: "Can\'t confirm your plan".',
     ],
   },
   {
@@ -155,7 +155,7 @@ const STATUS: Article[] = [
   {
     slug: 'cant-confirm-plan',
     title: "Can't confirm your plan",
-    body: ['No contact with our server for 7 days past your plan end. Open the app and check your internet. It turns back on at the next sync.'],
+    body: ['No contact with our server for about 5 weeks. Open the app and check your internet. It turns back on at the next sync.'],
   },
   {
     slug: 'signed-out',
