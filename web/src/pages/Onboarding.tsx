@@ -1,6 +1,6 @@
 // Onboarding (EXPERIENCE §5.2): four screens, nothing to type, Back always available, resumable.
-// 1 Where you trade (by device) · 2 About you · 3 Your rules (each ticked cost opens its rules; trading day) ·
-// 4 Connect (the Windows app for MT5, the browser extension for TradingView, Polymarket and Kalshi).
+// 1 Where you trade (each platform, and the ways you trade on it) · 2 About you · 3 Your rules (each ticked cost opens
+// its rules; trading day) · 4 Connect (the Windows app for MT5, the browser extension for TradingView, Polymarket and Kalshi).
 // Signed out (Start free, at /start), the first three run without an account: the draft stays in this browser,
 // Save my rules asks to sign in, and the rules are saved to the account right after.
 import { useEffect, useMemo, useState } from 'react';
@@ -14,6 +14,7 @@ import { PracticePause, Switch } from '../ui/kit.tsx';
 import { Brand } from '../ui/Brand.tsx';
 import { Icon, type IconName } from '../ui/Icon.tsx';
 import { RULE_INFO, RULE_ORDER, RuleFields, validRule } from '../ui/RuleFields.tsx';
+import { LIVE, MT5_COUNTS, WayBody, WHERE, WhereCard, type Way } from '../ui/Where.tsx';
 
 type AccountType = 'prop_challenge' | 'prop_funded' | 'own' | 'demo';
 type Defaults = { r5?: { r5Max: number }; r5bet?: { r5Max: number }; r6?: { unit: 'pct'; value: number }; r8?: { unit: 'pct' | 'amount'; value: number }; r7ignore?: number };
@@ -41,32 +42,29 @@ interface Draft {
   applied: boolean;
 }
 
-/** Where the trader trades, by device. MT5 on Windows and the three websites get the pause today. */
-const PLACES: { id: string; label: string; icon: IconName; line: string; items: { id: string; label: string; chip?: string }[] }[] = [
-  { id: 'windows', label: 'Windows', icon: 'window', line: 'With the DisciplineGuard app', items: [{ id: 'mt5', label: 'MetaTrader 5' }, { id: 'mt4', label: 'MetaTrader 4', chip: 'Coming later' }] },
-  { id: 'web', label: 'Website', icon: 'globe', line: 'In Chrome or Edge, on Windows or Mac', items: [{ id: 'tv', label: 'TradingView' }, { id: 'pm', label: 'Polymarket' }, { id: 'kalshi', label: 'Kalshi' }] },
-  { id: 'mac', label: 'Mac', icon: 'laptop', line: 'TradingView, Polymarket and Kalshi work on the website', items: [{ id: 'mt5_mac', label: 'MetaTrader 5', chip: 'Not yet' }] },
-  { id: 'phone', label: 'iPhone · Android', icon: 'phone', line: "Phone apps can't be paused", items: [{ id: 'mt_phone', label: 'MetaTrader 5' }, { id: 'tv_phone', label: 'TradingView' }, { id: 'pm_phone', label: 'Polymarket' }, { id: 'kalshi_phone', label: 'Kalshi' }] },
+/** Under the platforms (Where.tsx): what isn't one of them. */
+const MORE: (Omit<Way, 'works'> & { works?: Way['works'] })[] = [
+  { id: 'mt4', label: 'MetaTrader 4', icon: 'window', works: 'later' },
+  { id: 'other', label: 'Somewhere else', icon: 'plus' },
 ];
-/** Picks DisciplineGuard protects today. The others are kept as "tell me when it's ready". */
-const LIVE = ['mt5', 'tv', 'pm', 'kalshi'];
 const SITE_IDS: Site[] = ['tv', 'pm', 'kalshi'];
 /** Polymarket or Kalshi: their sizes are in dollars. */
 const hasBets = (p: string[]) => p.some((x) => ['pm', 'kalshi', 'pm_phone', 'kalshi_phone'].includes(x));
 /** Only Polymarket or Kalshi: no sizes in lots, and prop accounts don't apply. */
 function onlyBets(p: string[]): boolean {
-  return hasBets(p) && !p.some((x) => ['mt5', 'mt4', 'mt5_mac', 'mt_phone', 'tv', 'tv_phone'].includes(x));
+  return hasBets(p) && !p.some((x) => x.startsWith('mt') || x.startsWith('tv'));
 }
 
 const hasMt = (p: string[]) => p.some((x) => x.startsWith('mt'));
 
-/** What can't be connected from the picks, in one line each. */
+/** What can't be paused from the picks, in one line each. */
 function limits(p: string[]): string[] {
   const out: string[] = [];
   if (p.includes('mt4')) out.push("MetaTrader 4 is coming later. We'll tell you.");
   if (p.includes('mt5_mac')) out.push("MetaTrader 5 on Mac isn't supported yet. We'll tell you.");
-  if (p.some((x) => x.endsWith('_phone'))) out.push("Phone apps can't be paused. Trade on your computer for the pause.");
-  if (p.includes('mt_phone')) out.push('MetaTrader trades from your phone still count while MetaTrader 5 runs with DisciplineGuard on your computer or VPS.');
+  if (p.includes('mt_phone') || p.includes('mt5_web')) out.push(MT5_COUNTS);
+  if (p.includes('tv_desktop')) out.push("The TradingView desktop app can't be paused. Use the website in Chrome or Edge: same account, same charts.");
+  if (['tv_phone', 'pm_phone', 'kalshi_phone'].some((x) => p.includes(x))) out.push("Phone apps can't be paused. Trade on your computer for the pause.");
   if (p.includes('other')) out.push("We'll tell you if we add your platform.");
   return out;
 }
@@ -329,8 +327,10 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
     set({ step: Math.min(STEPS.length - 1, d.step + 1) });
   }
 
-  // Connect: the Windows app for MT5, the extension for the websites (also for a site's phone app: the website gets the pause).
-  const sites = SITE_IDS.filter((s) => d.platforms.includes(s) || d.platforms.includes(`${s}_phone`));
+  // Connect: the Windows app for MT5, the extension for the websites. A site's phone or desktop app gets the website's card,
+  // since the website can be paused. MT5 phone and web terminal trades count only while MT5 runs with the Windows app.
+  const mt5 = ['mt5', 'mt_phone', 'mt5_web'].some((x) => d.platforms.includes(x));
+  const sites = SITE_IDS.filter((s) => d.platforms.some((x) => x === s || x.startsWith(`${s}_`)));
   const cantConnect = limits(d.platforms);
 
   async function finish(lock: boolean) {
@@ -362,31 +362,19 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
         <section className="stack">
           <h1>Where do you trade?</h1>
           <p className="muted">Tick all that apply.</p>
-          <div className="places">
-            {PLACES.map((p) => (
-              <div key={p.id} className="card place">
-                <div className="place-head">
-                  <span className={`tile${p.items.some((it) => d.platforms.includes(it.id)) ? ' accent' : ''}`}><Icon name={p.icon} /></span>
-                  <div>
-                    <strong>{p.label}</strong>
-                    <div className="small muted">{p.line}</div>
-                  </div>
-                </div>
-                <div className="place-items">
-                  {p.items.map((it) => (
-                    <label key={it.id} className="choice place-item">
-                      <input type="checkbox" aria-label={`${it.label}, ${p.label}`} checked={d.platforms.includes(it.id)} onChange={(e) => togglePlatform(it.id, e.target.checked)} />
-                      <span className="grow">{it.label}</span>
-                      {it.chip && <span className="chip">{it.chip}</span>}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="where-grid">
+            {WHERE.map((p) => <WhereCard key={p.id} p={p} picked={d.platforms} onPick={togglePlatform} />)}
           </div>
-          <label className="check small muted">
-            <input type="checkbox" checked={d.platforms.includes('other')} onChange={(e) => togglePlatform('other', e.target.checked)} /> Somewhere else
-          </label>
+          <ul className="where-ways pick where-more">
+            {MORE.map((w) => (
+              <li key={w.id} className={`way ${w.works ?? 'other'}`}>
+                <label className="way-row">
+                  <input type="checkbox" checked={d.platforms.includes(w.id)} onChange={(e) => togglePlatform(w.id, e.target.checked)} />
+                  <WayBody w={w} />
+                </label>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -521,7 +509,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
           ) : (
             me && (
               <>
-                {d.platforms.includes('mt5') && (
+                {mt5 && (
                   <div className="card">
                     <div className="card-head"><h2><Icon name="window" /> MetaTrader 5 · Windows app</h2></div>
                     <ConnectMt5 me={me} />
@@ -533,7 +521,7 @@ export function Onboarding({ me, reload }: { me: Me | null; reload(): Promise<vo
                     <ConnectBrowser me={me} sites={sites} />
                   </div>
                 )}
-                {!d.platforms.includes('mt5') && sites.length === 0 && <p className="muted">Nothing to connect yet.</p>}
+                {!mt5 && sites.length === 0 && <p className="muted">Nothing to connect yet.</p>}
               </>
             )
           )}

@@ -1,6 +1,6 @@
 // The public website (EXPERIENCE §4): one page at `/` for signed-out visitors. Signed in, `/` is Today.
-// Home, when each tool acts, how it works, the rules, what it never does, a real recording and pricing (free, 1 account),
-// with a live demo pause.
+// Home, when each tool acts, how it works, the rules, where it works, what it never does, a real recording and pricing
+// (free, 1 account), with a live demo pause.
 import { useEffect, useState } from 'react';
 import { TRUST_LINES, type Order, type PausePlan } from '@dg/core';
 import { coreFmt } from '../fmt.ts';
@@ -10,6 +10,7 @@ import { HeroDemo } from '../ui/HeroDemo.tsx';
 import { Icon, RULE_ICON, type IconName } from '../ui/Icon.tsx';
 import { Pause } from '../ui/Pause.tsx';
 import { RULE_INFO } from '../ui/RuleFields.tsx';
+import { WHERE, WHERE_LINE, WhereGrid, worksOn } from '../ui/Where.tsx';
 
 const SOURCE = 'https://github.com/wwwlqh/disciplineguard';
 
@@ -22,13 +23,6 @@ function demo(): { plan: PausePlan; order: Order } {
 }
 
 const RULES = (['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10'] as const);
-
-const PLATFORMS: [string, string, string][] = [
-  ['M5', 'MetaTrader 5', 'Windows'],
-  ['TV', 'TradingView', 'Chrome · Edge'],
-  ['P', 'Polymarket', 'Chrome · Edge'],
-  ['K', 'Kalshi', 'Chrome · Edge'],
-];
 
 const PROMISE_ICONS: IconName[] = ['shieldCheck', 'bolt', 'lock'];
 
@@ -103,11 +97,14 @@ export function Site() {
         </div>
       </section>
 
-      <section className="platform-strip" id="platforms">
+      <section className="platform-strip">
         <div className="wrap">
-          <span className="eyebrow">Works where you trade</span>
-          {PLATFORMS.map(([g, name, where]) => (
-            <span key={name} className="plat"><span className="glyph">{g}</span><span>{name} <small>{where}</small></span></span>
+          <span className="eyebrow">Works with</span>
+          {WHERE.map((p) => (
+            <a key={p.id} href="#platforms" className="plat">
+              <span className="where-glyph" aria-hidden="true">{p.glyph}</span>
+              <span>{p.name} <small>{worksOn(p)}</small></span>
+            </a>
           ))}
         </div>
       </section>
@@ -172,6 +169,19 @@ export function Site() {
                 <div><strong>{RULE_INFO[id].name}</strong><span>{RULE_INFO[id].meaning}</span></div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="sec" id="platforms">
+        <div className="wrap">
+          <div className="sec-head reveal">
+            <span className="eyebrow">Where it works</span>
+            <h2>Your platform, on your computer.</h2>
+            <p>{WHERE_LINE}</p>
+          </div>
+          <div className="where-wrap">
+            <WhereGrid reveal />
           </div>
         </div>
       </section>

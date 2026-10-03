@@ -1,15 +1,25 @@
 // Help center (EXPERIENCE §15): one short article per setup step and status reason.
 // Public: the EA and the Windows app link here, signed in or not.
+import type { ReactNode } from 'react';
 import { onLink } from '../router.ts';
 import { Brand } from '../ui/Brand.tsx';
+import { WHERE_LINE, WhereGrid } from '../ui/Where.tsx';
 
 interface Article {
   slug: string;
   title: string;
   body: string[];
+  /** Shown after the body. */
+  extra?: ReactNode;
 }
 
 const SETUP: Article[] = [
+  {
+    slug: 'where',
+    title: 'Where it works',
+    body: [WHERE_LINE],
+    extra: <WhereGrid />,
+  },
   {
     slug: 'tradingview',
     title: 'Install the browser extension (TradingView, Polymarket, Kalshi)',
@@ -223,7 +233,16 @@ export function Help({ path, signedIn }: { path: string; signedIn: boolean }) {
         <Brand href="/help" label="Help" />
         <a href={signedIn ? '/today' : '/signin'} onClick={onLink} className="small">{signedIn ? 'Dashboard' : 'Sign in'}</a>
       </div>
-      {a ? (
+      {a?.extra ? (
+        <>
+          <div>
+            <h1>{a.title}</h1>
+            {a.body.map((p) => <p key={p} className="muted">{p}</p>)}
+          </div>
+          {a.extra}
+          <p className="small"><a href="/help" onClick={onLink}>All help</a></p>
+        </>
+      ) : a ? (
         <div className="card">
           <h1>{a.title}</h1>
           {a.body.map((p) => <p key={p}>{p}</p>)}

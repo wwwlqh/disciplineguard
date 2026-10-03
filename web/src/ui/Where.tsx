@@ -1,0 +1,140 @@
+// Where the pause works (EXPERIENCE §4 Platforms): each platform, each way to trade on it, and what DisciplineGuard does
+// there. The website, Start free and Help show this one list, so they always say the same thing.
+import { Icon, type IconName } from './Icon.tsx';
+
+/** works: a trade that breaks a rule gets the pause. counts: no pause, but the trade counts toward the rules. */
+export type Works = 'works' | 'counts' | 'no' | 'not_yet' | 'later';
+
+export interface Way {
+  /** The Start free pick. Picks that aren't "works" record "tell me when it's ready". */
+  id: string;
+  label: string;
+  icon: IconName;
+  works: Works;
+  note?: string;
+}
+
+export interface Platform {
+  id: string;
+  name: string;
+  glyph: string;
+  ways: Way[];
+  /** What "Counts only" means here. */
+  foot?: string;
+}
+
+/** The whole list in one line. */
+export const WHERE_LINE = "MetaTrader 5 on Windows. TradingView, Polymarket and Kalshi in Chrome or Edge, on Windows or Mac. Phone apps can't be paused.";
+
+export const MT5_COUNTS ="Phone and web terminal trades aren't paused. They count toward your rules while MetaTrader 5 with DisciplineGuard runs on your computer or VPS.";
+
+const website = (id: string): Way => ({ id, label: 'Website', icon: 'globe', works: 'works', note: 'Chrome or Edge' });
+const phone = (id: string): Way => ({ id, label: 'Phone app', icon: 'phone', works: 'no' });
+
+export const WHERE: Platform[] = [
+  {
+    id: 'mt5',
+    name: 'MetaTrader 5',
+    glyph: 'M5',
+    ways: [
+      { id: 'mt5', label: 'Windows app', icon: 'window', works: 'works', note: 'With the DisciplineGuard app' },
+      { id: 'mt_phone', label: 'Phone app', icon: 'phone', works: 'counts' },
+      { id: 'mt5_web', label: 'Web terminal', icon: 'globe', works: 'counts' },
+      { id: 'mt5_mac', label: 'Mac app', icon: 'laptop', works: 'not_yet' },
+    ],
+    foot: MT5_COUNTS,
+  },
+  {
+    id: 'tv',
+    name: 'TradingView',
+    glyph: 'TV',
+    ways: [website('tv'), { id: 'tv_desktop', label: 'Desktop app', icon: 'window', works: 'no', note: 'Use the website instead' }, phone('tv_phone')],
+  },
+  { id: 'pm', name: 'Polymarket', glyph: 'P', ways: [website('pm'), phone('pm_phone')] },
+  { id: 'kalshi', name: 'Kalshi', glyph: 'K', ways: [website('kalshi'), phone('kalshi_phone')] },
+];
+
+/** Picks that get the pause today. */
+export const LIVE = WHERE.flatMap((p) => p.ways.filter((w) => w.works === 'works').map((w) => w.id));
+
+/** "Windows app", "Website": the way each platform gets the pause. */
+export const worksOn = (p: Platform) => p.ways.find((w) => w.works === 'works')?.label;
+
+const STATUS: Record<Works, { label: string; tone: string; icon?: IconName }> = {
+  works: { label: 'Works', tone: 'accent', icon: 'check' },
+  counts: { label: 'Counts only', tone: 'amber' },
+  no: { label: 'Not supported', tone: 'no', icon: 'x' },
+  not_yet: { label: 'Not yet', tone: 'no' },
+  later: { label: 'Coming later', tone: 'no' },
+};
+
+export function WorksChip({ works }: { works: Works }) {
+  const s = STATUS[works];
+  return (
+    <span className={`chip works ${s.tone}`}>
+      {s.icon && <Icon name={s.icon} size={13} strokeWidth={2.4} />}
+      {s.label}
+    </span>
+  );
+}
+
+/** Icon, name and status on one line; the note below gets the full width. */
+export function WayBody({ w }: { w: Pick<Way, 'label' | 'icon' | 'note'> & { works?: Works } }) {
+  return (
+    <>
+      <Icon name={w.icon} className="way-icon" />
+      <span className="way-text">
+        <span className="way-line">
+          <span className="way-label">{w.label}</span>
+          {w.works && <WorksChip works={w.works} />}
+        </span>
+        {w.note && <small>{w.note}</small>}
+      </span>
+    </>
+  );
+}
+
+/**
+ * One platform and what works where. With `onPick` (Start free), each way is a tick, and the note under the card shows
+ * once a way it explains is ticked.
+ */
+export function WhereCard({ p, picked, onPick, className = '' }: { p: Platform; picked?: string[]; onPick?(id: string, on: boolean): void; className?: string }) {
+  const has = (id: string) => !!picked?.includes(id);
+  const on = p.ways.some((w) => has(w.id));
+  const foot = p.foot && (!onPick || p.ways.some((w) => w.works === 'counts' && has(w.id)));
+  return (
+    <div className={`card where${on ? ' on' : ''} ${className}`}>
+      <div className="where-head">
+        <span className="where-glyph" aria-hidden="true">{p.glyph}</span>
+        <strong>{p.name}</strong>
+      </div>
+      <ul className={`where-ways${onPick ? ' pick' : ''}`}>
+        {p.ways.map((w) => (
+          <li key={w.id} className={`way ${w.works}`}>
+            {onPick ? (
+              <label className="way-row">
+                <input type="checkbox" aria-label={`${p.name}, ${w.label}`} checked={has(w.id)} onChange={(e) => onPick(w.id, e.target.checked)} />
+                <WayBody w={w} />
+              </label>
+            ) : (
+              <div className="way-row"><WayBody w={w} /></div>
+            )}
+          </li>
+        ))}
+      </ul>
+      {foot && <p className="where-foot"><Icon name="info" size={15} /> {p.foot}</p>}
+    </div>
+  );
+}
+
+/** Read-only: every platform, then what's coming. */
+export function WhereGrid({ reveal = false }: { reveal?: boolean }) {
+  return (
+    <>
+      <div className="where-grid">
+        {WHERE.map((p) => <WhereCard key={p.id} p={p} className={reveal ? 'reveal' : ''} />)}
+      </div>
+      <p className="where-later"><Icon name="clock" size={15} /> MetaTrader 4 is coming later.</p>
+    </>
+  );
+}

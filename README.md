@@ -59,15 +59,13 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 
 ## Platforms
 
-| Platform | How | Status |
-|---|---|---|
-| **MetaTrader 5** (Windows) | The Windows app sets MT5 up for you. No files to copy, nothing to type. Works with prop firm and broker accounts. | ✅ Live |
-| **TradingView** (Chrome, Edge) | Browser extension. Pauses the order panel and one-click Buy/Sell. | ✅ Live |
-| **Polymarket** (Chrome, Edge) | The same browser extension. Pauses Buy in the trade box (market orders). Sell is never paused. | ✅ New |
-| **Kalshi** (Chrome, Edge) | The same browser extension. Pauses Submit Buy and Buy with 1-Click (dollars or shares). Sell is never paused. | ✅ New |
-| **Mac** | TradingView, Polymarket and Kalshi work in Chrome or Edge on a Mac. MetaTrader 5 on Mac isn't supported yet. | Website only |
-| **iPhone, Android** | Phone apps can't be paused. MT5 trades from the phone still count while MT5 runs with DisciplineGuard on a computer or VPS. | Not paused |
-| MT4, cTrader, NinjaTrader, web prop platforms | | Planned |
+| Platform | Works | Not paused | Status |
+|---|---|---|---|
+| **MetaTrader 5** | **Windows app.** The DisciplineGuard app sets MT5 up for you: no files to copy, nothing to type. Prop firm and broker accounts. | Phone app and web terminal: those trades count while MT5 runs with DisciplineGuard on a computer or VPS. Mac app: not yet. | ✅ Live |
+| **TradingView** | **Website** in Chrome or Edge, on Windows or Mac, with the browser extension. Pauses the order panel and one-click Buy/Sell. | Desktop app, phone app | ✅ Live |
+| **Polymarket** | **Website** in Chrome or Edge, same extension. Pauses Buy in the trade box (market orders). Sell is never paused. | Phone app | ✅ New |
+| **Kalshi** | **Website** in Chrome or Edge, same extension. Pauses Submit Buy and Buy with 1-Click (dollars or shares). Sell is never paused. | Phone app | ✅ New |
+| MT4, cTrader, NinjaTrader, web prop platforms | | | Planned |
 
 ## What it never does
 
@@ -77,7 +75,7 @@ Plus **Take a break** (15 minutes to 30 days) and **Done for today**, and a morn
 
 ## Get started
 
-1. Click **[Start free](https://disciplineguard.leowqiheng.workers.dev/start)**, pick where you trade (Windows, Mac, phone or website) and set your rules. Sign in with Google or email to save them.
+1. Click **[Start free](https://disciplineguard.leowqiheng.workers.dev/start)**, tick where you trade (each platform, and how you trade on it) and set your rules. Sign in with Google or email to save them.
 2. Connect your platform. The last step shows each one live as it connects:
    - **MT5:** download the [Windows app](https://disciplineguard.leowqiheng.workers.dev/downloads/DisciplineGuard-Setup.exe), click **Allow**, tick your MetaTrader, then **Protect**.
    - **TradingView, Polymarket or Kalshi:** [install the browser extension](https://disciplineguard.leowqiheng.workers.dev/help/tradingview) (download, unzip, *Load unpacked*), then **Sign in** and **Allow**.
