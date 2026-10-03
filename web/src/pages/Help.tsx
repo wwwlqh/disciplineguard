@@ -2,7 +2,7 @@
 // Public: the EA and the Windows app link here, signed in or not.
 import type { ReactNode } from 'react';
 import { onLink } from '../router.ts';
-import { Brand } from '../ui/Brand.tsx';
+import { BrandCrumb } from '../ui/Brand.tsx';
 import { WHERE_LINE, WhereGrid } from '../ui/Where.tsx';
 
 interface Article {
@@ -230,7 +230,7 @@ export function Help({ path, signedIn }: { path: string; signedIn: boolean }) {
   return (
     <div className="help-page stack">
       <div className="row between">
-        <Brand href="/help" label="Help" />
+        <BrandCrumb page="Help" href="/help" />
         <a href={signedIn ? '/today' : '/signin'} onClick={onLink} className="small">{signedIn ? 'Dashboard' : 'Sign in'}</a>
       </div>
       {a?.extra ? (

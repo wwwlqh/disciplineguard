@@ -100,7 +100,7 @@ These rules apply to product copy about the trader or their trades.
 | Page | Phase | Key content |
 |---|---|---|
 | Home | P0 waitlist, P1 beta, P2 launch | "Lockout tools act after your limit. DisciplineGuard pauses you at the click." The three trust lines. A picture of a pause. In P1: "Join the beta" with the invite waves explained |
-| How it works | P1 | Rules → pause with your note → skip or place anyway. Tighten now, loosen later. Closing is never paused |
+| How it works | P1 | Right under the hero, played: Set your rules, Connect your platform, Trade as usual, beside a window where a cursor does each step (ticks two costs and saves; downloads, Allow, Protect, On; a trade within the rules goes through, the next gets the pause and is skipped). Each step plays, then the next; click one to watch it. Plays only on screen; reduced motion shows each step's key frame |
 | Pricing | P1 | Free: 1 trading account, every rule, no card. TradingView Paper Trading not counted. Paid plans for more accounts later |
 | Where it works | P1 | One card per platform, one row per way to trade on it, each marked **Works**, **Counts only**, **Not supported** or **Not yet**. MetaTrader 5: Windows app works; phone app and web terminal count only (said under the card: they count while MT5 runs with DisciplineGuard on a computer or VPS); Mac app not yet. TradingView: website in Chrome or Edge works; desktop app and phone app not supported ("Use the website instead"). Polymarket, Kalshi: website works; phone app not supported. Then "MetaTrader 4 is coming later." The top strip names each platform with its way that works. Help → Where it works and Start free's first screen show the same list (`web/src/ui/Where.tsx`) |
 | What we see | P1 | "Our code is public" with a link to the client source on GitHub (the EA, the Windows app and the rules engine; the extension once built). Two columns. "We see": counts, daily P/L totals, symbol/side/size of paused orders, broker or server name, last 3 digits of accounts. "We never see": passwords, full account numbers, other websites. Notes, plans and reasons never go to analytics or partners |
@@ -124,6 +124,7 @@ These rules apply to product copy about the trader or their trades.
 
 - **Desktop**: Today · Rules · Devices · Stats · Alerts · Account. Help and "Report a problem" in the header.
 - **Mobile**: bottom tabs for Today, Rules, Stats and Alerts. Devices and Account sit in a menu. Every screen works on a phone.
+- **The logo** leads home: the website's first page when signed out or during setup (Help and Status too), Today once the rules are saved.
 
 ### 5.2 Sign-up and onboarding
 

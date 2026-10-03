@@ -42,12 +42,23 @@ export function Mark({ size = 28 }: { size?: number }) {
   );
 }
 
-/** The mark and the name, linking home. */
-export function Brand({ href = '/', label = 'DisciplineGuard', size = 28 }: { href?: string; label?: string; size?: number }) {
+/** The mark and the name, linking home: the website's first page, or Today once signed in. */
+export function Brand({ href = '/', size = 28, onClick = onLink }: { href?: string; size?: number; onClick?(e: React.MouseEvent<HTMLAnchorElement>): void }) {
   return (
-    <a href={href} onClick={onLink} className="brand">
+    <a href={href} onClick={onClick} className="brand">
       <Mark size={size} />
-      <span>{label}</span>
+      <span>DisciplineGuard</span>
     </a>
+  );
+}
+
+/** The logo, then where this page sits ("Help", "Status"). */
+export function BrandCrumb({ page, href }: { page: string; href?: string }) {
+  return (
+    <span className="crumb">
+      <Brand />
+      <span aria-hidden="true">/</span>
+      {href ? <a href={href} onClick={onLink}>{page}</a> : <span>{page}</span>}
+    </span>
   );
 }

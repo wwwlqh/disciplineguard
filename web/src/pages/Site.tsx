@@ -1,5 +1,5 @@
-// The public website (EXPERIENCE §4): one page at `/` for signed-out visitors. Signed in, `/` is Today.
-// Home, when each tool acts, how it works, the rules, where it works, what it never does, a real recording and pricing
+// The public website (EXPERIENCE §4): one page at `/` for signed-out visitors and during setup; then `/` is Today.
+// Home, how it works (played), when each tool acts, the rules, where it works, what it never does, a real recording and pricing
 // (free, 1 account), with a live demo pause.
 import { useEffect, useState } from 'react';
 import { TRUST_LINES, type Order, type PausePlan } from '@dg/core';
@@ -7,6 +7,7 @@ import { coreFmt } from '../fmt.ts';
 import { onLink } from '../router.ts';
 import { Brand, Mark } from '../ui/Brand.tsx';
 import { HeroDemo } from '../ui/HeroDemo.tsx';
+import { HowDemo } from '../ui/HowDemo.tsx';
 import { Icon, RULE_ICON, type IconName } from '../ui/Icon.tsx';
 import { Pause } from '../ui/Pause.tsx';
 import { RULE_INFO } from '../ui/RuleFields.tsx';
@@ -42,7 +43,7 @@ function useReveal() {
   }, []);
 }
 
-export function Site() {
+export function Site({ signedIn = false }: { signedIn?: boolean }) {
   const [d, setD] = useState<ReturnType<typeof demo> | null>(null);
   const [after, setAfter] = useState('');
   const [scrolled, setScrolled] = useState(false);
@@ -70,7 +71,7 @@ export function Site() {
             <a href="#rules">Rules</a>
             <a href="#platforms">Platforms</a>
             <a href="#pricing">Pricing</a>
-            <a href="/signin" onClick={onLink} className="btn ghost">Sign in</a>
+            {!signedIn && <a href="/signin" onClick={onLink} className="btn ghost">Sign in</a>}
             {start('btn primary')}
           </nav>
         </div>
@@ -109,6 +110,18 @@ export function Site() {
         </div>
       </section>
 
+      <section className="sec" id="how">
+        <div className="wrap">
+          <div className="sec-head reveal">
+            <span className="eyebrow">How it works</span>
+            <h2>Three steps. Then you trade.</h2>
+          </div>
+          <div className="reveal">
+            <HowDemo />
+          </div>
+        </div>
+      </section>
+
       <section className="sec">
         <div className="wrap">
           <div className="sec-head reveal">
@@ -122,35 +135,6 @@ export function Site() {
             <div className="card us reveal"><h3><Mark size={20} /> DisciplineGuard</h3><p>At the click, before the order. You decide, every time.</p></div>
             <div className="card reveal"><h3><Icon name="lock" size={18} /> Lockout tools</h3><p>After the limit. You're locked out.</p></div>
             <div className="card reveal"><h3><Icon name="file" size={18} /> Journals</h3><p>After the trade. Too late for this one.</p></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="sec" id="how">
-        <div className="wrap">
-          <div className="sec-head reveal">
-            <span className="eyebrow">How it works</span>
-            <h2>Three steps. Then you trade.</h2>
-          </div>
-          <div className="steps3">
-            <div className="card step3 reveal">
-              <div className="vignette"><VignetteRules /></div>
-              <span className="num">01</span>
-              <h3>Set your rules</h3>
-              <p>Pick from a starting template in two minutes.</p>
-            </div>
-            <div className="card step3 reveal">
-              <div className="vignette"><VignetteChart /></div>
-              <span className="num">02</span>
-              <h3>Trade as usual</h3>
-              <p>Nothing changes until a trade breaks a rule.</p>
-            </div>
-            <div className="card step3 reveal">
-              <div className="vignette"><VignettePause /></div>
-              <span className="num">03</span>
-              <h3>Break a rule, get a pause</h3>
-              <p>It names the rule. Skip, or place anyway after the wait.</p>
-            </div>
           </div>
         </div>
       </section>
@@ -322,52 +306,5 @@ function Moment() {
         <line className="m-track" x1="0" x2="0" y1="14" y2="48" strokeWidth="1.5" />
       </g>
     </svg>
-  );
-}
-
-function VignetteRules() {
-  const rows: [string, number][] = [['Max trades per day', 60], ['Cooldown after a loss', 35], ['Daily loss limit', 80]];
-  return (
-    <div className="vg-rules" aria-hidden="true">
-      {rows.map(([name, w]) => (
-        <div key={name}>
-          <div className="vg-row"><span>{name}</span><span className="switch"><input type="checkbox" checked readOnly tabIndex={-1} /><span /></span></div>
-          <div className="vg-bar"><i style={{ width: `${w}%` }} /></div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function VignetteChart() {
-  const pts = [70, 62, 66, 52, 56, 44, 48, 36, 40, 30, 34, 24];
-  const path = pts.map((y, i) => `${i ? 'L' : 'M'}${12 + i * 21} ${y}`).join(' ');
-  return (
-    <svg className="vg-chart" viewBox="0 0 260 96" aria-hidden="true">
-      <defs>
-        <linearGradient id="vg-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#12b8cf" stopOpacity=".28" />
-          <stop offset="1" stopColor="#12b8cf" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={`${path} L243 96 L12 96 Z`} fill="url(#vg-area)" />
-      <path d={path} fill="none" stroke="#12b8cf" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-      {[3, 7, 11].map((i) => (
-        <g key={i} transform={`translate(${12 + i * 21} ${pts[i]})`}>
-          <circle r="9" fill="#fff" stroke="#12b8cf" strokeWidth="1.5" />
-          <path d="M-3.5 0 -1 2.5 3.8 -2.6" fill="none" stroke="#0b98c0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        </g>
-      ))}
-    </svg>
-  );
-}
-
-function VignettePause() {
-  return (
-    <div className="vg-pause" aria-hidden="true">
-      <span className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 9.5 }}><Mark size={12} /> PAUSE · YOUR RULE</span>
-      <b>Your last trade closed at a loss 4 minutes ago.</b>
-      <div className="vg-btns"><span>Skip this trade</span><span>Place anyway · 0:05</span></div>
-    </div>
   );
 }

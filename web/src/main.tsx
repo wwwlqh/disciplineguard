@@ -132,7 +132,9 @@ function App() {
   }, [reload]);
 
   if (path.startsWith('/help')) return <Help path={path} signedIn={state === 'ready'} />;
-  if (path === '/' && state !== 'ready') return <Site />;
+  // The website's first page. Signed in, `/` is Today, except during setup, where the logo leads back here.
+  const inSetup = state === 'ready' && !!me && !me.user.onboarding?.done && me.user.setupMode;
+  if (path === '/' && (state !== 'ready' || inSetup)) return <Site signedIn={state === 'ready'} />;
   if (path === '/status') return <Status />;
   // Start free: set rules first, sign in to save them.
   if (path === '/start' && state !== 'ready') return state === 'loading' ? <div className="center-page muted">Loading…</div> : <Onboarding key="guest" me={null} reload={reload} />;

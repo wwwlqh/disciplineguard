@@ -1,10 +1,11 @@
 // Status and changelog (EXPERIENCE §4): is our server up, does TradingView still work, and what changed. Public.
 import { useEffect, useState } from 'react';
 import { onLink } from '../router.ts';
-import { Brand } from '../ui/Brand.tsx';
+import { BrandCrumb } from '../ui/Brand.tsx';
 
 /** Newest first. One line each, in the trader's words. */
 const CHANGES: [string, string][] = [
+  ['2026-10-03', 'How it works plays on the home page: set your rules, connect, trade. The logo always leads back home.'],
   ['2026-10-03', 'Where it works: each platform shows what works on its website, desktop app and phone app. Start free and Help show the same.'],
   ['2026-10-02', 'Start free asks where you trade (Windows, Mac, phone or website) and connects each platform, with live progress.'],
   ['2026-10-02', 'Windows app 0.1.5: signing in no longer closes the app.'],
@@ -45,7 +46,7 @@ export function Status() {
   return (
     <div className="help-page stack">
       <div className="row between">
-        <Brand href="/" label="Status" />
+        <BrandCrumb page="Status" />
         <a href="/help" onClick={onLink} className="small">Help</a>
       </div>
       <div className="card">
