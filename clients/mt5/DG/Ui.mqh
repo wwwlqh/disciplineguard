@@ -1,6 +1,6 @@
 //+------------------------------------------------------------------+
 //| Ui.mqh                                                           |
-//| Drawing for the panel and the pause (SPEC §9.2 "Rendering").     |
+//| Drawing for the panel (SPEC §9.2 "Rendering").                   |
 //| Text is drawn on a canvas with measured wrapping; only buttons   |
 //| and input fields are native objects. Sizes scale by              |
 //| TERMINAL_SCREEN_DPI / 96 × the panel scale.                      |
@@ -25,7 +25,7 @@ void DGSetScale(const double panelScale)
 
 struct DGPalette
   {
-   uint              surface, surface2, border, text, muted, faint, accent, onAccent, amber, blue, grey, backdrop;
+   uint              surface, surface2, border, text, muted, faint, accent, onAccent, amber, blue, grey;
    color             cSurface, cSurface2, cBorder, cText, cMuted, cAccent, cOnAccent;
   };
 
@@ -65,7 +65,6 @@ void DGSetPalette(const int theme)
    DGPal.muted = DGArgb(DGPal.cMuted);
    DGPal.accent = DGArgb(DGPal.cAccent);
    DGPal.onAccent = DGArgb(DGPal.cOnAccent);
-   DGPal.backdrop = ColorToARGB(C'8,10,12', 150);
   }
 
 //--- native objects ------------------------------------------------

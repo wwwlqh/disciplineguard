@@ -144,12 +144,10 @@ describe('sync (SPEC §10.3)', () => {
     expect(await verify(SIGNING_PUB, payload, sig)).toBe(true);
     const p = JSON.parse(payload);
     expect(p.rules.R1).toEqual({ on: true, max: 5 });
-    expect(p.rules.closeOutside).toBe(false);
+    expect(p.rules.closeOutside).toBeUndefined();
+    expect(p.popup).toBeUndefined();
     expect(p.license.state).toBe('free');
     expect(p.time.userResets.some((x: number) => x > w.t)).toBe(true);
-    // Kept empty for the EA and extension up to 0.1.6, which read them in every pause.
-    expect(p.notes).toEqual([]);
-    expect(p.plan).toBe('');
     expect(p.magic).toBeGreaterThanOrEqual(700_000_000);
     const again = await ea.sync();
     expect(again.data.signed).toBeNull();
@@ -161,13 +159,13 @@ describe('sync (SPEC §10.3)', () => {
     await web.onboard();
     const ea = await web.connect();
     await ea.sync();
-    const entry = { type: 'entry', ticket: 111, symbol: 'EURUSD', side: 'buy', size: 0.5, source: 'panel' };
+    const entry = { type: 'entry', ticket: 111, symbol: 'EURUSD', side: 'buy', size: 0.5, source: 'click' };
     const r = await ea.sync([entry, { ...entry }]);
     expect(r.data.snapshot.entries).toHaveLength(1);
     expect(r.data.ackedSeq).toBe(2);
     // CNT-07: a second EA on the same account reports the same deal: still one entry.
     const ea2 = await web.connect();
-    await ea2.sync([{ ...entry, source: 'outside' }]);
+    await ea2.sync([{ ...entry, source: 'history' }]);
     expect((await ea.sync()).data.snapshot.entries).toHaveLength(1);
   });
 
@@ -176,41 +174,31 @@ describe('sync (SPEC §10.3)', () => {
     const web = await w.signIn('a@b.co');
     await web.onboard();
     const ea = await web.connect();
-    await ea.sync([{ type: 'entry', ticket: 5, symbol: 'EURUSD', side: 'buy', size: 1, source: 'panel', pending: true }]);
+    await ea.sync([{ type: 'entry', ticket: 5, symbol: 'EURUSD', side: 'buy', size: 1, source: 'click', pending: true }]);
     const r = await ea.sync([{ type: 'entry_void', ticket: 5 }]);
     expect(r.data.snapshot.entries).toHaveLength(0);
   });
 
-  it('place anyway and outside violations become overrides; skips set the last skip', async () => {
+  it('a trade that broke a rule is counted as a rule break on Today and Stats', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
     await web.onboard();
     const ea = await web.connect();
-    const r = await ea.sync([
-      { type: 'pause', pauseId: 'p1', rules: ['R1'], title: 'R1', decision: 'place', sent: true, symbol: 'EURUSD', side: 'buy', size: 1, waitSec: 5 },
-      { type: 'entry', ticket: 9, symbol: 'GBPUSD', side: 'sell', size: 1, source: 'outside', violations: ['R1'] },
-      { type: 'pause', pauseId: 'p2', rules: ['R1'], title: 'R1', decision: 'skip', symbol: 'XAUUSD', side: 'buy', size: 1, waitSec: 15 },
+    await ea.sync(); // running: the trades below are covered
+    await ea.sync([
+      { type: 'entry', ticket: 8, symbol: 'EURUSD', side: 'buy', size: 1, source: 'click', violations: [] },
+      { type: 'entry', ticket: 9, symbol: 'GBPUSD', side: 'sell', size: 1, source: 'history', label: 'mobile', violations: ['R1', 'R9'] },
     ]);
-    expect(r.data.snapshot.overrides).toHaveLength(2);
-    expect(r.data.snapshot.lastSkip).toMatchObject({ symbol: 'XAUUSD', waitSec: 15 });
-  });
-
-  it('reasons are dropped until the trader says yes; the first one asks (SPEC §13.2)', async () => {
-    const w = new World();
-    const web = await w.signIn('a@b.co');
-    await web.onboard();
-    const ea = await web.connect();
-    const pause = (id: string, reason: string) => ({ type: 'pause', pauseId: id, rules: ['R1'], title: 'R1', decision: 'place', sent: true, symbol: 'EURUSD', side: 'buy', size: 1, reason });
-    await ea.sync([pause('a', 'fomo')]);
-    const me = (await web.get('/api/me')).data;
-    expect(me.user).toMatchObject({ reasonAsked: true, reasonConsent: null });
-    await web.send('PUT', '/api/prefs', { reasonConsent: true });
-    await ea.sync([pause('b', 'in_plan')]);
-    let stats = (await web.get('/api/stats')).data;
-    expect(stats.byReason).toEqual({ in_plan: 1 });
-    await web.send('PUT', '/api/prefs', { deleteReasons: true });
-    stats = (await web.get('/api/stats')).data;
-    expect(stats.byReason).toEqual({});
+    const today = (await web.get('/api/today')).data;
+    expect(today.meters).toMatchObject({ tradesToday: 2, breaksToday: 1 });
+    expect(today.broken).toHaveLength(1);
+    expect(today.broken[0]).toMatchObject({ symbol: 'GBPUSD', label: 'mobile', violations: ['R1', 'R9'] });
+    expect(today.week.keptToday).toBe(false);
+    const stats = (await web.get('/api/stats')).data;
+    expect(stats).toMatchObject({ trades: 2, breaks: 1, byRule: { R1: 1, R9: 1 }, daysTraded: 1, daysKept: 0, oneSlipDays: 1 });
+    // Pause events from clients up to 0.1.8 are ignored.
+    await ea.sync([{ type: 'pause', pauseId: 'p1', rules: ['R1'], title: 'R1', decision: 'place', sent: true }]);
+    expect((await web.get('/api/stats')).data.breaks).toBe(1);
   });
 
   it('breaks and done-for-today are never shortened (SPEC §6.5)', async () => {
@@ -306,22 +294,11 @@ describe('rule changes through the API (SPEC §6)', () => {
     expect(me.pending).toHaveLength(0);
   });
 
-  it('close outside trades: on applies now and reaches the EA signed; off waits for the reset', async () => {
+  it('popup and close-outside settings no longer exist', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
-    await web.onboard();
-    const ea = await web.connect();
-    await web.send('POST', '/api/lock', { firstName: 'Alex', understood: true });
-    expect((await web.send('PUT', '/api/settings', { key: 'closeOutside', value: true })).data).toEqual({ direction: 'stricter', appliesAt: 'now' });
-    const r = await ea.sync();
-    expect(await verify(SIGNING_PUB, r.data.signed.payload, r.data.signed.sig)).toBe(true);
-    expect(JSON.parse(r.data.signed.payload).rules.closeOutside).toBe(true);
-    // CHG-02: turning it off at 10:00 waits until 00:00 tonight.
-    expect((await web.send('PUT', '/api/settings', { key: 'closeOutside', value: false })).data).toEqual({ direction: 'looser', appliesAt: Date.UTC(2026, 9, 6) });
-    expect((await web.get('/api/me')).data.rules.closeOutside).toBe(true);
-    w.t = Date.UTC(2026, 9, 6, 0, 1);
-    expect((await web.get('/api/me')).data.rules.closeOutside).toBe(false);
-    expect((await web.send('PUT', '/api/settings', { key: 'closeOutside', value: 'yes' })).status).toBe(400);
+    expect((await web.send('PUT', '/api/settings', { key: 'closeOutside', value: true })).status).toBe(400);
+    expect((await web.send('PUT', '/api/settings', { key: 'popup', value: { show: 'breaks', wait: 5 } })).status).toBe(400);
   });
 
   it('CHG-18: a scheduled change can be cancelled at once', async () => {
@@ -337,13 +314,13 @@ describe('rule changes through the API (SPEC §6)', () => {
     expect(me.rules.R1.on).toBe(true);
   });
 
-  it('SET-02: setup-mode cool-off after a real pause', async () => {
+  it('SET-02: setup-mode cool-off after a rule break', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
     await web.onboard();
     const ea = await web.connect();
     w.t = Date.UTC(2026, 9, 5, 10, 14);
-    await ea.sync([{ type: 'pause', pauseId: 'x', rules: ['R1'], decision: 'skip', symbol: 'EURUSD', side: 'buy', size: 1 }]);
+    await ea.sync([{ type: 'entry', ticket: 1, symbol: 'EURUSD', side: 'buy', size: 1, source: 'click', violations: ['R1'] }]);
     w.t = Date.UTC(2026, 9, 5, 10, 20);
     const r = await web.send('PUT', '/api/settings', { key: 'rule:R1', value: { on: true, max: 8 } });
     expect(r.data.appliesAt).toBe(Date.UTC(2026, 9, 5, 10, 44));
@@ -363,7 +340,6 @@ describe('rule changes through the API (SPEC §6)', () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
     expect((await web.send('PUT', '/api/settings', { key: 'rule:R1', value: { on: true, max: 0 } })).status).toBe(400);
-    expect((await web.send('PUT', '/api/settings', { key: 'popup', value: { show: 'always' } })).status).toBe(400);
     expect((await web.send('PUT', '/api/settings', { key: 'tz', value: 'Mars/Base' })).status).toBe(400);
   });
 
@@ -455,9 +431,9 @@ describe('accounts, coverage and plans', () => {
     await ea.sync();
     // No heartbeat 11:00–11:40.
     w.t = Date.UTC(2026, 9, 5, 11, 40);
-    await ea.sync([{ type: 'entry', ticket: 77, symbol: 'EURUSD', side: 'buy', size: 1, source: 'outside', t: Date.UTC(2026, 9, 5, 11, 20) }]);
+    await ea.sync([{ type: 'entry', ticket: 77, symbol: 'EURUSD', side: 'buy', size: 1, source: 'history', t: Date.UTC(2026, 9, 5, 11, 20) }]);
     const today = (await web.get('/api/today')).data;
-    expect(today.outside[0].unprotected).toBe(true);
+    expect(today.meters.tradesToday).toBe(1);
     const gap = today.coverage.gaps.find((g: any) => g.from <= Date.UTC(2026, 9, 5, 11, 20) && g.to > Date.UTC(2026, 9, 5, 11, 20));
     expect(gap).toMatchObject({ trades: 1 });
     expect(today.week.keptToday).toBe(false);
@@ -505,7 +481,7 @@ describe('accounts, coverage and plans', () => {
 });
 
 describe('take a break for 1, 7 or 30 days (SPEC §6.5)', () => {
-  it('pauses every entry until then, and a later 15-minute break never shortens it', async () => {
+  it('marks every trade until then, and a later 15-minute break never shortens it', async () => {
     const w = new World();
     const web = await w.signIn('a@b.co');
     await web.onboard();

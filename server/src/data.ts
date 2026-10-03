@@ -33,7 +33,7 @@ function csv(rows: (string | number | boolean | null | undefined)[][]): string {
 
 const iso = (t: number | null | undefined) => (t ? new Date(t).toISOString() : '');
 
-/** GET /v1/export/<token>: the ZIP. JSON with everything, and CSVs for pauses, counted trades and rule changes. */
+/** GET /v1/export/<token>: the ZIP. JSON with everything, and CSVs for counted trades and rule changes. */
 export async function downloadExport(env: Env, tok: string): Promise<Response> {
   if (!/^[A-Za-z0-9_-]{20,100}$/.test(tok)) throw new HttpError(404, 'not_found');
   const t = clock(env);
@@ -44,31 +44,24 @@ export async function downloadExport(env: Env, tok: string): Promise<Response> {
   const u = uc.user;
   const q = async (sql: string) => (await env.DB.prepare(sql).bind(u.id).all<any>()).results;
   const changes = await q('SELECT key, from_json, to_json, direction, applies_at, created_at, actor FROM setting_changes WHERE user_id = ? ORDER BY created_at');
-  const pauses = await q("SELECT t, account_id, payload FROM events WHERE user_id = ? AND type = 'pause' ORDER BY t");
   const entries = await q("SELECT t, account_id, payload FROM events WHERE user_id = ? AND type = 'entry' AND void_at IS NULL ORDER BY t");
   const connections = await q('SELECT c.kind, c.name, c.version, c.created_at, c.last_seen, c.removed_at FROM connections c WHERE c.user_id = ?');
   const last3 = new Map(uc.accounts.map((a) => [a.id, a.last3]));
   const everything = {
     exportedAt: iso(t),
-    profile: { email: u.email, firstName: u.first_name, createdAt: iso(u.created_at), hideAmounts: !!u.hide_amounts, saveReasons: u.reason_consent === 1 },
+    profile: { email: u.email, firstName: u.first_name, createdAt: iso(u.created_at), hideAmounts: !!u.hide_amounts },
     plan: { state: uc.license.state, kind: u.plan_kind, validUntil: iso(uc.license.validUntil) },
     rules: uc.asm.rules,
-    popup: uc.asm.popup,
     timezone: uc.asm.tz,
     pendingChanges: uc.asm.pending,
     ruleChanges: changes.map((c) => ({ key: c.key, from: c.from_json && JSON.parse(c.from_json), to: c.to_json && JSON.parse(c.to_json), direction: c.direction, appliesAt: iso(c.applies_at), at: iso(c.created_at), by: c.actor })),
     accounts: uc.accounts.map((a) => ({ platform: a.platform, broker: a.broker, server: a.server_name, last3: a.last3, nickname: a.nickname, currency: a.currency, connectedAt: iso(a.created_at) })),
     connections: connections.map((c) => ({ kind: c.kind, name: c.name, version: c.version, connectedAt: iso(c.created_at), lastSeen: iso(c.last_seen), removedAt: iso(c.removed_at) })),
-    pauses: pauses.map((p) => ({ at: iso(p.t), account: last3.get(p.account_id) ?? null, ...JSON.parse(p.payload) })),
     trades: entries.map((e) => ({ at: iso(e.t), account: last3.get(e.account_id) ?? null, ...JSON.parse(e.payload) })),
     alerts: alertPrefs(u.alerts_json),
   };
   const files = {
     'disciplineguard.json': JSON.stringify(everything, null, 2),
-    'pauses.csv': csv([
-      ['time', 'account', 'rule', 'decision', 'symbol', 'side', 'size', 'wait_s', 'reason'],
-      ...everything.pauses.map((p: any) => [p.at, p.account, p.title, p.decision, p.symbol, p.side, p.size, p.waitSec, p.reason]),
-    ]),
     'trades.csv': csv([
       ['time', 'account', 'symbol', 'side', 'size', 'source', 'rules_broken'],
       ...everything.trades.map((e: any) => [e.at, e.account, e.symbol, e.side, e.size, e.source, (e.violations ?? []).join(' ')]),

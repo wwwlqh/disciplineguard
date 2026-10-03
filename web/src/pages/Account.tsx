@@ -8,8 +8,7 @@ import { Icon } from '../ui/Icon.tsx';
 import type { PageProps } from '../main.tsx';
 
 const REPORT_TYPES = [
-  ['should_not_pause', 'This order should not have been paused'],
-  ['should_pause', "This order should have been paused but wasn't"],
+  ['wrong_count', 'A trade was counted wrong, or not counted'],
   ['setup', 'Setup'],
   ['billing', 'Billing'],
   ['other', 'Other'],
@@ -17,18 +16,16 @@ const REPORT_TYPES = [
 
 const ALERTS: [AlertKind, string][] = [
   ['limit', 'Daily loss limit reached'],
-  ['after_limit', 'Placed anyway after the daily loss limit'],
+  ['broke', 'A trade went past a rule'],
+  ['after_limit', 'A trade after the daily loss limit'],
   ['off', 'DisciplineGuard turned off, or trades while it was off'],
   ['moved', 'Account connected to another login'],
-  ['outside', 'Outside trade went past a rule'],
-  ['closed', "Outside trade closed, or couldn't be closed"],
   ['unchecked', "Orders we couldn't check"],
   ['summary', 'End-of-session summary'],
-  ['placed', 'Placed anyway (other rules)'],
   ['stop', 'Stop loss removed or widened'],
 ];
 
-/** Take a break for 1, 7 or 30 days (EXPERIENCE §12): every new trade gets a 45 s pause and type to confirm. */
+/** Take a break for 1, 7 or 30 days (EXPERIENCE §12): every trade until then is marked as past a rule. */
 function LongBreak() {
   const toast = useToast();
   const [days, setDays] = useState<1 | 7 | 30 | null>(null);
@@ -40,7 +37,7 @@ function LongBreak() {
   return (
     <div className="card" id="break">
       <div className="card-head"><h2><Icon name="coffee" /> Take a break</h2></div>
-      <p className="muted">Every new trade gets a 45-second pause, and you type to confirm. It can't be shortened.</p>
+      <p className="muted">Every trade until then is marked as past a rule. It can't be shortened.</p>
       <div className="row">
         {([1, 7, 30] as const).map((d) => <button key={d} onClick={() => setDays(d)}>{d === 1 ? '1 day' : `${d} days`}</button>)}
       </div>
@@ -86,7 +83,7 @@ export function AccountPage({ me, reload }: PageProps) {
     try {
       if (action === 'cancel') {
         const r = await api('POST', '/api/plan/cancel');
-        toast(`Cancelled. Protection stays on until ${date(r.until)}. Your rules are saved for 90 days after that.`);
+        toast(`Cancelled. Counting stays on until ${date(r.until)}. Your rules are saved for 90 days after that.`);
       } else if (action === 'refund') {
         await api('POST', '/api/plan/refund');
         toast("Refund requested. You won't be charged again.");
@@ -130,7 +127,7 @@ export function AccountPage({ me, reload }: PageProps) {
 
   const planLine =
     lic.state === 'active' ? `${me.user.planKind === 'earlybird_yearly' ? 'Early-bird yearly' : me.user.planKind === 'monthly' ? 'Monthly' : 'Yearly'} · ${me.user.cancelAtPeriodEnd ? 'ends' : 'renews'} ${time(lic.validUntil)}`
-      : lic.state === 'past_due' ? `Payment failed · protection until ${time(lic.validUntil)}`
+      : lic.state === 'past_due' ? `Payment failed · counting until ${time(lic.validUntil)}`
         : "Free · 1 trading account · TradingView Paper Trading doesn't count";
 
   return (
@@ -159,7 +156,7 @@ export function AccountPage({ me, reload }: PageProps) {
         <Sheet label="Plan" onClose={() => setSheet(null)}>
           <h2>{sheet === 'cancel' ? 'Cancel your plan?' : sheet === 'refund' ? 'Request a full refund?' : `Switch to ${sheet}?`}</h2>
           <p>
-            {sheet === 'cancel' && `Protection stays on until ${date(lic.validUntil)}. You won't be charged again.`}
+            {sheet === 'cancel' && `Counting stays on until ${date(lic.validUntil)}. You won't be charged again.`}
             {sheet === 'refund' && 'The full amount goes back to your card, and the plan ends.'}
             {sheet === 'monthly' && `From your next renewal.${me.user.planKind === 'earlybird_yearly' ? ' The early-bird price ends.' : ''}`}
             {sheet === 'yearly' && 'From your next renewal.'}
@@ -208,15 +205,10 @@ export function AccountPage({ me, reload }: PageProps) {
         <div className="card-head"><h2><Icon name="eye" /> Privacy</h2></div>
         <ul className="list">
           <li className="row between">
-            <span>Save the reasons I pick <span className="small muted">(only you see them)</span></span>
-            <Switch label="Save the reasons I pick" checked={me.user.reasonConsent === 1} onChange={(v) => pref({ reasonConsent: v })} />
-          </li>
-          <li className="row between">
             <span>Hide amounts on screen <span className="small muted">(for streaming)</span></span>
             <Switch label="Hide amounts" checked={me.user.hideAmounts} onChange={(v) => pref({ hideAmounts: v })} />
           </li>
         </ul>
-        <button className="link small" onClick={async () => { await pref({ deleteReasons: true }); toast('Reason history deleted.'); }}>Delete my reason history</button>
       </div>
 
       <div className="card">
@@ -275,7 +267,7 @@ export function AccountPage({ me, reload }: PageProps) {
               ? 'Deleted now.'
               : `Deleted at ${time(deleting.at)}. DisciplineGuard is a commitment tool, so deletion waits like a loosening. Your plan is cancelled now, and you won't be charged again.`}
           </p>
-          <p className="small muted">Deleted: your rules, trades, pauses and devices. Kept: receipts at the payment provider.</p>
+          <p className="small muted">Deleted: your rules, trades and devices. Kept: receipts at the payment provider.</p>
           <p className="small">Before you go: export your data, then uninstall DisciplineGuard for Windows.</p>
           <label className="field">
             Type DELETE to confirm

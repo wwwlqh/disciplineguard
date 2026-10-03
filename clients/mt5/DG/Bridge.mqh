@@ -10,10 +10,8 @@
 //|   DisciplineGuard\<terminal id>\app.txt  app heartbeat: unix s,  |
 //|                                          state, connection id,   |
 //|                                          masked email            |
-//|   DisciplineGuard\<terminal id>\ea.txt   EA heartbeat: unix s,   |
-//|                                          then algo_on/algo_off   |
-//| Files are touched only from the timer: never in a click handler  |
-//| and never while a pause is open (invariant 3).                   |
+//|   DisciplineGuard\<terminal id>\ea.txt   EA heartbeat: unix s     |
+//| Files are touched only from the timer, never in a click handler. |
 //+------------------------------------------------------------------+
 #ifndef DG_BRIDGE_MQH
 #define DG_BRIDGE_MQH
@@ -79,11 +77,10 @@ public:
    string            waitPath;
    ulong             sentTick;
    // quiet periods
-   bool              pauseOpen;
    ulong             lastInteraction;
    ulong             lastBeat;
 
-                     DGBridge() { dir = ""; appAlive = false; appState = ""; conn = ""; email = ""; waiting = false; seq = 0; waitPath = ""; sentTick = 0; pauseOpen = false; lastInteraction = 0; lastBeat = 0; }
+                     DGBridge() { dir = ""; appAlive = false; appState = ""; conn = ""; email = ""; waiting = false; seq = 0; waitPath = ""; sentTick = 0; lastInteraction = 0; lastBeat = 0; }
 
    void              Init() { dir = DG_BRIDGE_ROOT + DGTerminalId() + "\\"; seq = (long)GetTickCount64(); }
 
@@ -102,16 +99,14 @@ public:
       if(GetTickCount64() - lastBeat >= DG_EA_BEAT_MS)
         {
          lastBeat = GetTickCount64();
-         // The app shows "Click Algo Trading once" when the terminal's Algo Trading is off (spike Q11).
-         string algo = TerminalInfoInteger(TERMINAL_TRADE_ALLOWED) != 0 ? "algo_on" : "algo_off";
-         DGCommonWrite(dir + "ea.txt", IntegerToString((long)TimeGMT()) + "\n" + algo);
+         DGCommonWrite(dir + "ea.txt", IntegerToString((long)TimeGMT()));
         }
      }
 
    /// True when a request may be sent now.
    bool              MayCall()
      {
-      if(pauseOpen || waiting || !appAlive) return false;
+      if(waiting || !appAlive) return false;
       return GetTickCount64() - lastInteraction >= DG_QUIET_AFTER_MS;
      }
 
@@ -137,7 +132,7 @@ public:
    /// Returns true when the outstanding request finished: code is the HTTP status, or -1 when the app didn't answer.
    bool              Poll(string &path, int &code, string &resp)
      {
-      if(!waiting || pauseOpen) return false;
+      if(!waiting) return false;
       string txt = DGCommonRead(dir + "in.txt");
       if(txt != "")
         {

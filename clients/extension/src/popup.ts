@@ -1,4 +1,4 @@
-// The toolbar popup (EXPERIENCE §6.4): status, sign in, practice pause, help.
+// The toolbar popup (EXPERIENCE §6.4): status, sign in, dashboard, help.
 import { API } from './config.ts';
 import type { Cache, Status } from './messages.ts';
 
@@ -7,7 +7,7 @@ const LINES: Record<Status, string> = {
   offline: '● On (offline). Rules from your last sync apply.',
   setting_up: '● Setting up. Open Polymarket, Kalshi, or a TradingView chart with your broker connected.',
   attention: '● Needs attention. Sign in again. Your saved rules still apply.',
-  off: '● Off. Orders go through normally.',
+  off: '● Off. Trades aren’t counted.',
   signed_out: '● Off. Signed out.',
 };
 
@@ -31,10 +31,7 @@ function render(r: Reply) {
   document.getElementById('actions')!.innerHTML = '';
   const open = (page: string) => () => chrome.tabs.create({ url: `${API}/${page}` });
   if (r.cache.status === 'signed_out') button('Sign in', 'primary', () => void ask('sign_in').then(() => window.close()));
-  else {
-    button('Open dashboard', 'primary', open('today'));
-    button('Practice pause', '', open('today?practice'));
-  }
+  else button('Open dashboard', 'primary', open('today'));
   button('Help', 'link', open('help'));
   if (r.cache.status !== 'signed_out') button('Sign out', 'link', () => void ask('sign_out').then(render));
 }

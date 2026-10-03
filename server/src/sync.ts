@@ -39,12 +39,7 @@ interface SyncEvent {
   [k: string]: unknown;
 }
 
-const RULE_IDS = new Set(['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'BREAK', 'DONE_TODAY', 'CHECK']);
-/**
- * closed · failed (still open) · kept (a stop loss was added in time) · gone (the trader closed it first) ·
- * off (the setting or protection was turned off before it closed).
- */
-const AUTO_CLOSE_RESULTS = new Set(['closed', 'failed', 'kept', 'gone', 'off']);
+const RULE_IDS = new Set(['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'BREAK', 'DONE_TODAY']);
 const OFF_REASONS = new Set(['removed', 'chart_close', 'template', 'signed_out', 'switched_login', 'site_access_removed', 'uninstalled']);
 
 async function authDevice(req: Request, env: Env): Promise<ConnRow> {
@@ -55,6 +50,9 @@ async function authDevice(req: Request, env: Env): Promise<ConnRow> {
   if (!c) throw new HttpError(401, 'bad_token');
   return c;
 }
+
+/** An entry seen at the trader's click (the extension; 'panel' from clients up to 0.1.8), not read later from history. */
+const isClick = (source: unknown) => source === 'click' || source === 'panel';
 
 function clean(s: unknown, max = 40): string | undefined {
   return typeof s === 'string' ? s.slice(0, max) : undefined;
@@ -131,8 +129,8 @@ export async function sync(req: Request, env: Env, ctx: Ctx): Promise<Response> 
     if (typeof e !== 'object' || e === null || typeof e.type !== 'string' || typeof e.t !== 'number') continue;
     if (typeof e.seq === 'number' && e.seq > maxSeq) maxSeq = e.seq;
     const acct = e.acct !== undefined ? keyToAccount.get(String(e.acct)) : undefined;
-    // Only live signals prove the EA was running then. A fill reported later from history does not.
-    const live = e.type === 'hb' || e.type === 'pause' || e.type === 'exit' || (e.type === 'entry' && e.source === 'panel');
+    // Only live signals prove the client was running then. A fill reported later from history does not.
+    const live = e.type === 'hb' || e.type === 'exit' || (e.type === 'entry' && isClick(e.source));
     if (acct && live && e.t <= t + 60_000) coveragePoints.get(acct.id)?.push(Math.min(e.t, t));
     await storeEvent(env, uc, conn, acct, e, t);
   }
@@ -208,42 +206,24 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
       if (!acct) return;
       const id = ticket ? await eventId(acct.id, 'entry', ticket) : clientId;
       const rules = Array.isArray(e.violations) ? (e.violations as unknown[]).filter((r): r is string => typeof r === 'string' && RULE_IDS.has(r)) : [];
-      const source = e.source === 'panel' ? 'panel' : 'outside';
-      const covered = source === 'panel' || (await wasCovered(env, acct.id, t));
+      // 'click': seen at the trader's click. 'history': read from the platform after it filled (the EA, the positions table).
+      const source = isClick(e.source) ? 'click' : 'history';
+      const covered = source === 'click' || (await wasCovered(env, acct.id, t));
       const payload = {
         symbol: clean(e.symbol, 30), side: e.side === 'sell' ? 'sell' : 'buy', size: finite(e.size) ?? 0, source,
-        label: clean(e.label, 12), pauseId: clean(e.pauseId, 64), pending: !!e.pending, violations: rules, unprotected: !covered || !!e.unprotected,
-        // "Close outside trades": the EA is closing it, and an auto_close event follows with the result.
-        autoClose: source === 'outside' && rules.length > 0 && e.autoClose === true ? 'pending' : undefined,
+        label: clean(e.label, 12), pending: !!e.pending, violations: rules, unprotected: !covered || !!e.unprotected,
       };
       const stmts = [insert(id, 'entry', payload), env.DB.prepare('UPDATE trading_accounts SET last_entry_at = MAX(COALESCE(last_entry_at, 0), ?) WHERE id = ?').bind(t, acct.id)];
-      if (source === 'outside' && rules.length > 0) stmts.push(insert(`${id}:ov`, 'override', { from: 'outside', rules }));
+      // A trade that broke a rule: counted as a rule break, and it starts the setup-mode cool-off (SPEC §6.1).
+      if (rules.length > 0) {
+        stmts.push(insert(`${id}:ov`, 'override', { from: source, rules }));
+        stmts.push(env.DB.prepare('UPDATE users SET last_real_pause_at = MAX(COALESCE(last_real_pause_at, 0), ?) WHERE id = ?').bind(t, userId));
+      }
       const [stored] = await env.DB.batch(stmts);
       if (!stored.meta.changes) return;
       await alerts.scheduleSummary(env, uc, t);
-      // A trade the EA is closing gets its alert with the result (auto_close below).
-      if (source === 'outside' && rules.length > 0 && !payload.autoClose) await alerts.outsideViolation(env, uc, rules, payload.label);
+      if (rules.length > 0) await alerts.ruleBroken(env, uc, acct, rules, payload);
       if (payload.unprotected) await alerts.unprotectedEntry(env, uc, acct);
-      return;
-    }
-    case 'auto_close': {
-      // "Close outside trades" (SPEC §9.2): what happened to an outside entry the EA set out to close.
-      if (!acct || !ticket || !AUTO_CLOSE_RESULTS.has(String(e.result))) return;
-      const result = String(e.result);
-      const rules = Array.isArray(e.violations) ? (e.violations as unknown[]).filter((r): r is string => typeof r === 'string' && RULE_IDS.has(r)) : [];
-      const label = clean(e.label, 12);
-      const reason = result === 'failed' ? clean(e.reason, 80) : undefined;
-      const stored = await insert(await eventId(acct.id, 'auto_close', ticket), 'auto_close', {
-        result, rules, label, reason, symbol: clean(e.symbol, 30), side: e.side === 'sell' ? 'sell' : 'buy', size: finite(e.size) ?? 0,
-      }).run();
-      if (!stored.meta.changes) return;
-      await env.DB.prepare("UPDATE events SET payload = json_set(payload, '$.autoClose', ?) WHERE id = ? AND user_id = ?")
-        .bind(result, await eventId(acct.id, 'entry', ticket), userId)
-        .run();
-      if (rules.length === 0) return;
-      if (result === 'closed' || result === 'failed') await alerts.outsideClosed(env, uc, rules, label, result === 'closed', reason);
-      // A stop loss added in time, closed by the trader first, or the setting turned off: the usual outside alert.
-      else await alerts.outsideViolation(env, uc, rules, label);
       return;
     }
     case 'entry_void': {
@@ -256,41 +236,6 @@ async function storeEvent(env: Env, uc: UserCtx, conn: ConnRow, acct: AccountRow
       if (!acct) return;
       const id = ticket ? await eventId(acct.id, 'close', ticket) : clientId;
       await insert(id, 'close', { net: finite(e.net) ?? 0, size: finite(e.size) ?? 0 }).run();
-      return;
-    }
-    case 'pause': {
-      const decision = ['skip', 'place', 'timeout', 'reinit'].includes(String(e.decision)) ? String(e.decision) : 'skip';
-      const pauseId = clean(e.pauseId, 64) ?? clientId;
-      const rules = Array.isArray(e.rules) ? (e.rules as unknown[]).filter((r): r is string => typeof r === 'string' && RULE_IDS.has(r)) : [];
-      const payload = {
-        pauseId, rules, title: clean(e.title, 12), decision, shownSec: finite(e.shownSec), waitSec: finite(e.waitSec), typed: !!e.typed,
-        placedAnyway: finite(e.placedAnyway), reattempt: !!e.reattempt, unlockToClickMs: finite(e.unlockToClickMs),
-        symbol: clean(e.symbol, 30), side: e.side === 'sell' ? 'sell' : 'buy', size: finite(e.size), sent: !!e.sent,
-        reason: uc.user.reason_consent ? clean(e.reason, 30) : undefined, variant: clean(e.variant, 20),
-      };
-      const stmts = [insert(`p:${pauseId}`, 'pause', payload), env.DB.prepare('UPDATE users SET last_real_pause_at = MAX(COALESCE(last_real_pause_at, 0), ?) WHERE id = ?').bind(t, userId)];
-      // Reasons are dropped until the trader says yes; the first one named asks the question on Today.
-      if (e.reason !== undefined && uc.user.reason_consent === null && uc.user.reason_asked_at === null) {
-        stmts.push(env.DB.prepare('UPDATE users SET reason_asked_at = ? WHERE id = ? AND reason_asked_at IS NULL').bind(t, userId));
-      }
-      if (decision === 'place' && e.sent) stmts.push(insert(`p:${pauseId}:ov`, 'override', { from: 'pause', rules }));
-      if (decision === 'skip' || decision === 'timeout') {
-        stmts.push(
-          env.DB.prepare('INSERT INTO user_state (user_id, last_skip_json) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET last_skip_json = excluded.last_skip_json')
-            .bind(userId, JSON.stringify({ t, symbol: payload.symbol, side: payload.side, waitSec: payload.waitSec ?? 0 })),
-        );
-      }
-      const [stored] = await env.DB.batch(stmts);
-      if (!stored.meta.changes) return;
-      await alerts.scheduleSummary(env, uc, t);
-      if (decision === 'place' && e.sent) await alerts.placedAnyway(env, uc, acct, { title: payload.title, rules, side: payload.side, size: payload.size, symbol: payload.symbol });
-      return;
-    }
-    case 'pause_sent': {
-      // Place anyway confirmed sent after the pause event was already queued.
-      const pauseId = clean(e.pauseId, 64);
-      if (!pauseId) return;
-      await insert(`p:${pauseId}:ov`, 'override', { from: 'pause' }).run();
       return;
     }
     case 'break':
@@ -370,10 +315,6 @@ export async function signedBlock(env: Env, uc: UserCtx, connectionId: string): 
     setupMode: !!uc.user.setup_mode,
     lockAt,
     rules: enforcedRules(uc),
-    popup: uc.asm.popup,
-    // Always empty: the EA and extension up to 0.1.6 read them in every pause.
-    notes: [],
-    plan: '',
     time: resolvedTime(uc),
     accounts,
     license: { state: uc.license.state, validUntil: uc.license.validUntil, enforcing: uc.license.enforcing },
@@ -388,12 +329,11 @@ export async function buildSnapshot(env: Env, uc: UserCtx) {
   const day = dayOf(uc.userResets, t);
   const entriesFrom = Math.min(day.start, t - Math.max(HOUR, r.R3.seconds * 1000)) - 60_000;
   const closesFrom = t - Math.max(2 * r.R7.minutes + r.R10.minutes, 30) * MIN;
-  const [entries, closes, lastTwo, overrides, st] = await Promise.all([
+  const [entries, closes, lastTwo, st] = await Promise.all([
     env.DB.prepare("SELECT account_id, t, payload FROM events WHERE user_id = ? AND type = 'entry' AND void_at IS NULL AND t >= ? ORDER BY t").bind(uc.user.id, entriesFrom).all<any>(),
     env.DB.prepare("SELECT id, account_id, t, payload FROM events WHERE user_id = ? AND type = 'close' AND t >= ? ORDER BY t").bind(uc.user.id, closesFrom).all<any>(),
     env.DB.prepare("SELECT id, account_id, t, payload FROM events WHERE user_id = ? AND type = 'close' ORDER BY t DESC LIMIT 2").bind(uc.user.id).all<any>(),
-    env.DB.prepare("SELECT t FROM events WHERE user_id = ? AND type = 'override' AND t >= ? ORDER BY t").bind(uc.user.id, day.start).all<{ t: number }>(),
-    env.DB.prepare('SELECT break_until, done_until, last_skip_json FROM user_state WHERE user_id = ?').bind(uc.user.id).first<any>(),
+    env.DB.prepare('SELECT break_until, done_until FROM user_state WHERE user_id = ?').bind(uc.user.id).first<any>(),
   ]);
   const closeMap = new Map<string, any>();
   for (const c of [...lastTwo.results, ...closes.results]) closeMap.set(c.id, c);
@@ -414,10 +354,8 @@ export async function buildSnapshot(env: Env, uc: UserCtx) {
     dayEnd: day.end,
     entries: entries.results.map(entry),
     closes: [...closeMap.values()].sort((a, b) => a.t - b.t).map((c) => ({ t: c.t, account: c.account_id, net: JSON.parse(c.payload).net, size: JSON.parse(c.payload).size })),
-    overrides: overrides.results.map((o) => o.t),
     breakUntil: st?.break_until ?? null,
     doneUntil: st?.done_until ?? null,
-    lastSkip: st?.last_skip_json ? JSON.parse(st.last_skip_json) : null,
     accounts,
   };
 }

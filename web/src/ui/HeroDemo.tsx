@@ -1,13 +1,14 @@
-// The landing page's moving demo, drawn in SVG: a live chart, a Buy past the day's limit, the pause, a skip.
-// It loops while visible, holds still for reduced motion, and uses the real pause wording from @dg/core.
+// The landing page's moving demo, drawn in SVG: a live chart and a Buy past the day's limit. It goes straight through,
+// the count goes over the limit, and a note says which rule it broke. It loops while visible, holds still for reduced
+// motion, and uses the real wording from @dg/core.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { headline, type Order } from '@dg/core';
+import { breakLine, type Order } from '@dg/core';
 import { coreFmt } from '../fmt.ts';
 import { Mark } from './Brand.tsx';
 import { Icon } from './Icon.tsx';
 
-type Phase = 'idle' | 'aim' | 'press' | 'pause' | 'aimSkip' | 'skip' | 'done';
-const STEPS: [Phase, number][] = [['idle', 1600], ['aim', 950], ['press', 380], ['pause', 3400], ['aimSkip', 850], ['skip', 380], ['done', 2400]];
+type Phase = 'idle' | 'aim' | 'press' | 'placed' | 'note' | 'done';
+const STEPS: [Phase, number][] = [['idle', 1600], ['aim', 950], ['press', 380], ['placed', 900], ['note', 4200], ['done', 900]];
 
 interface Candle { o: number; h: number; l: number; c: number }
 
@@ -34,14 +35,12 @@ const PLOT = 540;
 
 export function HeroDemo() {
   const still = useMemo(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
-  const [phase, setPhase] = useState<Phase>(still ? 'pause' : 'idle');
+  const [phase, setPhase] = useState<Phase>(still ? 'note' : 'idle');
   const [candles, setCandles] = useState(() => series(46));
-  const [left, setLeft] = useState(5);
   const [cursor, setCursor] = useState({ x: 210, y: 120 });
   const [visible, setVisible] = useState(true);
   const body = useRef<HTMLDivElement>(null);
   const buy = useRef<HTMLSpanElement>(null);
-  const skip = useRef<HTMLSpanElement>(null);
 
   // Only animate while on screen and the tab is visible.
   useEffect(() => {
@@ -74,17 +73,8 @@ export function HeroDemo() {
       setCursor({ x: r.left - b.left + r.width * dx, y: r.top - b.top + r.height * dy });
     };
     if (phase === 'aim') at(buy.current);
-    if (phase === 'aimSkip') at(skip.current, 0.45, 0.55);
-    if (phase === 'done') setCursor((c) => ({ x: c.x - 120, y: c.y - 70 }));
-    if (phase === 'pause') setLeft(5);
+    if (phase === 'placed') setCursor((c) => ({ x: c.x - 120, y: c.y - 70 }));
   }, [phase]);
-
-  // The countdown on Place anyway.
-  useEffect(() => {
-    if (phase !== 'pause' || still) return;
-    const id = setInterval(() => setLeft((s) => Math.max(1, s - 1)), 1000);
-    return () => clearInterval(id);
-  }, [phase, still]);
 
   // The last candle ticks.
   useEffect(() => {
@@ -117,15 +107,16 @@ export function HeroDemo() {
   const ask = last.c + 0.00003;
 
   const order: Order = { platform: 'mt5', account: 'demo', symbol: 'EURUSD', side: 'buy', size: 0.5, type: 'market', kind: 'entry' };
-  const head = headline({ rule: 'R1', observed: 4, limit: 3 }, order, coreFmt(), Date.now());
-  const showPause = phase === 'pause' || phase === 'aimSkip' || phase === 'skip';
+  const line = breakLine({ rule: 'R1', observed: 4, limit: 3 }, order, coreFmt(), Date.now());
+  // After the click the trade is placed and counted: 4 of 3.
+  const over = phase === 'placed' || phase === 'note' || phase === 'done';
 
   return (
-    <div className="demo-window" aria-label="A Buy past the day's trade limit gets a pause, and the trader skips it" role="img">
+    <div className="demo-window" aria-label="A Buy past the day's trade limit goes through, and is marked as past the rule" role="img">
       <div className="demo-top" aria-hidden="true">
         <span className="demo-dots"><i /><i /><i /></span>
         <span className="demo-title"><Icon name="candles" size={14} /> EURUSD · M5</span>
-        <span className="demo-pill"><span className="live-dot" /> DisciplineGuard · On · 3 of 3 trades</span>
+        <span className={`demo-pill${over ? ' over' : ''}`}><span className="live-dot" /> DisciplineGuard · On · {over ? 4 : 3} of 3 trades</span>
       </div>
       <div className="demo-body" ref={body} aria-hidden="true">
         <svg className="demo-chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
@@ -163,22 +154,15 @@ export function HeroDemo() {
           <span ref={buy} className={`demo-btn buy${phase === 'press' ? ' pressed' : ''}`}><small>Buy</small>{ask.toFixed(5)}</span>
         </div>
 
-        <div className={`demo-scrim${showPause ? ' on' : ''}`} />
-        <div className={`demo-pause${showPause ? ' on' : ''}`}>
-          <div className="dp-label"><Mark size={15} /> PAUSE · YOUR RULE</div>
-          <div className="dp-head">{head}</div>
-          <div className="dp-line">Your limit resets 00:00.</div>
-          <div className="dp-chip">Buy 0.50 EURUSD</div>
-          <div className="dp-wait"><i className={showPause && !still ? 'run' : ''} /></div>
-          <div className="dp-buttons">
-            <span ref={skip} className={`dp-skip${phase === 'skip' ? ' pressed' : ''}`}>Skip this trade</span>
-            <span className="dp-place">Place anyway · 0:0{left}</span>
-          </div>
+        <div className={`demo-toast${phase === 'placed' ? ' on' : ''}`}><Icon name="check" size={15} strokeWidth={2.2} /> Placed. Buy 0.50 EURUSD</div>
+        <div className={`demo-note${phase === 'note' ? ' on' : ''}`}>
+          <div className="dp-label"><Mark size={15} /> PAST YOUR RULE · MAX TRADES PER DAY</div>
+          <div className="dp-head">{line}</div>
+          <div className="dp-line">It counts toward today. Your limit resets 00:00.</div>
         </div>
-        <div className={`demo-toast${phase === 'done' ? ' on' : ''}`}><Icon name="check" size={15} strokeWidth={2.2} /> Skipped. Nothing was placed.</div>
 
         {!still && (
-          <div className={`demo-cursor${phase === 'press' || phase === 'skip' ? ' click' : ''}`} style={{ transform: `translate(${cursor.x}px, ${cursor.y}px)` }}>
+          <div className={`demo-cursor${phase === 'press' ? ' click' : ''}`} style={{ transform: `translate(${cursor.x}px, ${cursor.y}px)` }}>
             <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 3.5 18.5 12 12 13.4 9.2 19.5 5 3.5Z" fill="#fff" stroke="#0b1220" strokeWidth="1.4" strokeLinejoin="round" /></svg>
           </div>
         )}

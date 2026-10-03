@@ -89,7 +89,7 @@ async fn browse(app: AppHandle, core: State<'_, Shared>) -> Result<Option<String
     .await
 }
 
-/// Opens a page of the web app, e.g. "today?practice" or "devices".
+/// Opens a page of the web app, e.g. "today" or "devices".
 #[tauri::command]
 fn open_web(app: AppHandle, core: State<'_, Shared>, page: String) {
     let _ = app.opener().open_url(format!("{}/{page}", core.web), None::<&str>);
@@ -174,8 +174,7 @@ fn tray_rows(core: &Core) -> (TrayRows, Option<Status>) {
     rows.push(None);
     for (id, text) in [
         ("dashboard", "Open dashboard"),
-        ("practice", "Practice pause"),
-        ("protect", "Protect MetaTrader"),
+        ("protect", "Connect MetaTrader"),
         ("help", "Help"),
         ("report", "Report a problem"),
     ] {
@@ -216,7 +215,6 @@ fn on_menu(app: &AppHandle, id: &str) {
     let core = app.state::<Shared>().inner().clone();
     let page = match id {
         "dashboard" => "today",
-        "practice" => "today?practice",
         "help" => "help",
         "report" => "account#report",
         "signin" => return show(app, "signin"),

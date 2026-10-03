@@ -195,15 +195,13 @@ impl Core {
                     None => setup::ea_path(&t).exists(),
                 };
                 let (status, reason) = if !protected {
-                    (Status::Off, "Not protected".to_string())
+                    (Status::Off, "Not connected".to_string())
                 } else if !s.signed_in() {
-                    (Status::Off, "Signed out. Orders go through normally.".into())
+                    (Status::Off, "Signed out. Trades aren't counted.".into())
                 } else if restart_needed {
                     (Status::SettingUp, "Restart MetaTrader to finish setup".into())
                 } else if !is_running(&t, &running) {
                     (Status::NotRunning, format!("{} is closed", t.name))
-                } else if ea.algo_on == Some(false) {
-                    (Status::NeedsAttention, "Algo Trading is off. Click Algo Trading once in MetaTrader.".into())
                 } else if connected {
                     (Status::On, "On".into())
                 } else if ea.running(now) {
@@ -314,8 +312,8 @@ impl Core {
     }
 
     /// Every few seconds: finishes setup for waiting terminals the trader has closed, and brings each closed
-    /// protected terminal's EA up to the build this app carries. An open MT reloads an EA whose file changes, which
-    /// would end an open pause (invariant 3), so an open terminal waits until it is closed.
+    /// protected terminal's EA up to the build this app carries. An open MT reloads an EA whose file changes, so an
+    /// open terminal waits until it is closed: the panel never reloads under the trader.
     pub fn maintain(&self) {
         let protected: Vec<(Terminal, bool)> = {
             let s = self.state.lock().unwrap();

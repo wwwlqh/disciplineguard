@@ -1,7 +1,11 @@
-// evaluate(rules, settings, state, order, now) → violations (SPEC §8.1). The only rule logic.
+// evaluate(rules, settings, state, order, now) → the rules a trade breaks (SPEC §8.1). The only rule logic.
+// Every trade is counted; one that breaks a rule is counted as a rule break. Nothing is ever held.
 import { classifyOrder, effectiveR5, floorToStep, positionSize, round8, sameInstrument } from './classify.ts';
 import { accountResets, dayOf, localParts, localToUtc, nextReset, DAY, HOUR, MIN } from './time.ts';
 import type { AccountState, Close, Entry, EvalInput, Rules, State, TitleId, Violation } from './types.ts';
+
+/** Take a break (EXPERIENCE §6.3): 15 minutes from the pill. */
+export const BREAK_MINUTES = 15;
 
 export const PRIORITY: TitleId[] = ['DONE_TODAY', 'BREAK', 'R8', 'R7', 'R10', 'R1', 'R2', 'R3', 'R4', 'R6', 'R5', 'R9'];
 
@@ -33,12 +37,6 @@ export function countedEntries(entries: Entry[], countOnce: boolean): Entry[] {
 export function entriesToday(input: Pick<EvalInput, 'rules' | 'time' | 'state'>, t: number): number {
   const { start, end } = dayOf(input.time.userResets, t);
   return countedEntries(input.state.entries, input.rules.countOnce).filter((e) => e.t >= start && e.t < end && e.t <= t).length;
-}
-
-/** Place-anyway decisions and outside violations in the user trading day containing `t`. */
-export function placedAnywayCount(input: Pick<EvalInput, 'time' | 'state'>, t: number): number {
-  const { start, end } = dayOf(input.time.userResets, t);
-  return input.state.overrides.filter((o) => o >= start && o < end && o <= t).length;
 }
 
 function isLoss(c: Close): boolean {

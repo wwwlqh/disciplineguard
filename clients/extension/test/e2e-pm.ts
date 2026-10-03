@@ -8,7 +8,7 @@ await runE2E('pm', 'https://polymarket.com/**', 'fixture-pm.html', async ({ ctx,
   await chart.goto('https://polymarket.com/event/stand-in/will-it-rain');
   await until(async () => (await cache())?.status === 'on' && Object.keys((await cache()).accounts).length === 1, 'extension On');
   const me = (await call('GET', '/api/me', undefined, cookie)).data;
-  check(me.accounts.length === 1 && me.accounts[0].platform === 'tv' && me.accounts[0].last3 === '0ab', 'the Polymarket wallet is protected (last 3 only)');
+  check(me.accounts.length === 1 && me.accounts[0].platform === 'tv' && me.accounts[0].last3 === '0ab', 'the Polymarket wallet is counted (last 3 only)');
 
   const pillText = () => chart.locator('dg-pill .text').textContent();
   await until(async () => (await pillText())?.startsWith('On · 0 of 1 bets'), 'the pill shows On and the bet meter');
@@ -16,54 +16,48 @@ await runE2E('pm', 'https://polymarket.com/**', 'fixture-pm.html', async ({ ctx,
 
   const sent = () => chart.evaluate(() => (window as any).sent as number);
   const press = (sel: string) => pressAt(chart, sel);
-  const pauseOpen = () => chart.locator('dg-pause dialog[open]').count();
+  const note = () => chart.locator('dg-note .note.on').count();
+  const noteHead = () => chart.locator('dg-note .head').textContent();
+  const today = () => call('GET', '/api/today', undefined, cookie).then((r) => r.data);
 
   // Bet 1 keeps the rule: straight through, and counted.
   await press('#submit');
-  check((await sent()) === 1 && (await pauseOpen()) === 0, 'a bet within the rules goes straight through');
+  check((await sent()) === 1 && (await note()) === 0, 'a bet within the rules goes straight through, with no note');
   await until(async () => (await cache())?.snapshot?.entries?.length === 1, 'the entry reaches the server');
 
-  // Picking an outcome is never held.
+  // Picking an outcome isn't a bet.
   await press('#no');
   await press('#yes');
-  check((await pauseOpen()) === 0, 'picking Yes or No is never paused');
+  check((await note()) === 0, 'picking Yes or No is not counted');
 
-  // Bet 2 breaks R1: held, the page never sees the click. Esc skips.
+  // Bet 2 breaks R1: it still goes straight through, counted as a rule break with a note.
   await press('#submit');
-  check((await sent()) === 1 && (await pauseOpen()) === 1, 'bet 2 is held with the pause');
-  check((await chart.locator('dg-pause .head').textContent())?.includes('trade 2 today'), 'the pause names the rule');
-  await chart.keyboard.press('Escape');
-  check((await pauseOpen()) === 0 && (await sent()) === 1, 'Esc skips; nothing sent');
+  check((await sent()) === 2, 'a bet that breaks a rule goes straight through too (never held)');
+  check((await note()) === 1 && (await noteHead())?.includes('Trade 2 today'), 'a note says which rule it broke');
+  await until(async () => (await today()).broken.length === 1, 'the rule break reaches the server');
 
-  // Selling is never paused.
+  // Selling and Deposit aren't bets.
   await press('#sell');
   await press('#submit');
-  check((await sent()) === 2 && (await pauseOpen()) === 0, 'a sell goes straight through');
+  check((await sent()) === 3, 'a sell goes straight through');
   await press('#buy');
-
-  // Deposit is never paused.
   await chart.evaluate(() => (document.getElementById('submit')!.textContent = 'Deposit'));
   await press('#submit');
-  check((await pauseOpen()) === 0, 'Deposit is never paused');
   await chart.evaluate(() => (document.getElementById('submit')!.textContent = 'Buy Yes'));
+  const d = await until(async () => {
+    const x = await today();
+    return x.meters.tradesToday === 2 && x;
+  }, 'two bets counted');
+  check(d.meters.tradesToday === 2 && d.broken.length === 1, 'the sell and Deposit are not counted as bets');
 
-  // Place anyway after the wait, then the trader's own click sends it.
-  await press('#submit');
-  await chart.waitForTimeout(2300);
-  await chart.locator('dg-pause button.place').click();
-  check((await pauseOpen()) === 0 && (await sent()) === 2, 'Place anyway closes the pause and does not click for the trader');
-  await press('#submit');
-  check((await sent()) === 3 && (await pauseOpen()) === 0, 'the next click on Buy places it');
-
-  // The portfolio drops 150 from where the day started: past the 100 limit. The server is told and the next bet is paused.
+  // The portfolio drops 150 from where the day started: past the 100 limit. The server is told; the next bet breaks R8.
   await chart.evaluate(() => (window as any).setPortfolio(850));
   const acct = await until(async () => {
-    const d = (await call('GET', '/api/today', undefined, cookie)).data;
-    return d.accounts[0]?.inLimit && d.accounts[0];
+    const x = await today();
+    return x.accounts[0]?.inLimit && x.accounts[0];
   }, 'the daily loss limit reaches the server');
   check(acct.inLimit, 'reaching the daily loss limit is reported');
   await press('#submit');
-  check((await pauseOpen()) === 1 && (await sent()) === 3, 'after the loss limit, a new bet is paused');
-  check(/down \$150.*daily limit is \$100/.test((await chart.locator('dg-pause .head').textContent()) ?? ''), 'the pause names the daily loss limit');
-  await chart.keyboard.press('Escape');
+  check((await sent()) === 4, 'after the loss limit, a new bet still goes straight through');
+  check(/down \$150.*daily limit is \$100/.test((await noteHead()) ?? ''), 'the note names the daily loss limit');
 });

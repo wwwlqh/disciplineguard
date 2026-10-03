@@ -1,7 +1,7 @@
 // Rule-change protection (SPEC §6): stricter applies now, looser waits.
 import { effectiveR5 } from './classify.ts';
 import { effectiveAt, nextReset, HOUR, MIN } from './time.ts';
-import type { AccountRules, PopupSettings, TimeWindow } from './types.ts';
+import type { AccountRules, TimeWindow } from './types.ts';
 
 export type Direction = 'same' | 'stricter' | 'looser';
 
@@ -12,7 +12,7 @@ export type Direction = 'same' | 'stricter' | 'looser';
  * - `acct:<id>:r7ignore` number | null · `acct:<id>:copies` number[] · `acct:<id>:reset` ResetSpec
  * - `default:r5` / `default:r6` / `default:r8` / `default:r7ignore`: used by accounts without their own value;
  *   `default:r5bet` is the max size in dollars for Polymarket and Kalshi accounts
- * - `popup` PopupSettings · `countOnce` boolean · `closeOutside` boolean · `tz` string · `reset` ResetSpec
+ * - `countOnce` boolean · `tz` string · `reset` ResetSpec
  */
 export type SettingKey = string;
 
@@ -87,29 +87,6 @@ function compareLimit(a: Limit, b: Limit): Direction {
   return b.value < a.value ? 'stricter' : 'looser';
 }
 
-const TC_RANK = { off: 0, after: 1, always: 2 } as const;
-
-function comparePopup(a: PopupSettings, b: PopupSettings): Direction {
-  if (sameJson(a, b)) return 'same';
-  const parts: Direction[] = [];
-  parts.push(a.show === b.show ? 'same' : b.show === 'every' ? 'stricter' : 'looser');
-  parts.push(fields([['up', a.wait, b.wait]]));
-  if (a.lossWait.on !== b.lossWait.on) parts.push(b.lossWait.on ? 'stricter' : 'looser');
-  else if (b.lossWait.on) {
-    parts.push(fields([['up', a.lossWait.seconds, b.lossWait.seconds], ['up', a.lossWait.withinMinutes, b.lossWait.withinMinutes]]));
-  }
-  if (a.growing.on !== b.growing.on) parts.push(b.growing.on ? 'stricter' : 'looser');
-  else if (b.growing.on) parts.push(fields([['up', a.growing.step, b.growing.step], ['up', a.growing.cap, b.growing.cap]]));
-  const ra = TC_RANK[a.typeConfirm.mode];
-  const rb = TC_RANK[b.typeConfirm.mode];
-  if (ra !== rb) parts.push(rb > ra ? 'stricter' : 'looser');
-  else if (b.typeConfirm.mode === 'after') parts.push(fields([['down', a.typeConfirm.n, b.typeConfirm.n]]));
-  parts.push(fields([['on', a.skipCard, b.skipCard]]));
-  parts.push(a.keyboardPlace === b.keyboardPlace ? 'same' : b.keyboardPlace ? 'looser' : 'stricter');
-  if (parts.includes('looser')) return 'looser';
-  return parts.includes('stricter') ? 'stricter' : 'same';
-}
-
 /** Compares a proposed value with the active one (SPEC §6.2). Anything not clearly stricter is looser. */
 export function compareChange(key: SettingKey, active: any, proposed: any): Direction {
   if (sameJson(active, proposed)) return 'same';
@@ -159,9 +136,7 @@ export function compareChange(key: SettingKey, active: any, proposed: any): Dire
   }
   // Defaults apply to every account without its own value, so they compare like account values.
   if (kind === 'default') return compareChange(`acct:*:${id === 'r5bet' ? 'r5' : id}`, active, proposed);
-  if (kind === 'popup') return comparePopup(active, proposed);
   if (kind === 'countOnce') return proposed ? 'looser' : 'stricter';
-  if (kind === 'closeOutside') return proposed ? 'stricter' : 'looser';
   return 'looser'; // tz, reset and anything unknown
 }
 
@@ -172,15 +147,15 @@ export interface ChangeContext {
   now: number;
   userResets: number[];
   setupMode: boolean;
-  /** The latest real pause (not practice), for the setup-mode cool-off (SPEC §6.1). */
-  lastRealPauseAt?: number;
+  /** The latest trade that broke a rule, for the setup-mode cool-off (SPEC §6.1). */
+  lastBreakAt?: number;
 }
 
 /** When a change takes effect: 'now' or an instant. */
 export function whenApplies(direction: Direction, ctx: ChangeContext): 'now' | number {
   if (direction !== 'looser') return 'now';
   if (ctx.setupMode) {
-    const coolEnd = ctx.lastRealPauseAt !== undefined ? ctx.lastRealPauseAt + SETUP_COOL_OFF_MIN * MIN : -Infinity;
+    const coolEnd = ctx.lastBreakAt !== undefined ? ctx.lastBreakAt + SETUP_COOL_OFF_MIN * MIN : -Infinity;
     return ctx.now < coolEnd ? coolEnd : 'now';
   }
   return effectiveAt(ctx.userResets, ctx.now);

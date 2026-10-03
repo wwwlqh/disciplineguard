@@ -1,10 +1,10 @@
 # DisciplineGuard for Windows
 
-The tray app that sets up MetaTrader 5 for the trader (SPEC §9.5, EXPERIENCE §7.1). The trader signs in with **Allow** in the browser, ticks their MetaTrader and presses **Protect**. Nothing is typed or clicked inside MetaTrader. The app also shows the trader's alerts as Windows notifications (SPEC §11.1).
+The tray app that sets up MetaTrader 5 for the trader (SPEC §9.5, EXPERIENCE §7.1). The trader signs in with **Allow** in the browser, ticks their MetaTrader and presses **Connect**. Nothing is typed or clicked inside MetaTrader. The app also shows the trader's alerts as Windows notifications (SPEC §11.1).
 
 | Folder | What it is |
 |---|---|
-| `core` | Everything but the window: sign-in, finding terminals, Protect (MT's own files), the EA file bridge, the signed EA manifest, DPAPI storage, fetching alerts. Builds and tests on any OS. |
+| `core` | Everything but the window: sign-in, finding terminals, Connect (MT's own files), the EA file bridge, the signed EA manifest, DPAPI storage, fetching alerts. Builds and tests on any OS. |
 | `app` | The Tauri 2 shell: tray, first-run window (`ui/`), notifications, updater, installer (NSIS). Builds on Windows only. |
 
 **Why Tauri.** A ~5 MB installer, low memory (Rust in the background, the system WebView2 only while the window is open), a signed updater built in, and NSIS installers that code-sign in CI.
@@ -28,13 +28,13 @@ set DG_WEB=http://localhost:5173
 cd clients\windows && cargo run -p disciplineguard
 ```
 
-`DG_API` works in debug builds only. To Protect, a debug build also needs a signed EA in `app/ea/`: make a dev key with `node scripts/sign-ea-manifest.ts --new-key`, sign a compiled EA with it, and set `DG_RELEASE_PUB` before `cargo run`. A portable MT5 (`clients/mt5/tests/smoke.ps1`) keeps your own terminals untouched.
+`DG_API` works in debug builds only. To Connect, a debug build also needs a signed EA in `app/ea/`: make a dev key with `node scripts/sign-ea-manifest.ts --new-key`, sign a compiled EA with it, and set `DG_RELEASE_PUB` before `cargo run`. A portable MT5 (`clients/mt5/tests/smoke.ps1`) keeps your own terminals untouched.
 
-## How Protect works
+## How Connect works
 
 1. The EA build is checked against the signed manifest, then copied to `MQL5\Experts\DisciplineGuard\`.
 2. `MQL5\Profiles\Templates\default.tpl` gets the EA, so every new chart has the panel. A fresh MT has no `default.tpl`, so the app writes a bare one that looks like MT's built-in default.
-3. With MetaTrader closed, the last-used profile's first free chart gets the EA and `config\common.ini` turns on Algo Trading. If MetaTrader is open, the app asks: "Restart MetaTrader" or "Next time I open it". It never closes MetaTrader without that click, and a chart running another EA is left alone.
+3. With MetaTrader closed, the last-used profile's first free chart gets the EA and `config\common.ini` lets EAs run (the EA itself never trades). If MetaTrader is open, the app asks: "Restart MetaTrader" or "Next time I open it". It never closes MetaTrader without that click, and a chart running another EA is left alone.
 4. The EA's first sync reaches the app through the bridge, and the app registers the terminal (`POST /v1/desktop/terminals`).
 
 ## Releasing

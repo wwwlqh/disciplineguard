@@ -8,7 +8,7 @@ type Count = { k: string; n: number };
 interface Metrics {
   users: { total: number; new7d: number; connected: number; active7d: number };
   accounts: Count[];
-  week: { pauses: number; trades: number };
+  week: { trades: number; breaks: number };
   tellMe: Count[];
   reports: Count[];
 }
@@ -29,7 +29,7 @@ export function Owner() {
             <Stat label="Users" value={m.users.total} note={`${m.users.new7d} new this week`} />
             <Stat label="Connected" value={m.users.connected} note="a device turned on" />
             <Stat label="Active" value={m.users.active7d} note="a device seen this week" />
-            <Stat label="Pauses" value={m.week.pauses} note={`${m.week.trades} trades this week`} />
+            <Stat label="Trades" value={m.week.trades} note={`${m.week.breaks} past a rule this week`} />
           </div>
           <div className="card">
             <h2>Accounts</h2>

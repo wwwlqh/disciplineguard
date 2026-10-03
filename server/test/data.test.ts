@@ -12,7 +12,7 @@ describe('export (SPEC §13.4)', () => {
     const web = await w.signIn('a@b.co');
     await web.onboard();
     const ea = await web.connect();
-    await ea.sync([{ type: 'pause', pauseId: 'p1', rules: ['R1'], title: 'R1', decision: 'skip', symbol: 'EURUSD', side: 'buy', size: 1 }]);
+    await ea.sync([{ type: 'entry', ticket: 1, symbol: 'EURUSD', side: 'buy', size: 1, source: 'history', violations: ['R1'] }]);
     w.t += 11 * MIN;
     expect((await web.send('POST', '/api/export')).status).toBe(403);
     const fresh = await w.signIn('a@b.co');
@@ -21,7 +21,7 @@ describe('export (SPEC §13.4)', () => {
     const r = await w.call('GET', `/v1/export/${tok}`);
     expect(r.status).toBe(200);
     expect(r.headers.get('content-type')).toBe('application/zip');
-    for (const name of ['disciplineguard.json', 'pauses.csv', 'trades.csv', 'rule-changes.csv']) expect(r.data).toContain(name);
+    for (const name of ['disciplineguard.json', 'trades.csv', 'rule-changes.csv']) expect(r.data).toContain(name);
     expect(r.data).toContain('EURUSD');
     expect(r.data).not.toContain('1234567');
     expect((await w.call('GET', `/v1/export/${tok}`)).status).toBe(410);

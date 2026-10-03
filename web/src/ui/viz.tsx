@@ -81,30 +81,6 @@ export function Gauge({ value, max, tone = 'accent', width = 200, stroke = 12, l
   );
 }
 
-/** Part-to-whole in one bar, with a legend that carries every value. */
-export function StackedBar({ parts, label }: { parts: { key: string; label: string; value: number; tone: string }[]; label: string }) {
-  const total = parts.reduce((a, b) => a + b.value, 0);
-  const pct = (v: number) => (total ? Math.round((v / total) * 100) : 0);
-  return (
-    <div className="stacked">
-      <div className="stacked-bar" role="img" aria-label={`${label}: ${parts.map((p) => `${p.label} ${p.value}`).join(', ')}`}>
-        {total === 0 ? <i className="seg empty" /> : parts.filter((p) => p.value > 0).map((p) => (
-          <i key={p.key} className={`seg ${p.tone}`} style={{ flexGrow: p.value }} data-tip={`${p.label} · ${p.value} (${pct(p.value)}%)`} />
-        ))}
-      </div>
-      <ul className="legend big">
-        {parts.map((p) => (
-          <li key={p.key}>
-            <span className="legend-name"><span className={`swatch ${p.tone}`} aria-hidden="true" />{p.label}</span>
-            <strong>{p.value}</strong>
-            <span className="faint">{pct(p.value)}%</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 /** Horizontal bars for one series, sorted, value at the tip. */
 export function HBars({ rows, label }: { rows: { key: string; label: string; value: number; icon?: IconName }[]; label: string }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
@@ -149,11 +125,11 @@ export interface DayCell {
   traded: boolean;
   kept: boolean;
   entries?: number;
-  pauses?: number;
+  breaks?: number;
 }
 
 const DAY_STATE = (d: DayCell) => (!d.traded ? 'idle' : d.kept ? 'kept' : 'broke');
-const DAY_WORD: Record<string, string> = { idle: 'No trading', kept: 'Rules kept', broke: 'A rule was broken' };
+const DAY_WORD: Record<string, string> = { idle: 'No trading', kept: 'Rules kept', broke: 'Went past a rule' };
 
 /** Days as a calendar: one column per week, Monday at the top. */
 export function Calendar({ days: given, span }: { days: DayCell[]; span?: number }) {
@@ -168,7 +144,7 @@ export function Calendar({ days: given, span }: { days: DayCell[]; span?: number
       <div className="cal-days" aria-hidden="true">{['Mon', '', 'Wed', '', 'Fri', '', 'Sun'].map((d, i) => <span key={i}>{d}</span>)}</div>
       <div className="cal-grid" role="img" aria-label={`${days.filter((d) => d.kept).length} days kept of ${days.filter((d) => d.traded).length} traded`}>
         {cells.map((d, i) => d ? (
-          <i key={i} className={`cal-cell ${DAY_STATE(d)}`} data-tip={`${weekday(d.start)} ${date(d.start)} · ${DAY_WORD[DAY_STATE(d)]}${d.traded ? ` · ${d.entries ?? 0} trades, ${d.pauses ?? 0} pauses` : ''}`} />
+          <i key={i} className={`cal-cell ${DAY_STATE(d)}`} data-tip={`${weekday(d.start)} ${date(d.start)} · ${DAY_WORD[DAY_STATE(d)]}${d.traded ? ` · ${d.entries ?? 0} trades, ${d.breaks ?? 0} past a rule` : ''}`} />
         ) : <i key={i} className="cal-cell pad" />)}
       </div>
     </div>

@@ -26,7 +26,7 @@ export async function until<T>(f: () => Promise<T | undefined | false>, what: st
   throw new Error(`timed out: ${what}`);
 }
 
-/** A real mouse click at the control, like the trader's (the pause covering the page is the point). */
+/** A real mouse click at the control, like the trader's. */
 export async function press(page: Page, sel: string) {
   const box = (await page.locator(sel).boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
@@ -85,8 +85,7 @@ export async function runE2E(name: string, site: string, fixture: string, test: 
     const mail = (await call('GET', '/dev/outbox')).data.find((m: any) => m.to_email === email);
     const code = /code is (\d{6})/.exec(mail.body)![1];
     const cookie = (await call('POST', '/v1/auth/verify', { email, code })).cookie!;
-    const popup = { show: 'breaks', wait: 2, lossWait: { on: false, seconds: 15, withinMinutes: 30 }, growing: { on: false, step: 5, cap: 45 }, typeConfirm: { mode: 'off', n: 3 }, skipCard: true, keyboardPlace: false };
-    const ob = await call('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 1 }, R8: { on: true, restHours: 12 } }, defaults: { r8: { unit: 'amount', value: 100 } }, popup }, cookie);
+    const ob = await call('POST', '/api/onboarding/apply', { tz: 'UTC', reset: { preset: 'midnight' }, rules: { R1: { on: true, max: 1 }, R8: { on: true, restHours: 12 } }, defaults: { r8: { unit: 'amount', value: 100 } } }, cookie);
     check(ob.status === 200, 'onboarded with R1 max 1 and R8 100');
 
     ctx = await chromium.launchPersistentContext(profile, {

@@ -84,11 +84,11 @@ export function ConnectMt5({ me, onlyNew = false, onConnected }: { me: Me; onlyN
           </div>
         </li>
         <li><span>Open it and click <strong>Allow</strong>.</span></li>
-        <li><span>Tick your MetaTrader and press <strong>Protect</strong>.</span></li>
+        <li><span>Tick your MetaTrader and press <strong>Connect</strong>.</span></li>
       </ol>
       <Live
         conns={p.connections.filter((c) => c.kind === 'mt5' || c.kind === 'mt4')}
-        allowed={app ? `Allowed on ${app.name}. Tick your MetaTrader and press Protect.` : null}
+        allowed={app ? `Allowed on ${app.name}. Tick your MetaTrader and press Connect.` : null}
         waiting="Waiting for your computer…"
       />
       <details className="small muted">
@@ -160,7 +160,7 @@ export function ConnectBrowser({ me, sites = ['tv', 'pm', 'kalshi'], onlyNew = f
         <summary>Trouble?</summary>
         <ul>
           <li>No Sign in tab: click the puzzle icon in the toolbar, then DisciplineGuard.</li>
-          {sites.includes('tv') && <li>TradingView: use the website with your broker connected. The desktop app can't be paused.</li>}
+          {sites.includes('tv') && <li>TradingView: use the website with your broker connected. Trades in the desktop app aren't counted.</li>}
           <li>Safari and Firefox aren't supported.</li>
         </ul>
       </details>

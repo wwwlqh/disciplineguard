@@ -130,7 +130,7 @@ export function Devices({ me, reload }: PageProps) {
           <p className="muted">
             {removing.ended || me.user.setupMode
               ? 'This applies now.'
-              : 'This waits until your next day reset (at least 12 hours). It stays protected until then.'}
+              : 'This waits until your next day reset (at least 12 hours). Its trades are counted until then.'}
           </p>
           <div className="row">
             <button className="danger" onClick={remove}>Remove</button>

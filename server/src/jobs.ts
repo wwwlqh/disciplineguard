@@ -51,6 +51,7 @@ export async function runScheduled(env: Env, ctx: Ctx): Promise<{ ran: number }>
   }
   // Retention (SPEC §13.3).
   await env.DB.batch([
+    // 'pause': kept from before DisciplineGuard became count-only.
     env.DB.prepare("DELETE FROM events WHERE t < ? AND type NOT IN ('pause', 'override', 'entry', 'close')").bind(t - 90 * DAY),
     env.DB.prepare('DELETE FROM coverage WHERE to_utc < ?').bind(t - 30 * DAY),
     env.DB.prepare('DELETE FROM alerts WHERE created_at < ?').bind(t - 7 * DAY),

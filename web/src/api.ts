@@ -1,5 +1,5 @@
 // Same-origin JSON API. Mutating calls carry X-DG (the server's CSRF check).
-import type { PopupSettings, ResolvedTime, Rules } from '@dg/core';
+import type { ResolvedTime, Rules } from '@dg/core';
 
 export class ApiError extends Error {
   status: number;
@@ -67,7 +67,7 @@ export interface Pending {
   effectiveAt: number;
 }
 
-export type AlertKind = 'limit' | 'after_limit' | 'off' | 'moved' | 'outside' | 'closed' | 'unchecked' | 'summary' | 'placed' | 'stop';
+export type AlertKind = 'limit' | 'after_limit' | 'broke' | 'off' | 'moved' | 'unchecked' | 'summary' | 'stop';
 
 export interface AlertPrefs {
   on: Record<AlertKind, boolean>;
@@ -85,10 +85,8 @@ export interface Me {
     lockedBy: string | null;
     lockAt: number | null;
     firstOnAt: number | null;
-    lastRealPauseAt: number | null;
+    lastBreakAt: number | null;
     hideAmounts: boolean;
-    reasonConsent: number | null;
-    reasonAsked: boolean;
     alerts: AlertPrefs;
     hasApp: boolean;
     onboarding: any;
@@ -102,7 +100,6 @@ export interface Me {
   };
   license: License;
   rules: Rules;
-  popup: PopupSettings;
   tz: string;
   settings: Record<string, { active: any; pending: { value: any; effectiveAt: number } | null; setAt: number }>;
   pending: Pending[];

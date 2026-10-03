@@ -1,8 +1,8 @@
 //+------------------------------------------------------------------+
 //| Copy.mqh                                                         |
-//| Pause and status wording (EXPERIENCE §9.2), the same words as    |
-//| packages/core/src/copy.ts. Times use the user timezone offsets   |
-//| from the signed cache, never the terminal's clock zone.          |
+//| Rule-break and status wording (EXPERIENCE §9.2), the same words |
+//| as packages/core/src/copy.ts. Times use the user timezone        |
+//| offsets from the signed cache, never the terminal's clock zone.  |
 //+------------------------------------------------------------------+
 #ifndef DG_COPY_MQH
 #define DG_COPY_MQH
@@ -66,55 +66,35 @@ string DGRuleName(const string r)
    if(r == "R10") return "No bigger after a loss";
    if(r == "BREAK") return "Break";
    if(r == "DONE_TODAY") return "Done for today";
-   return "Check your plan";
+   return "your rule";
   }
 
-/// The headline for violation i (or the "every entry" headline when there is none).
-string DGHeadline(DGModel &m, const int i, const long now)
-  {
-   if(i < 0 || i >= ArraySize(m.vRule)) return "Check your plan before this trade.";
-   string r = m.vRule[i];
-   if(r == "R1") return StringFormat("This would be trade %d today. Your limit is %d.", (int)m.vObs[i], (int)m.vLim[i]);
-   if(r == "R2") return StringFormat("This would be trade %d this hour. Your limit is %d.", (int)m.vObs[i], (int)m.vLim[i]);
-   if(r == "R3")
-     {
-      long span = MathMax(1, (now - (m.vClears[i] - (long)m.r3Seconds * 1000)) / 1000);
-      return "This is your " + DGOrdinal((int)m.vObs[i]) + " trade in " + IntegerToString(span) + " seconds.";
-     }
-   if(r == "R4")
-      return m.vClears[i] != DG_NONE ? "It's " + DGFmtTime(m, now, now) + ". Your trading hours start at " + DGFmtTime(m, m.vClears[i], now) + "."
-             : "It's " + DGFmtTime(m, now, now) + ". You're outside your trading hours.";
-   if(r == "R5") return "This would make your " + m.oSym + " position " + DGFmtLots(m.vObs[i]) + " lots. Your max is " + DGFmtLots(m.vLim[i]) + ".";
-   if(r == "R6") return m.vFixSl[i] ? "No stop loss, so risk can't be checked." : "This trade risks " + DGFmtMoney(m.vObs[i]) + ". Your max is " + DGFmtMoney(m.vLim[i]) + ".";
-   if(r == "R7")
-     {
-      int mins = (int)m.vObs[i];
-      return mins <= 0 ? "Your last trade just closed at a loss." : StringFormat("Your last trade closed at a loss %d minute%s ago.", mins, mins == 1 ? "" : "s");
-     }
-   if(r == "R8") return "You're down " + DGFmtMoney(m.vObs[i]) + " today. Your daily limit is " + DGFmtMoney(m.vLim[i]) + ".";
-   if(r == "R9") return "This trade has no stop loss.";
-   if(r == "R10") return "This is bigger than the trade you just lost on (" + DGFmtLots(m.vObs[i]) + " vs " + DGFmtLots(m.vLim[i]) + " lots).";
-   if(r == "BREAK") return "You're on a break until " + DGFmtTime(m, m.vClears[i], now) + ".";
-   if(r == "DONE_TODAY") return "You said you're done for today.";
-   return "Check your plan before this trade.";
-  }
-
-/// The way-out or fix line. Empty means the plan line only.
-string DGWayOut(DGModel &m, const int i, const long now)
+/// What a counted trade broke, for violation i, in one line. Same words as breakLine in packages/core/src/copy.ts.
+string DGBreakLine(DGModel &m, const int i, const long now)
   {
    if(i < 0 || i >= ArraySize(m.vRule)) return "";
    string r = m.vRule[i];
-   if(r == "R1") return "Your limit resets " + DGFmtTime(m, m.vClears[i], now) + ".";
-   if(r == "R4" && m.vClears[i] != DG_NONE) return "Your hours open at " + DGFmtTime(m, m.vClears[i], now) + ".";
-   if(r == "R5") return "Trade " + DGFmtLots(m.vHasFix[i] ? m.vFixSize[i] : m.vLim[i]) + " lots or less.";
-   if(r == "R6") return m.vFixSl[i] ? "Add a stop loss." : DGFmtLots(m.vFixSize[i]) + " lots fits at this stop.";
-   if(r == "R8") return "You're done for today. Your rest ends " + DGFmtTime(m, m.vClears[i], now) + ".";
-   if(r == "R9") return "Add a stop loss.";
-   if(r == "R10") return "Trade " + DGFmtLots(m.vLim[i]) + " lots or less.";
-   if(r == "DONE_TODAY") return "Your trading day resets at " + DGFmtTime(m, m.vClears[i], now) + ".";
+   if(r == "R1") return StringFormat("Trade %d today. Your limit is %d.", (int)m.vObs[i], (int)m.vLim[i]);
+   if(r == "R2") return StringFormat("Trade %d this hour. Your limit is %d.", (int)m.vObs[i], (int)m.vLim[i]);
+   if(r == "R3")
+     {
+      long span = MathMax(1, (now - (m.vClears[i] - (long)m.r3Seconds * 1000)) / 1000);
+      return "Your " + DGOrdinal((int)m.vObs[i]) + " trade in " + IntegerToString(span) + " seconds.";
+     }
+   if(r == "R4") return "Placed at " + DGFmtTime(m, now, now) + ", outside your trading hours.";
+   if(r == "R5") return "Your " + m.oSym + " position is " + DGFmtLots(m.vObs[i]) + " lots. Your max is " + DGFmtLots(m.vLim[i]) + ".";
+   if(r == "R6") return m.vFixSl[i] ? "No stop loss, so its risk couldn't be checked." : "This trade risks " + DGFmtMoney(m.vObs[i]) + ". Your max is " + DGFmtMoney(m.vLim[i]) + ".";
+   if(r == "R7")
+     {
+      int mins = (int)m.vObs[i];
+      return mins <= 0 ? "Placed right after a losing trade." : StringFormat("Placed %d minute%s after a losing trade.", mins, mins == 1 ? "" : "s");
+     }
+   if(r == "R8") return "You're down " + DGFmtMoney(m.vObs[i]) + " today. Your daily limit is " + DGFmtMoney(m.vLim[i]) + ".";
+   if(r == "R9") return "This trade has no stop loss.";
+   if(r == "R10") return "Bigger than the trade you just lost on (" + DGFmtLots(m.vObs[i]) + " vs " + DGFmtLots(m.vLim[i]) + " lots).";
+   if(r == "BREAK") return "Placed during your break (until " + DGFmtTime(m, m.vClears[i], now) + ").";
+   if(r == "DONE_TODAY") return "Placed after you said you're done for today.";
    return "";
   }
-
-#define DG_FOOTER "Closing, moving SL/TP and cancelling orders are never paused. To close a position, skip first."
 
 #endif

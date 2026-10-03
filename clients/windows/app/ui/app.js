@@ -1,4 +1,4 @@
-// The first-run window (EXPERIENCE §7.1): sign in → we found your MetaTrader → Protect → done.
+// The first-run window (EXPERIENCE §7.1): sign in → we found your MetaTrader → Connect → done.
 // The tray reopens it on a given screen through the "screen" event.
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
@@ -12,7 +12,6 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const svg = (d, size = 18, sw = 1.8) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const ICON = {
   shieldCheck: (s, w) => svg('<path d="M12 3 5 6v5.5c0 4.4 2.9 7.9 7 9.5 4.1-1.6 7-5.1 7-9.5V6l-7-3Z"/><path d="m9 12 2.2 2.2L15.5 10"/>', s, w),
-  pause: (s, w) => svg('<rect x="7" y="5" width="3.6" height="14" rx="1.2"/><rect x="13.4" y="5" width="3.6" height="14" rx="1.2"/>', s, w),
   window: (s, w) => svg('<rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9h18"/>', s, w),
   check: (s, w) => svg('<path d="m5 12.5 4.5 4.5L19 7.5"/>', s, w),
   alert: (s, w) => svg('<path d="M10.3 4.3 2.9 17.5A2 2 0 0 0 4.6 20.5h14.8a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/>', s, w),
@@ -51,9 +50,9 @@ function signin(_v, error = '') {
       ${error ? `<p class="warn">${esc(error)}</p>` : ''}
     </div>
     <ul class="promises">
-      <li>${ICON.shieldCheck(16)}<span>Closing a trade is never paused.</span></li>
-      <li>${ICON.shieldCheck(16)}<span>Trades that keep your rules go straight through. We never make an order wait for our server.</span></li>
-      <li>${ICON.shieldCheck(16)}<span>We never see your broker password, and we never open, change or close a trade unless you click to do it or turn on Close outside trades.</span></li>
+      <li>${ICON.shieldCheck(16)}<span>Every trade goes straight through. DisciplineGuard never holds, pauses or blocks an order.</span></li>
+      <li>${ICON.shieldCheck(16)}<span>Each trade is counted against your rules, and a trade that goes past one is marked.</span></li>
+      <li>${ICON.shieldCheck(16)}<span>We never see your broker password, and we never open, change or close a trade.</span></li>
     </ul>
     <div class="actions"><button class="primary" id="go">${ICON.globe(16)} Continue in browser</button></div>`;
   document.getElementById('go').onclick = async (e) => {
@@ -89,14 +88,14 @@ function found(v, error = '') {
     <h1 class="${none ? 'center' : ''}">${open.length ? 'We found your MetaTrader' : prot.length ? 'Your MetaTrader' : 'No MetaTrader 5 found yet'}</h1>
     ${none ? '<p class="muted center">Open MetaTrader 5 once, or pick its folder.</p>' : open.length ? '<p class="muted">Tick the ones you trade on.</p>' : ''}
     ${open.length ? `<div class="list">${open.map(row).join('')}</div>` : ''}
-    ${prot.length ? `<p class="label">Protected</p><div class="list">${prot.map(protRow).join('')}</div>
-      <p class="muted small">To remove protection, use <button class="link" id="devices">Devices</button> on the website.</p>` : ''}
+    ${prot.length ? `<p class="label">Connected</p><div class="list">${prot.map(protRow).join('')}</div>
+      <p class="muted small">To stop counting a terminal, use <button class="link" id="devices">Devices</button> on the website.</p>` : ''}
     ${none ? '' : `<p class="muted small">Don't see it? <button class="link" id="browse">Browse</button></p>`}
     ${!v.canProtect ? '<p class="warn">This copy can\'t set up MetaTrader. Download it again.</p>' : ''}
     ${error ? `<p class="warn">${esc(error)}</p>` : ''}
     <div class="actions">
       ${prot.length ? '<button id="close">Close</button>' : ''}
-      ${open.length ? `<button class="primary" id="protect" ${v.canProtect ? '' : 'disabled'}>${ICON.shieldCheck(16)} Protect</button>` : ''}
+      ${open.length ? `<button class="primary" id="protect" ${v.canProtect ? '' : 'disabled'}>${ICON.shieldCheck(16)} Connect</button>` : ''}
       ${none ? `<button class="primary" id="browse">${ICON.folder(16)} Pick its folder</button>` : ''}
     </div>`;
   const on = (id, f) => document.getElementById(id) && (document.getElementById(id).onclick = f);
@@ -125,17 +124,16 @@ function found(v, error = '') {
 function result(v, stuck = []) {
   const prot = v.rows.filter((r) => r.protected);
   const step = (state, label) => `<div class="step ${state}"><span class="st">${state === 'ok' ? ICON.check(13, 2.6) : state === 'bad' ? ICON.alert(13, 2.2) : ''}</span><span>${label}</span></div>`;
-  const algo = (r) => (r.algoOn === false ? step('bad', 'Algo Trading is off: click Algo Trading once in MetaTrader') : step(r.algoOn ? 'ok' : 'wait', 'Algo Trading on'));
   const waiting = prot.some((r) => r.restartNeeded);
-  const allOn = prot.length && prot.every((r) => r.connected && !r.restartNeeded && r.algoOn !== false);
+  const allOn = prot.length && prot.every((r) => r.connected && !r.restartNeeded);
   el.innerHTML = `
     ${hero(allOn ? ICON.shieldCheck(30, 2) : waiting ? ICON.refresh(28, 2) : ICON.window(28, 2), waiting ? 'amber' : '')}
-    <h1 class="center">${allOn ? 'Protected' : 'Setting up'}</h1>
+    <h1 class="center">${allOn ? 'Connected' : 'Setting up'}</h1>
     <div class="list">
       ${prot.map((r) => `
         <div class="row">
           <span class="grow"><span class="name">${esc(r.name)}</span>
-            <span class="steps">${step(r.installed ? 'ok' : 'wait', 'Installed')}${algo(r)}${step(r.connected ? 'ok' : 'wait', 'Connected')}</span>
+            <span class="steps">${step(r.installed ? 'ok' : 'wait', 'Installed')}${step(r.connected ? 'ok' : 'wait', 'Connected')}</span>
           </span>
         </div>`).join('')}
     </div>
@@ -170,11 +168,11 @@ function done() {
   el.innerHTML = `
     ${hero(ICON.check(32, 2.4))}
     <div class="center">
-      <h1>You're protected</h1>
-      <p class="muted">Open any chart: the panel is there. DisciplineGuard stays in the tray.</p>
+      <h1>You're all set</h1>
+      <p class="muted">Every trade on this account is now counted against your rules: in MetaTrader, on your phone and on the web terminal. DisciplineGuard stays in the tray.</p>
     </div>
-    <div class="actions"><button id="close">Close</button><button class="primary" id="practice">${ICON.pause(16)} Try a practice pause</button></div>`;
-  document.getElementById('practice').onclick = () => invoke('open_web', { page: 'today?practice' });
+    <div class="actions"><button id="close">Close</button><button class="primary" id="dashboard">${ICON.globe(16)} Open dashboard</button></div>`;
+  document.getElementById('dashboard').onclick = () => invoke('open_web', { page: 'today' });
   document.getElementById('close').onclick = () => invoke('hide');
 }
 

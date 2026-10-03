@@ -1,28 +1,27 @@
 // Stats, Phase 1 (EXPERIENCE §5.7). Counts and facts only. Never money saved.
 import { useEffect, useState } from 'react';
-import { REASONS, RULE_NAMES, type RuleId, type TitleId } from '@dg/core';
+import { RULE_NAMES, type RuleId, type TitleId } from '@dg/core';
 import { api } from '../api.ts';
 import { platformName } from '../fmt.ts';
 import { Icon, RULE_ICON, type IconName } from '../ui/Icon.tsx';
-import { Calendar, Columns, HBars, Ring, Stat, StackedBar, type DayCell } from '../ui/viz.tsx';
+import { Calendar, Columns, HBars, Ring, Stat, type DayCell } from '../ui/viz.tsx';
 import type { PageProps } from '../main.tsx';
 
 interface StatsData {
   days: number;
-  pauses: number;
-  byOutcome: Record<string, number>;
+  trades: number;
+  breaks: number;
+  /** Rule breaks by rule: a trade that broke two rules counts for each. */
   byRule: Record<string, number>;
-  byReason: Record<string, number>;
   byHour: number[];
   daysTraded: number;
   daysKept: number;
-  cameBackDays: number;
-  daily?: (DayCell & { entries: number; pauses: number })[];
-  coverage: { outside: number; unprotected: number; unclassified: number; stopChanges: number; offEvents: number };
+  oneSlipDays: number;
+  daily?: (DayCell & { entries: number; breaks: number })[];
+  coverage: { unprotected: number; unclassified: number; stopChanges: number; offEvents: number };
 }
 
 const COVERAGE: [keyof StatsData['coverage'], string, IconName][] = [
-  ['outside', 'Trades placed outside DisciplineGuard', 'phone'],
   ['unprotected', 'Trades placed while DisciplineGuard was off', 'shield'],
   ['offEvents', 'Times DisciplineGuard was turned off', 'alert'],
   ['stopChanges', 'Stops removed or widened', 'stop'],
@@ -38,13 +37,12 @@ export function Stats({ me }: PageProps) {
   useEffect(() => {
     api<StatsData>('GET', `/api/stats?days=${days}${account ? `&account=${account}` : ''}`).then(setS).catch(() => {});
   }, [days, account]);
-  const skipped = (s?.byOutcome.skip ?? 0) + (s?.byOutcome.timeout ?? 0);
   return (
     <div className="stack">
       <div className="page-head">
         <div>
           <h1>Stats</h1>
-          <div className="sub">Counts and facts from your pauses and trades.</div>
+          <div className="sub">Counts and facts from your trades.</div>
         </div>
         <div className="row">
           <select value={account} onChange={(e) => setAccount(e.target.value)} aria-label="Account">
@@ -56,21 +54,21 @@ export function Stats({ me }: PageProps) {
           </select>
         </div>
       </div>
-      {!s ? <p className="muted">Loading…</p> : s.pauses === 0 && s.daysTraded === 0 ? (
+      {!s ? <p className="muted">Loading…</p> : s.daysTraded === 0 ? (
         <div className="card">
           <div className="empty-state">
             <span className="tile accent"><Icon name="stats" size={22} /></span>
             <strong>Stats start after your first trading day</strong>
-            <span className="small">Pauses, skips and days kept show up here.</span>
+            <span className="small">Your trades and days kept show up here.</span>
           </div>
         </div>
       ) : (
         <>
           <div className="grid four">
             <Stat icon="calendar" label="Days kept" value={<>{s.daysKept}<small> of {s.daysTraded}</small></>} note="days you traded" />
-            <Stat icon="pause" label="Pauses" value={s.pauses} />
-            <Stat icon="check" label="Skipped" value={skipped} note={s.pauses ? `${Math.round((skipped / s.pauses) * 100)}% of pauses` : undefined} />
-            <Stat icon="refresh" label="Came back" value={s.cameBackDays} note="one placed anyway, then rules kept" />
+            <Stat icon="activity" label="Trades" value={s.trades} />
+            <Stat icon="alert" label="Past a rule" value={s.breaks} note={s.trades ? `${Math.round((s.breaks / s.trades) * 100)}% of trades` : undefined} />
+            <Stat icon="refresh" label="One slip" value={s.oneSlipDays} note="days with one trade past a rule" />
           </div>
 
           {s.daily && s.daily.length > 0 && (
@@ -85,7 +83,7 @@ export function Stats({ me }: PageProps) {
               </div>
               <div className="cal-legend">
                 <span><i style={{ background: 'var(--accent)' }} /> Rules kept</span>
-                <span><i style={{ background: 'color-mix(in srgb, var(--amber) 80%, transparent)' }} /> A rule was broken</span>
+                <span><i style={{ background: 'color-mix(in srgb, var(--amber) 80%, transparent)' }} /> Went past a rule</span>
                 <span><i style={{ background: 'var(--track)' }} /> No trading</span>
               </div>
             </div>
@@ -93,51 +91,16 @@ export function Stats({ me }: PageProps) {
 
           <div className="grid two">
             <div className="card">
-              <div className="card-head"><h2><Icon name="pause" /> Pauses by outcome</h2></div>
-              <StackedBar
-                label="Pauses by outcome"
-                parts={[
-                  { key: 'skip', label: 'Skipped', value: s.byOutcome.skip ?? 0, tone: 'c1' },
-                  { key: 'timeout', label: 'Timed out', value: s.byOutcome.timeout ?? 0, tone: 'c2' },
-                  { key: 'place', label: 'Placed anyway', value: s.byOutcome.place ?? 0, tone: 'c3' },
-                ]}
-              />
-            </div>
-            <div className="card">
-              <div className="card-head"><h2><Icon name="rules" /> Pauses by rule</h2></div>
-              <HBars
-                label="Pauses by rule"
-                rows={Object.entries(s.byRule).sort((a, b) => b[1] - a[1]).map(([r, n]) => ({
-                  key: r, label: RULE_NAMES[r as TitleId] ?? 'Check your plan', value: n, icon: RULE_ICON[r as RuleId] ?? 'pause',
-                }))}
-              />
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-head"><h2><Icon name="clock" /> Pauses by hour of day</h2>{s.byHour.some((n) => n > 0) && <span className="small faint">Most at {hh(s.byHour.indexOf(Math.max(...s.byHour)))}</span>}</div>
-            <Columns
-              label="Pauses by hour of day"
-              values={s.byHour}
-              tick={(i) => (i % 6 === 0 || i === 23 ? String(i).padStart(2, '0') : null)}
-              tip={(i, v) => `${hh(i)}–${hh((i + 1) % 24)} · ${v} ${v === 1 ? 'pause' : 'pauses'}`}
-            />
-            <table className="sr-only">
-              <caption>Pauses by hour of day</caption>
-              <tbody>{s.byHour.map((n, h) => <tr key={h}><th>{hh(h)}</th><td>{n}</td></tr>)}</tbody>
-            </table>
-          </div>
-
-          <div className="grid two">
-            {Object.keys(s.byReason).length > 0 && (
-              <div className="card">
-                <div className="card-head"><h2><Icon name="quote" /> Reasons you named</h2></div>
+              <div className="card-head"><h2><Icon name="rules" /> Past a rule, by rule</h2></div>
+              {s.breaks === 0 ? <p className="muted small">No trade went past a rule in this period.</p> : (
                 <HBars
-                  label="Reasons you named"
-                  rows={Object.entries(s.byReason).sort((a, b) => b[1] - a[1]).map(([r, n]) => ({ key: r, label: REASONS.find(([id]) => id === r)?.[1] ?? r, value: n }))}
+                  label="Past a rule, by rule"
+                  rows={Object.entries(s.byRule).sort((a, b) => b[1] - a[1]).map(([r, n]) => ({
+                    key: r, label: RULE_NAMES[r as TitleId] ?? r, value: n, icon: RULE_ICON[r as RuleId] ?? 'alert',
+                  }))}
                 />
-              </div>
-            )}
+              )}
+            </div>
             <div className="card">
               <div className="card-head"><h2><Icon name="shield" /> Coverage</h2></div>
               <ul className="list">
@@ -149,6 +112,20 @@ export function Stats({ me }: PageProps) {
                 ))}
               </ul>
             </div>
+          </div>
+
+          <div className="card">
+            <div className="card-head"><h2><Icon name="clock" /> Past a rule, by hour of day</h2>{s.byHour.some((n) => n > 0) && <span className="small faint">Most at {hh(s.byHour.indexOf(Math.max(...s.byHour)))}</span>}</div>
+            <Columns
+              label="Past a rule, by hour of day"
+              values={s.byHour}
+              tick={(i) => (i % 6 === 0 || i === 23 ? String(i).padStart(2, '0') : null)}
+              tip={(i, v) => `${hh(i)}–${hh((i + 1) % 24)} · ${v} ${v === 1 ? 'trade' : 'trades'} past a rule`}
+            />
+            <table className="sr-only">
+              <caption>Past a rule, by hour of day</caption>
+              <tbody>{s.byHour.map((n, h) => <tr key={h}><th>{hh(h)}</th><td>{n}</td></tr>)}</tbody>
+            </table>
           </div>
         </>
       )}

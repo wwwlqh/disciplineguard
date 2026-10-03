@@ -1,8 +1,8 @@
-// Where the pause works (EXPERIENCE §4 Platforms): each platform, each way to trade on it, and what DisciplineGuard does
+// Where trades are counted (EXPERIENCE §4 Platforms): each platform, each way to trade on it, and what DisciplineGuard does
 // there. The website, Start free and Help show this one list, so they always say the same thing.
 import { Icon, type IconName } from './Icon.tsx';
 
-/** works: DisciplineGuard covers it (the pause, or for MT5's phone app and web terminal, counting; see `foot`). */
+/** works: trades placed there are counted (MT5's phone app and web terminal through MT5 on a computer; see `foot`). */
 export type Works = 'works' | 'no' | 'not_yet' | 'later';
 
 export interface Way {
@@ -28,7 +28,7 @@ export interface Platform {
 /** The whole list in one line. */
 export const WHERE_LINE = "MetaTrader 5 on Windows, and its phone and web terminal trades count too. TradingView, Polymarket and Kalshi in Chrome or Edge, on Windows or Mac.";
 
-export const MT5_COUNTS = "Phone and web terminal trades count toward your rules while MetaTrader 5 with DisciplineGuard runs on your computer or VPS. They aren't paused.";
+export const MT5_COUNTS = "Phone and web terminal trades count toward your rules while MetaTrader 5 with DisciplineGuard runs on your computer or VPS.";
 
 const website = (id: string): Way => ({ id, label: 'Website', icon: 'globe', works: 'works', note: 'Chrome or Edge' });
 const phone = (id: string): Way => ({ id, label: 'Phone app', icon: 'phone', works: 'no' });
@@ -57,10 +57,10 @@ export const WHERE: Platform[] = [
   { id: 'kalshi', name: 'Kalshi', logo: '/brands/kalshi.png', ways: [website('kalshi'), phone('kalshi_phone')] },
 ];
 
-/** Picks that get the pause today. */
+/** Picks that are counted today. */
 export const LIVE = WHERE.flatMap((p) => p.ways.filter((w) => w.works === 'works').map((w) => w.id));
 
-/** "Windows app", "Website": the way each platform gets the pause. */
+/** "Windows app", "Website": the way each platform is counted. */
 export const worksOn = (p: Platform) => p.ways.find((w) => w.works === 'works')?.label;
 
 const STATUS: Record<Works, { label: string; tone: string; icon?: IconName }> = {

@@ -8,7 +8,7 @@ import { isOwner, requireSession, type Session } from './auth.ts';
 import { audit, rateLimit, securityEmail, sendEmail, type Ctx } from './common.ts';
 import { enforcedRules, resolvedTime, userCtx, type AccountRow, type UserCtx } from './context.ts';
 import { coverageGaps } from './coverage.ts';
-import { dayRows, isKept } from './days.ts';
+import { brokenTrades, dayRows, isKept } from './days.ts';
 import { now as clock, type Env } from './env.ts';
 import { body, HttpError, json, str } from './http.ts';
 import { allowDesktop } from './desktop.ts';
@@ -107,7 +107,7 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
     user: {
       email: u.email, firstName: u.first_name, setupMode: !!u.setup_mode, lockedAt: u.locked_at, lockedBy: u.locked_by,
       lockAt: u.setup_mode && u.first_on_at ? autoLockAt(uc.userResets, u.first_on_at) : null, firstOnAt: u.first_on_at,
-      lastRealPauseAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts, reasonConsent: u.reason_consent, reasonAsked: u.reason_asked_at !== null,
+      lastBreakAt: u.last_real_pause_at, hideAmounts: !!u.hide_amounts,
       onboarding: u.onboarding_json ? JSON.parse(u.onboarding_json) : null,
       alerts: alertPrefs(u.alerts_json), hasApp: apps.length > 0,
       owner: isOwner(env, u), planKind: u.plan_kind, cancelAtPeriodEnd: !!u.cancel_at_period_end,
@@ -116,7 +116,6 @@ async function me(req: Request, env: Env, s: Session): Promise<Response> {
     },
     license: uc.license,
     rules: uc.asm.rules,
-    popup: uc.asm.popup,
     tz: uc.asm.tz,
     settings: raw,
     pending: uc.asm.pending,
@@ -136,7 +135,6 @@ function describeKey(key: string): string {
   const [kind, id, sub] = key.split(':');
   if (kind === 'rule') return `Rule "${PROTECTED_LABEL[id] ?? id}"`;
   if (kind === 'acct') return `Account setting (${sub})`;
-  if (kind === 'popup') return 'Popup settings';
   if (kind === 'tz') return 'Timezone';
   if (kind === 'reset') return 'Day reset';
   return key;
@@ -151,7 +149,7 @@ async function putSetting(req: Request, env: Env, s: Session, ctx: Ctx): Promise
   const value = validateSetting(key, b.value, (id) => uc.accounts.find((a) => a.id === id));
   const cur = uc.settings.get(key);
   const res = requestChange(key, toRow(cur), value, {
-    now: t, userResets: uc.userResets, setupMode: !!uc.user.setup_mode, lastRealPauseAt: uc.user.last_real_pause_at ?? undefined,
+    now: t, userResets: uc.userResets, setupMode: !!uc.user.setup_mode, lastBreakAt: uc.user.last_real_pause_at ?? undefined,
   });
   if (b.dryRun === true) return json({ direction: res.direction, appliesAt: res.appliesAt });
   if (res.direction === 'same' && !cur?.pending) return json({ direction: 'same', appliesAt: 'now' });
@@ -253,7 +251,7 @@ function stateFrom(snap: Awaited<ReturnType<typeof buildSnapshot>>, uc: UserCtx)
     };
   }
   return {
-    entries: snap.entries, closes: snap.closes, overrides: snap.overrides, breakUntil: snap.breakUntil ?? undefined, doneUntil: snap.doneUntil ?? undefined,
+    entries: snap.entries, closes: snap.closes, breakUntil: snap.breakUntil ?? undefined, doneUntil: snap.doneUntil ?? undefined,
     accounts, clock: { verified: true },
   };
 }
@@ -281,12 +279,9 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
     };
   });
 
-  const { results: pauses } = await env.DB.prepare("SELECT t, payload FROM events WHERE user_id = ? AND type = 'pause' AND t >= ? ORDER BY t DESC LIMIT 50")
+  const { results: history } = await env.DB.prepare("SELECT t, account_id FROM events WHERE user_id = ? AND type = 'entry' AND t >= ? AND json_extract(payload, '$.source') != 'click'")
     .bind(uc.user.id, day.start)
-    .all<{ t: number; payload: string }>();
-  const { results: outside } = await env.DB.prepare("SELECT t, account_id, payload FROM events WHERE user_id = ? AND type = 'entry' AND t >= ? AND json_extract(payload, '$.source') = 'outside' ORDER BY t DESC")
-    .bind(uc.user.id, day.start)
-    .all<any>();
+    .all<{ t: number; account_id: string }>();
   const unclassified = await env.DB.prepare("SELECT COUNT(*) AS n FROM events WHERE user_id = ? AND type = 'unclassified' AND t >= ?").bind(uc.user.id, day.start).first<{ n: number }>();
   const { results: offEvents } = await env.DB.prepare("SELECT t, payload FROM events WHERE user_id = ? AND type IN ('protection_off', 'account_moved') AND t >= ? ORDER BY t DESC")
     .bind(uc.user.id, day.start - DAY)
@@ -296,30 +291,19 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
   for (const a of uc.accounts) {
     const firstSeen = Math.max(day.start, a.created_at);
     for (const g of await coverageGaps(env, a.id, firstSeen, t)) {
-      const trades = outside.filter((o) => o.account_id === a.id && o.t >= g.from && o.t < g.to).length;
+      const trades = history.filter((o) => o.account_id === a.id && o.t >= g.from && o.t < g.to).length;
       gaps.push({ accountId: a.id, last3: a.last3, from: g.from, to: g.to, trades });
     }
   }
 
   const weekDays = await dayRows(env, uc, t - 7 * DAY, t + 1);
-  const pausesWeek = await env.DB.prepare(
-    "SELECT json_extract(payload, '$.decision') AS d, json_extract(payload, '$.title') AS title, json_extract(payload, '$.reason') = 'in_plan' AS ip, COUNT(*) AS n FROM events WHERE user_id = ? AND type = 'pause' AND t >= ? GROUP BY d, title, ip",
-  )
-    .bind(uc.user.id, t - 7 * DAY)
-    .all<{ d: string; title: string; ip: number | null; n: number }>();
-  // Calibration (EXPERIENCE §5.4): one rule caused most pauses, and most were placed anyway or marked "In my plan".
-  const byTitle = new Map<string, { n: number; overruled: number }>();
-  for (const r of pausesWeek.results) {
-    const x = byTitle.get(r.title) ?? { n: 0, overruled: 0 };
-    x.n += r.n;
-    if (r.d === 'place' || r.ip === 1) x.overruled += r.n;
-    byTitle.set(r.title, x);
-  }
-  const total = [...byTitle.values()].reduce((a, b) => a + b.n, 0);
+  const brokenWeek = await brokenTrades(env, uc.user.id, t - 7 * DAY);
+  // Calibration (EXPERIENCE §5.4): one rule caused most of this week's rule breaks. Is it set right?
+  const byRule = new Map<string, number>();
+  for (const b of brokenWeek) if (b.violations[0]) byRule.set(b.violations[0], (byRule.get(b.violations[0]) ?? 0) + 1);
   let calibration: { rule: string; count: number } | null = null;
-  for (const [title, x] of byTitle) {
-    if (total >= 5 && x.n / total > 0.5 && x.overruled / x.n > 0.5 && title !== 'CHECK') calibration = { rule: title, count: x.n };
-  }
+  for (const [rule, n] of byRule) if (brokenWeek.length >= 5 && n / brokenWeek.length > 0.5) calibration = { rule, count: n };
+  const todayRow = weekDays.find((x) => x.start === day.start);
 
   return json({
     now: t,
@@ -332,6 +316,7 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
     accounts,
     meters: {
       tradesToday: entriesToday(input, t),
+      breaksToday: todayRow?.breaks ?? 0,
       r1Max: rules.R1.on ? rules.R1.max : null,
       cooldownUntil: cd && cd.until > t ? cd.until : null,
       breakUntil: state.breakUntil && state.breakUntil > t ? state.breakUntil : null,
@@ -342,21 +327,16 @@ async function today(req: Request, env: Env, s: Session): Promise<Response> {
     tighten: uc.tighten ?? null,
     tightenSuggest: tightenSuggest(uc),
     pending: uc.asm.pending,
-    pauses: pauses.map((p) => ({ t: p.t, ...JSON.parse(p.payload) })),
-    outside: outside.map((o) => ({ t: o.t, accountId: o.account_id, ...JSON.parse(o.payload) })),
+    // Today's trades that broke a rule, newest first.
+    broken: brokenWeek.filter((b) => b.t >= day.start),
     coverage: { gaps, unclassified: unclassified?.n ?? 0, off: offEvents.map((e) => ({ t: e.t, ...JSON.parse(e.payload ?? '{}') })) },
     week: {
-      pauses: total,
-      skipped: pausesWeek.results.filter((r) => r.d === 'skip' || r.d === 'timeout').reduce((a, b) => a + b.n, 0),
-      placed: pausesWeek.results.filter((r) => r.d === 'place').reduce((a, b) => a + b.n, 0),
-      daysTraded: weekDays.filter((d) => d.entries + d.pauses > 0).length,
+      breaks: brokenWeek.length,
+      daysTraded: weekDays.filter((d) => d.entries > 0).length,
       daysKept: weekDays.filter(isKept).length,
       // The last 7 trading days, oldest first, for the week strip.
-      days: weekDays.slice(-7).map((d) => ({ start: d.start, traded: d.entries + d.pauses > 0, kept: isKept(d) })),
-      keptToday: (() => {
-        const d = weekDays.find((x) => x.start === day.start);
-        return d ? d.placed === 0 && d.outside === 0 && d.unprotected === 0 : true;
-      })(),
+      days: weekDays.slice(-7).map((d) => ({ start: d.start, traded: d.entries > 0, kept: isKept(d) })),
+      keptToday: !todayRow || (todayRow.breaks === 0 && todayRow.unprotected === 0),
     },
     calibration,
   });
@@ -366,43 +346,36 @@ async function stats(req: Request, env: Env, s: Session): Promise<Response> {
   const t = clock(env);
   const url = new URL(req.url);
   const days = Math.min(90, Math.max(1, Number(url.searchParams.get('days') ?? 30)));
-  const account = url.searchParams.get('account');
+  const account = url.searchParams.get('account') ?? undefined;
   const uc = await userCtx(env, s.user.id, t);
   const from = t - days * DAY;
   const acctFilter = account ? ' AND account_id = ?' : '';
   const bind = (stmt: string) => (account ? env.DB.prepare(stmt).bind(uc.user.id, from, account) : env.DB.prepare(stmt).bind(uc.user.id, from));
-  const { results: pauses } = await bind(`SELECT t, payload FROM events WHERE user_id = ? AND type = 'pause' AND t >= ?${acctFilter}`).all<{ t: number; payload: string }>();
-  const byOutcome = { skip: 0, place: 0, timeout: 0 } as Record<string, number>;
+  const broken = await brokenTrades(env, uc.user.id, from, { account });
   const byRule: Record<string, number> = {};
-  const byReason: Record<string, number> = {};
   const byHour = new Array(24).fill(0);
   const time = resolvedTime(uc);
-  for (const p of pauses) {
-    const x = JSON.parse(p.payload);
-    byOutcome[x.decision] = (byOutcome[x.decision] ?? 0) + 1;
-    byRule[x.title ?? 'CHECK'] = (byRule[x.title ?? 'CHECK'] ?? 0) + 1;
-    if (x.reason) byReason[x.reason] = (byReason[x.reason] ?? 0) + 1;
-    byHour[Math.floor(localParts(time.offsets, p.t).msOfDay / HOUR)]++;
+  for (const b of broken) {
+    for (const r of b.violations) byRule[r] = (byRule[r] ?? 0) + 1;
+    byHour[Math.floor(localParts(time.offsets, b.t).msOfDay / HOUR)]++;
   }
   const rows = await dayRows(env, uc, from, t + 1);
-  const traded = rows.filter((d) => d.entries + d.pauses > 0);
-  const cameBack = traded.filter((d) => d.placed === 1 && d.outside === 0 && d.unprotected === 0).length;
+  const traded = rows.filter((d) => d.entries > 0);
   const count = async (type: string, extra = '') =>
     (await bind(`SELECT COUNT(*) AS n FROM events WHERE user_id = ? AND type = '${type}' AND t >= ?${acctFilter}${extra}`).first<{ n: number }>())?.n ?? 0;
   return json({
     days,
-    pauses: pauses.length,
-    byOutcome,
+    trades: traded.reduce((a, d) => a + d.entries, 0),
+    breaks: broken.length,
     byRule,
-    byReason,
     byHour,
     daysTraded: traded.length,
     daysKept: traded.filter(isKept).length,
-    cameBackDays: cameBack,
+    // Days with exactly one rule break: one slip, then the rules held.
+    oneSlipDays: traded.filter((d) => d.breaks === 1 && d.unprotected === 0).length,
     // Every day of the period, oldest first, for the calendar.
-    daily: rows.map((d) => ({ start: d.start, entries: d.entries, pauses: d.pauses, traded: d.entries + d.pauses > 0, kept: isKept(d) })),
+    daily: rows.map((d) => ({ start: d.start, entries: d.entries, breaks: d.breaks, traded: d.entries > 0, kept: isKept(d) })),
     coverage: {
-      outside: await count('entry', " AND json_extract(payload, '$.source') = 'outside'"),
       unprotected: await count('entry', " AND json_extract(payload, '$.unprotected') = 1"),
       unclassified: await count('unclassified'),
       stopChanges: await count('stop_change'),
@@ -450,7 +423,6 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
       if (b.defaults[k] !== undefined && b.defaults[k] !== null) writes.push([`default:${k}`, validateSetting(`default:${k}`, b.defaults[k], () => undefined)]);
     }
   }
-  if (b.popup) writes.push(['popup', validateSetting('popup', b.popup, () => undefined)]);
 
   for (const [key, value] of writes) {
     const cur = uc.settings.get(key);
@@ -469,18 +441,14 @@ async function applyOnboarding(req: Request, env: Env, s: Session, ctx: Ctx): Pr
   return json({ ok: true });
 }
 
-/** Not protected: reason consent, hide amounts, first name (SPEC §6.2 last row). */
+/** Not protected: hide amounts, first name (SPEC §6.2 last row). */
 async function prefs(req: Request, env: Env, s: Session): Promise<Response> {
   const b = await body(req);
   const sets: string[] = [];
   const vals: unknown[] = [];
-  if (typeof b.reasonConsent === 'boolean') (sets.push('reason_consent = ?'), vals.push(b.reasonConsent ? 1 : 0));
   if (typeof b.hideAmounts === 'boolean') (sets.push('hide_amounts = ?'), vals.push(b.hideAmounts ? 1 : 0));
   if (typeof b.firstName === 'string') (sets.push('first_name = ?'), vals.push(b.firstName.trim().slice(0, 60) || null));
   if (sets.length) await env.DB.prepare(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, s.user.id).run();
-  if (b.deleteReasons === true) {
-    await env.DB.prepare("UPDATE events SET payload = json_remove(payload, '$.reason') WHERE user_id = ? AND type = 'pause'").bind(s.user.id).run();
-  }
   return json({ ok: true });
 }
 
@@ -589,7 +557,7 @@ async function signOutAll(req: Request, env: Env, s: Session, ctx: Ctx): Promise
   return json({ ok: true });
 }
 
-const REPORT_TYPES = ['should_not_pause', 'should_pause', 'setup', 'billing', 'other'];
+const REPORT_TYPES = ['wrong_count', 'setup', 'billing', 'other'];
 
 async function report(req: Request, env: Env, s: Session, ctx: Ctx): Promise<Response> {
   const b = await body(req, 64 * 1024);

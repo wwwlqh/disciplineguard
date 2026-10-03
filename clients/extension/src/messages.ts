@@ -1,5 +1,5 @@
 // What the content script, popup and service worker say to each other, and the cache they share.
-import type { PopupSettings, ResolvedTime, Rules } from '@dg/core';
+import type { ResolvedTime, Rules } from '@dg/core';
 
 /** A TradingView broker account, as read from the Account Manager. */
 export interface TvAccount {
@@ -27,7 +27,6 @@ export interface Cache {
   refused?: Record<string, 'account_cap' | 'account_taken'>;
   signed?: {
     rules: Rules;
-    popup: PopupSettings;
     time: ResolvedTime;
     hideAmounts: boolean;
     license: { state: string; validUntil: number; enforcing: boolean };

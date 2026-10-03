@@ -1,4 +1,4 @@
-// The DisciplineGuard mark: two candlesticks that read as a pause, on a bright mint-to-blue tile.
+// The DisciplineGuard mark: two candlesticks, on a bright mint-to-blue tile.
 // The favicon (public/mark.svg), the Windows app and the extension icons are the same drawing.
 import { useId } from 'react';
 import { onLink } from '../router.ts';
