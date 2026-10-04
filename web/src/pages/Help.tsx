@@ -35,7 +35,7 @@ const SETUP: Article[] = [
     slug: 'install',
     title: 'Install DisciplineGuard for Windows',
     body: [
-      'Download it from Devices → Add MT5, and run the installer. It\'s for MetaTrader 5 on Windows. MetaTrader on a Mac isn\'t supported yet.',
+      'Download it from Devices → Add MT5, and run the installer. It\'s for MetaTrader 5 on Windows. MetaTrader on a Mac isn\'t supported.',
       'The app sets up MetaTrader for you. You never copy files or type a code.',
     ],
   },

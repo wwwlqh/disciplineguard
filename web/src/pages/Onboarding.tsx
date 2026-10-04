@@ -44,7 +44,6 @@ interface Draft {
 
 /** Under the platforms (Where.tsx): what isn't one of them. */
 const MORE: (Omit<Way, 'works'> & { works?: Way['works'] })[] = [
-  { id: 'mt4', label: 'MetaTrader 4', icon: 'window', works: 'later' },
   { id: 'other', label: 'Somewhere else', icon: 'plus' },
 ];
 const SITE_IDS: Site[] = ['tv', 'pm', 'kalshi'];
@@ -60,8 +59,7 @@ const hasMt = (p: string[]) => p.some((x) => x.startsWith('mt'));
 /** What can't be paused from the picks, in one line each. */
 function limits(p: string[]): string[] {
   const out: string[] = [];
-  if (p.includes('mt4')) out.push("MetaTrader 4 is coming later. We'll tell you.");
-  if (p.includes('mt5_mac')) out.push("MetaTrader 5 on Mac isn't supported yet. We'll tell you.");
+  if (p.includes('mt5_mac')) out.push("MetaTrader 5 on Mac isn't supported. Use it on Windows or a Windows VPS.");
   if (p.includes('mt_phone') || p.includes('mt5_web')) out.push(MT5_COUNTS);
   if (p.includes('tv_desktop')) out.push("The TradingView desktop app can't be paused. Use the website in Chrome or Edge: same account, same charts.");
   if (['tv_phone', 'pm_phone', 'kalshi_phone'].some((x) => p.includes(x))) out.push("Phone apps can't be paused. Trade on your computer for the pause.");

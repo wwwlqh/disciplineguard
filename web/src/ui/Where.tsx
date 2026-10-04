@@ -3,7 +3,7 @@
 import { Icon, type IconName } from './Icon.tsx';
 
 /** works: DisciplineGuard covers it (the pause, or for MT5's phone app and web terminal, counting; see `foot`). */
-export type Works = 'works' | 'no' | 'not_yet' | 'later';
+export type Works = 'works' | 'no';
 
 export interface Way {
   /** The Start free pick. Picks that aren't "works" record "tell me when it's ready". */
@@ -42,7 +42,7 @@ export const WHERE: Platform[] = [
       { id: 'mt5', label: 'Windows app', icon: 'window', works: 'works', note: 'With the DisciplineGuard app' },
       { id: 'mt_phone', label: 'Phone app', icon: 'phone', works: 'works' },
       { id: 'mt5_web', label: 'Web terminal', icon: 'globe', works: 'works' },
-      { id: 'mt5_mac', label: 'Mac app', icon: 'laptop', works: 'not_yet' },
+      { id: 'mt5_mac', label: 'Mac app', icon: 'laptop', works: 'no', note: 'Use Windows or a Windows VPS' },
     ],
     foot: MT5_COUNTS,
     footFor: ['mt_phone', 'mt5_web'],
@@ -66,8 +66,6 @@ export const worksOn = (p: Platform) => p.ways.find((w) => w.works === 'works')?
 const STATUS: Record<Works, { label: string; tone: string; icon?: IconName }> = {
   works: { label: 'Works', tone: 'accent', icon: 'check' },
   no: { label: 'Not supported', tone: 'no', icon: 'x' },
-  not_yet: { label: 'Not yet', tone: 'no' },
-  later: { label: 'Coming later', tone: 'no' },
 };
 
 export function WorksChip({ works }: { works: Works }) {
@@ -129,14 +127,11 @@ export function WhereCard({ p, picked, onPick, className = '' }: { p: Platform; 
   );
 }
 
-/** Read-only: every platform, then what's coming. */
+/** Read-only: every platform. */
 export function WhereGrid({ reveal = false }: { reveal?: boolean }) {
   return (
-    <>
-      <div className="where-grid">
-        {WHERE.map((p) => <WhereCard key={p.id} p={p} className={reveal ? 'reveal' : ''} />)}
-      </div>
-      <p className="where-later"><Icon name="clock" size={15} /> MetaTrader 4 is coming later.</p>
-    </>
+    <div className="where-grid">
+      {WHERE.map((p) => <WhereCard key={p.id} p={p} className={reveal ? 'reveal' : ''} />)}
+    </div>
   );
 }
