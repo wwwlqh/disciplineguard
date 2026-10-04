@@ -191,7 +191,8 @@ impl Core {
                 let ea = self.bridge.ea_status(&t.id);
                 let protected = s.is_protected(&t.id);
                 let restart_needed = s.pending.contains(&t.id);
-                let connected = s.links.contains_key(&t.id) && ea.running(now);
+                let linked = s.links.contains_key(&t.id);
+                let connected = linked && ea.running(now);
                 let installed = match &ea_sha {
                     Some(sha) => setup::ea_installed(&t, sha),
                     None => setup::ea_path(&t).exists(),
@@ -222,7 +223,7 @@ impl Core {
                     installed,
                     algo_on: ea.algo_on,
                     connected,
-                    linked: s.links.contains_key(&t.id),
+                    linked,
                     restart_needed,
                     status,
                     reason,
