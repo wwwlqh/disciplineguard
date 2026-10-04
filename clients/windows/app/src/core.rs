@@ -91,6 +91,8 @@ pub struct Row {
     pub installed: bool,
     pub algo_on: Option<bool>,
     pub connected: bool,
+    /// Has connected at least once, so a closed MetaTrader is just closed, not still setting up.
+    pub linked: bool,
     pub restart_needed: bool,
     pub status: Status,
     pub reason: String,
@@ -220,6 +222,7 @@ impl Core {
                     installed,
                     algo_on: ea.algo_on,
                     connected,
+                    linked: s.links.contains_key(&t.id),
                     restart_needed,
                     status,
                     reason,
@@ -303,6 +306,19 @@ impl Core {
             let _ = process::launch(&t);
         }
         stuck
+    }
+
+    /// The trader pressed "Open MetaTrader": starts each protected terminal that is closed. The EA is already on its
+    /// charts, so it connects by itself.
+    pub fn open_terminals(&self) {
+        let running = running();
+        let closed: Vec<Terminal> = {
+            let s = self.state.lock().unwrap();
+            s.protected.values().filter(|t| !is_running(t, &running)).cloned().collect()
+        };
+        for t in closed {
+            let _ = process::launch(&t);
+        }
     }
 
     fn finish(&self, t: &Terminal) {

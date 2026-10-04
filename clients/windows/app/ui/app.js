@@ -30,7 +30,9 @@ function pick(v) {
   if (!v.signedIn) return 'signin';
   const prot = v.rows.filter((r) => r.protected);
   if (!prot.length) return 'found';
-  if (prot.some((r) => r.restartNeeded || !r.connected)) return 'result';
+  // Still setting up: never connected yet, or waiting on a restart, a chart or Algo Trading. A MetaTrader that
+  // connected before and is now just closed is not setting up.
+  if (prot.some((r) => !r.linked || r.status === 'setting_up' || r.status === 'needs_attention')) return 'result';
   return 'found';
 }
 
@@ -96,12 +98,14 @@ function found(v, error = '') {
     ${error ? `<p class="warn">${esc(error)}</p>` : ''}
     <div class="actions">
       ${prot.length ? '<button id="close">Close</button>' : ''}
+      ${!open.length && prot.some((r) => r.status === 'not_running') ? `<button class="primary" id="openmt">${ICON.window(16)} Open MetaTrader</button>` : ''}
       ${open.length ? `<button class="primary" id="protect" ${v.canProtect ? '' : 'disabled'}>${ICON.shieldCheck(16)} Protect</button>` : ''}
       ${none ? `<button class="primary" id="browse">${ICON.folder(16)} Pick its folder</button>` : ''}
     </div>`;
   const on = (id, f) => document.getElementById(id) && (document.getElementById(id).onclick = f);
   on('devices', () => invoke('open_web', { page: 'devices' }));
   on('close', () => invoke('hide'));
+  on('openmt', openMt);
   on('browse', async () => {
     try {
       await invoke('browse');
@@ -128,6 +132,7 @@ function result(v, stuck = []) {
   const algo = (r) => (r.algoOn === false ? step('bad', 'Algo Trading is off: click Algo Trading once in MetaTrader') : step(r.algoOn ? 'ok' : 'wait', 'Algo Trading on'));
   const waiting = prot.some((r) => r.restartNeeded);
   const allOn = prot.length && prot.every((r) => r.connected && !r.restartNeeded && r.algoOn !== false);
+  const closed = prot.some((r) => r.status === 'not_running');
   el.innerHTML = `
     ${hero(allOn ? ICON.shieldCheck(30, 2) : waiting ? ICON.refresh(28, 2) : ICON.window(28, 2), waiting ? 'amber' : '')}
     <h1 class="center">${allOn ? 'Protected' : 'Setting up'}</h1>
@@ -143,7 +148,8 @@ function result(v, stuck = []) {
       ${stuck.length ? `<p class="warn">${esc(stuck.join(', '))} didn't close. Close any MetaTrader dialog and try again.</p>` : ''}
       <div class="actions"><button id="later">Next time I open it</button><button class="primary" id="restart">${ICON.refresh(16)} Restart MetaTrader</button></div>`
       : allOn ? '<div class="actions"><button class="primary" id="next">Next</button></div>'
-      : '<p class="muted center">Open MetaTrader and any chart.</p><div class="actions"><button id="later">Close</button></div>'}`;
+      : closed ? `<p class="muted center">DisciplineGuard connects once MetaTrader is open.</p><div class="actions"><button id="later">Close</button><button class="primary" id="openmt">${ICON.window(16)} Open MetaTrader</button></div>`
+      : '<p class="muted center">Open any chart in MetaTrader.</p><div class="actions"><button id="later">Close</button></div>'}`;
   const on = (id, f) => document.getElementById(id) && (document.getElementById(id).onclick = f);
   on('restart', async (e) => {
     e.currentTarget.disabled = true;
@@ -153,8 +159,16 @@ function result(v, stuck = []) {
     startPoll();
   });
   on('later', () => invoke('hide'));
+  on('openmt', openMt);
   on('next', () => show('done'));
   startPoll();
+}
+
+async function openMt(e) {
+  e.currentTarget.disabled = true;
+  e.currentTarget.textContent = 'Opening…';
+  await invoke('open_mt');
+  show('result');
 }
 
 function startPoll() {

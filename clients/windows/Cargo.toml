@@ -5,7 +5,7 @@ members = ["core", "app"]
 default-members = ["core"]
 
 [workspace.package]
-version = "0.1.10"
+version = "0.1.11"
 edition = "2021"
 license = "UNLICENSED"
 

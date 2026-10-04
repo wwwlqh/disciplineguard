@@ -76,6 +76,13 @@ async fn restart(core: State<'_, Shared>) -> Result<Vec<String>, ()> {
 }
 
 #[tauri::command]
+async fn open_mt(core: State<'_, Shared>) -> Result<(), ()> {
+    let c = core.inner().clone();
+    blocking(move || c.open_terminals()).await;
+    Ok(())
+}
+
+#[tauri::command]
 async fn browse(app: AppHandle, core: State<'_, Shared>) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
     let c = core.inner().clone();
@@ -227,14 +234,29 @@ fn on_menu(app: &AppHandle, id: &str) {
     let _ = app.opener().open_url(format!("{}/{page}", core.web), None::<&str>);
 }
 
+/// Left by an update, so the app it restarts stays in the tray instead of opening its window.
+fn updated_marker() -> std::path::PathBuf {
+    std::env::temp_dir().join("DisciplineGuard.updated")
+}
+
+/// True once, right after an update restarted the app.
+fn just_updated() -> bool {
+    let m = updated_marker();
+    let fresh = std::fs::metadata(&m).and_then(|x| x.modified()).is_ok_and(|t| t.elapsed().is_ok_and(|e| e < Duration::from_secs(600)));
+    let _ = std::fs::remove_file(&m);
+    fresh
+}
+
 /// Checks the signed update manifest now and every 6 hours; an update installs quietly and the app restarts.
 async fn updates(app: AppHandle) {
     loop {
         if let Ok(u) = app.updater() {
             if let Ok(Some(update)) = u.check().await {
+                let _ = std::fs::write(updated_marker(), b"");
                 if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
                     app.restart();
                 }
+                let _ = std::fs::remove_file(updated_marker());
             }
         }
         tokio::time::sleep(Duration::from_secs(6 * 3600)).await;
@@ -249,7 +271,8 @@ fn main() {
     if std::env::args().any(|a| a == "--uninstall") {
         std::process::exit(if core.uninstall() { 0 } else { 2 });
     }
-    let autostarted = std::env::args().any(|a| a == "--autostart");
+    // Started with Windows or by an update: stay in the tray.
+    let autostarted = just_updated() || std::env::args().any(|a| a == "--autostart");
 
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| show(app, "")))
@@ -259,7 +282,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .manage(core.clone())
-        .invoke_handler(tauri::generate_handler![view, sign_in, protect, restart, browse, open_web, hide])
+        .invoke_handler(tauri::generate_handler![view, sign_in, protect, restart, open_mt, browse, open_web, hide])
         .setup(move |app| {
             use tauri_plugin_autostart::ManagerExt;
             // Starts with Windows (SPEC §9.5).
